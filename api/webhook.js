@@ -1,6 +1,5 @@
 import { Telegraf, Markup } from "telegraf";
 import { initializeApp, getApps, getApp } from "firebase/app";
-// 🔥 THE FIX: We import from firestore/lite instead of firestore
 import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore/lite";
 import { getAuth, signInAnonymously } from "firebase/auth";
 
@@ -16,19 +15,19 @@ const firebaseConfig = {
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const db = getFirestore(app);
+
+// 🔥 THE FIX: Explicitly tell it to use "(default)"
+const db = getFirestore(app, "(default)"); 
 const auth = getAuth(app);
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// Helper to ensure Firebase is authenticated
 async function ensureAuth() {
   if (!auth.currentUser) {
     await signInAnonymously(auth);
   }
 }
 
-// 1. Handle /start command
 bot.start(async (ctx) => {
   try {
     await ensureAuth(); 
@@ -69,7 +68,6 @@ bot.start(async (ctx) => {
   }
 });
 
-// 2. Handle user replying with their name
 bot.on("text", async (ctx, next) => {
   try {
     if (ctx.message.reply_to_message && ctx.message.text) {
@@ -90,7 +88,6 @@ bot.on("text", async (ctx, next) => {
   }
 });
 
-// 3. Helper to send the Mini App button
 function sendPlayButton(ctx, name) {
   return ctx.reply(`Ready to hustle, *${name}*? 👊🏾\n\nTap below to open Lagos Life:`, {
     parse_mode: "Markdown",
@@ -100,7 +97,6 @@ function sendPlayButton(ctx, name) {
   });
 }
 
-// 4. Export the Vercel Serverless Function
 export default async function handler(req, res) {
   if (req.method === "GET") {
     return res.status(200).json({ status: "Vercel is alive" });
