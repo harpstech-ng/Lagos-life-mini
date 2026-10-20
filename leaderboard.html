@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Lagos Life — Leaderboard</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+      }},
+    };
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html, body {
+      margin: 0; padding: 0;
+      background: #08080B; color: #fff;
+      overflow-x: hidden; overscroll-behavior-y: none;
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent);
+    }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+    .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); }
+    .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); }
+    .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.18) 0%, rgba(255,214,10,0.06) 100%); border: 1px solid rgba(255,214,10,0.3); box-shadow: 0 0 20px rgba(255,214,10,0.2); }
+    .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    input { -webkit-user-select: text; user-select: text; }
+    input:focus { outline: none; }
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    .hero-grid { background-image: linear-gradient(rgba(255,214,10,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,214,10,0.04) 1px, transparent 1px); background-size: 22px 22px; -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    const KEY = 'lagos-life-mini';
+    const MAX_E = 100;
+    const ENERGY_MS = 5 * 60 * 1000;
+    const TOTAL_USERS = 256890;
+    const MIN_WITHDRAW = 10_000_000_000;
+    const REAL_PER_WITHDRAW = 1000;
+
+    const BIZ_PRICES = {
+      water: 10_000, suya: 250_000, keke: 500_000, phone: 2_000_000,
+      danfo: 5_000_000, wash: 25_000_000, bet9ja: 50_000_000,
+      lounge: 500_000_000, oil: 5_000_000_000,
+    };
+    const BIZ_PER_HR = {
+      water: 2000, suya: 40000, keke: 75000, phone: 350000,
+      danfo: 800000, wash: 4000000, bet9ja: 9000000,
+      lounge: 90000000, oil: 1000000000,
+    };
+    const ASSET_PRICES = {
+      chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000,
+      gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000,
+      mansion: 1_000_000_000_000,
+    };
+
+    const fmt = (n) => {
+      n = Math.floor(n || 0);
+      const s = n < 0 ? '-' : '';
+      n = Math.abs(n);
+      if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
+      if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return s + '₦' + (n / 1e3).toFixed(1) + 'K';
+      return s + '₦' + n.toLocaleString();
+    };
+    const fmtReal = (n) => '₦' + (n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function makeLeaderboard() {
+      let seed = 1337;
+      const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+      const first = ['Tunde', 'Chidi', 'Bisi', 'Emeka', 'Ngozi', 'Femi', 'Yemi', 'Ada', 'Kelechi', 'Seyi', 'Ifeanyi', 'Amaka', 'Bola', 'Dapo', 'Funke', 'Uche', 'Tope', 'Zainab', 'Musa', 'Chioma', 'Segun', 'Kemi'];
+      const last = ['Ade', 'Okoye', 'Balogun', 'Eze', 'Ogun', 'Nwosu', 'Bello', 'Achebe', 'Ibrahim', 'Ojo', 'Chukwu', 'Lawal', 'Adebayo', 'Nnamdi', 'Salami'];
+      const faces = ['🦍', '🐐', '🦅', '🐆', '🦁', '🐊', '🦈', '🐘', '🦂', '🐍'];
+      const out = [];
+      for (let i = 0; i < 100; i++) {
+        out.push({
+          name: first[Math.floor(rnd() * first.length)] + ' ' + last[Math.floor(rnd() * last.length)],
+          nw: Math.floor(Math.pow(10, 13.7 - i * 0.055)),
+          emoji: faces[Math.floor(rnd() * faces.length)],
+        });
+      }
+      return out;
+    }
+
+    const DEFAULT = {
+      name: 'Aje Butler', cash: 25000, real: 0, energy: MAX_E,
+      lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
+      street: {}, taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+    };
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(KEY);
+        if (!raw) return { ...DEFAULT, lastEnergy: Date.now(), lastSeen: Date.now() };
+        const d = JSON.parse(raw);
+        const st = {
+          ...DEFAULT, ...d,
+          businesses: d.businesses || {}, assets: d.assets || {},
+          travels: d.travels || [], street: d.street || {},
+        };
+        const elapsed = Math.min(Math.max(0, Date.now() - (d.lastSeen || Date.now())), 8 * 3600 * 1000);
+        if (elapsed > 5000) {
+          const perHr = Object.entries(st.businesses).reduce((a, [id, cnt]) => a + cnt * (BIZ_PER_HR[id] || 0), 0);
+          if (perHr > 0) st.cash += (perHr * elapsed) / 3600000;
+        }
+        st.lastEnergy = st.lastEnergy || Date.now();
+        st.energy = Math.min(MAX_E, st.energy ?? MAX_E);
+        st.lastSeen = Date.now();
+        return st;
+      } catch {
+        return { ...DEFAULT, lastEnergy: Date.now(), lastSeen: Date.now() };
+      }
+    }
+    function save(s) {
+      try { localStorage.setItem(KEY, JSON.stringify({ ...s, lastSeen: Date.now() })); } catch {}
+    }
+
+    const Card = ({ children, className = '', gold = false }) => (
+      <div className={'rounded-2xl ' + (gold ? 'card-gold' : 'card-gradient') + ' ' + className}>{children}</div>
+    );
+    const SectionTitle = ({ children, right }) => (
+      <div className="flex items-end justify-between mb-2.5 mt-6">
+        <h2 className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display">{children}</h2>
+        {right}
+      </div>
+    );
+
+    function App() {
+      const [s, setS] = useState(load);
+      const [toast, setToast] = useState(null);
+
+      useEffect(() => {
+        const tg = window?.Telegram?.WebApp;
+        try { tg?.ready(); tg?.expand(); } catch {}
+      }, []);
+      useEffect(() => { save(s); }, [s]);
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2400);
+        return () => clearTimeout(t);
+      }, [toast]);
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+
+      useEffect(() => {
+        const iv = setInterval(() => {
+          setS((p) => {
+            const nowT = Date.now();
+            let energy = p.energy;
+            let lastEnergy = p.lastEnergy;
+            if (energy < MAX_E) {
+              const gained = Math.floor((nowT - lastEnergy) / ENERGY_MS);
+              if (gained > 0) {
+                energy = Math.min(MAX_E, energy + gained);
+                lastEnergy = energy >= MAX_E ? nowT : lastEnergy + gained * ENERGY_MS;
+              }
+            }
+            const perHr = Object.entries(p.businesses).reduce((a, [id, cnt]) => a + cnt * (BIZ_PER_HR[id] || 0), 0);
+            return { ...p, energy, lastEnergy, cash: p.cash + perHr / 3600 };
+          });
+        }, 1000);
+        return () => clearInterval(iv);
+      }, []);
+
+      const bizValue = useMemo(
+        () => Object.entries(s.businesses).reduce((a, [id, c]) => a + c * (BIZ_PRICES[id] || 0), 0),
+        [s.businesses]
+      );
+      const assetValue = useMemo(
+        () => Object.entries(s.assets).reduce((a, [id, c]) => a + c * (ASSET_PRICES[id] || 0), 0),
+        [s.assets]
+      );
+      const netWorth = Math.floor(s.cash + bizValue + assetValue);
+
+      const { board, rank } = useMemo(() => {
+        const list = makeLeaderboard();
+        const lowest = list[list.length - 1].nw;
+        let insertAt = list.findIndex((e) => e.nw < netWorth);
+        if (insertAt === -1) insertAt = list.length;
+        let r;
+        if (netWorth >= lowest) r = insertAt + 1;
+        else r = Math.min(TOTAL_USERS, 101 + Math.floor(Math.max(0, 1 - netWorth / lowest) * (TOTAL_USERS - 101)));
+        const me = { name: s.name, nw: netWorth, emoji: '👤', me: true, gold: s.goldName };
+        const full = [...list.slice(0, insertAt), me, ...list.slice(insertAt)];
+        return { board: full, rank: r };
+      }, [netWorth, s.name, s.goldName]);
+
+      const withdraw = () => {
+        if (s.cash < MIN_WITHDRAW) return notify('You need ₦10B fake to withdraw', 'bad');
+        setS((p) => ({ ...p, cash: p.cash - MIN_WITHDRAW, real: p.real + REAL_PER_WITHDRAW }));
+        notify('Withdrawn! +' + fmtReal(REAL_PER_WITHDRAW) + ' real 💰');
+        try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('heavy'); } catch {}
+      };
+
+      const topUpDemo = () => {
+        setS((p) => ({ ...p, real: p.real + 1000 }));
+        notify('Demo top-up: +₦1,000.00 real');
+      };
+
+      const NAV = [
+        { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
+        { id: 'hustle', label: 'Hustle', icon: '👊', href: 'hustle.html' },
+        { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
+        { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
+        { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: '#' },
+      ];
+      const MORE_PAGES = [
+        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
+        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
+        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
+      ];
+
+      return (
+        <div className="min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black">
+          <div className="mx-auto max-w-md min-h-screen flex flex-col pb-24 relative">
+            <header className="sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]">
+              <div className="px-4 py-2.5 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display">L</div>
+                  <div className="min-w-0">
+                    <div className="text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display">Leaderboard</div>
+                    <div className="text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5">#{rank.toLocaleString()}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums">⚡ {s.energy}</div>
+                  <div className="px-2 py-1 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] text-[10px] font-extrabold tabular-nums">{fmtReal(s.real)}</div>
+                </div>
+              </div>
+            </header>
+
+            <main className="flex-1 px-4 pb-4 animate-slideDown">
+              {/* PROFILE */}
+              <Card className="relative overflow-hidden p-4 mt-3 hero-grid" gold>
+                <div className="absolute -top-16 -right-12 w-48 h-48 rounded-full bg-[#FFD60A]/25 blur-3xl pointer-events-none" />
+                <div className="relative flex items-center gap-3">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-3xl shrink-0 shadow-[0_8px_24px_-8px_rgba(255,214,10,0.6)]">
+                    👤
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <input value={s.name}
+                             onChange={(e) => setS((p) => ({ ...p, name: e.target.value.slice(0, 18) }))}
+                             className="bg-transparent text-[15px] font-black outline-none border-b border-transparent focus:border-[#FFD60A]/50 w-full min-w-0 font-display" />
+                      {s.goldName && <span className="text-[#FFD60A] text-base shrink-0">⭐</span>}
+                    </div>
+                    <div className="text-[10px] font-bold text-white/45 mt-1">
+                      Rank #{rank.toLocaleString()} · {s.taps.toLocaleString()} taps · {s.clout.toLocaleString()} clout
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-white/[0.08] grid grid-cols-3 gap-2 text-center">
+                  {[['Net Worth', fmt(netWorth)], ['Cash', fmt(s.cash)], ['Real', fmtReal(s.real)]].map(([k, v]) => (
+                    <div key={k}>
+                      <div className="text-[9px] uppercase tracking-widest text-white/35 font-bold">{k}</div>
+                      <div className="text-[12px] font-black tabular-nums mt-0.5">{v}</div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* WITHDRAW */}
+              <SectionTitle>Withdraw to Real</SectionTitle>
+              <Card className="p-4">
+                <div className="text-[11px] text-white/55 leading-relaxed">
+                  Rate: <span className="text-[#FFD60A] font-bold">₦1B fake = ₦100 real</span><br />
+                  Minimum: <span className="text-[#FFD60A] font-bold">₦10B fake = ₦1,000 real</span>
+                </div>
+                <div className="mt-3 h-2.5 rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-[#22C55E] via-[#FFD60A] to-[#FFB800] rounded-full transition-all" style={{ width: Math.min(100, (s.cash / MIN_WITHDRAW) * 100) + '%' }} />
+                </div>
+                <div className="mt-2 flex justify-between text-[10px] font-bold text-white/40 tabular-nums">
+                  <span>{fmt(s.cash)}</span>
+                  <span>{fmt(MIN_WITHDRAW)}</span>
+                </div>
+                <button onClick={withdraw} disabled={s.cash < MIN_WITHDRAW}
+                        className="w-full mt-3 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] py-3.5 text-[13px] font-black text-black active:scale-[0.97] transition disabled:from-white/[0.06] disabled:to-white/[0.06] disabled:text-white/30 font-display shadow-[0_8px_24px_-8px_rgba(34,197,94,0.6)] disabled:shadow-none">
+                  Withdraw ₦1,000.00 Real
+                </button>
+                <button onClick={topUpDemo} className="w-full mt-2 rounded-xl bg-white/[0.06] border border-white/10 py-2.5 text-[11px] font-extrabold text-white/65 active:scale-[0.97] transition">
+                  💳 Top Up ₦1,000 Real (Demo)
+                </button>
+              </Card>
+
+              {/* LEADERBOARD */}
+              <SectionTitle right={<span className="text-[10px] font-bold text-white/30">TOP 100</span>}>
+                Ranking
+              </SectionTitle>
+              <Card className="divide-y divide-white/[0.05] overflow-hidden">
+                {board.slice(0, 100).map((u, i) => (
+                  <div key={i} className={'px-3 py-2.5 flex items-center gap-2.5 ' + (u.me ? 'bg-[#FFD60A]/10' : '')}>
+                    <div className={'w-7 text-center text-[11px] font-black tabular-nums shrink-0 font-display ' +
+                      (i === 0 ? 'text-[#FFD60A] text-[13px]' : i === 1 ? 'text-white/80' : i === 2 ? 'text-[#CD7F32]' : 'text-white/30')}>
+                      {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                    </div>
+                    <div className={'w-9 h-9 rounded-lg grid place-items-center text-base shrink-0 ' + (u.me ? 'bg-[#FFD60A]/20' : 'bg-white/[0.06]')}>
+                      {u.emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className={'text-[12px] font-extrabold truncate font-display ' + (u.me ? 'text-[#FFD60A]' : '')}>
+                        {u.name} {u.me && <span className="text-[9px] opacity-70">(you)</span>}
+                        {u.gold && <span className="ml-1">⭐</span>}
+                      </div>
+                    </div>
+                    <div className="text-[11px] font-black tabular-nums text-white/65 shrink-0">{fmt(u.nw)}</div>
+                  </div>
+                ))}
+              </Card>
+
+              <Card className="p-3.5 mt-4">
+                <div className="flex items-start gap-2">
+                  <span className="text-base">🏆</span>
+                  <p className="text-[10.5px] text-white/50 leading-relaxed">
+                    Every asset, business, and cash dey count toward your Net Worth. Push higher to climb the leaderboard. Withdraw ₦10B fake for ₦1,000 real. 💰
+                  </p>
+                </div>
+              </Card>
+            </main>
+
+            <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]">
+              <div className="grid grid-cols-6 px-1 pt-1.5 safe-bottom">
+                {NAV.map((n) => {
+                  const active = n.id === 'more';
+                  return (
+                    <a key={n.id} href={n.href}
+                       onClick={(e) => { if (n.id === 'more') { e.preventDefault(); document.getElementById('more-sheet')?.classList.remove('hidden'); } }}
+                       className={'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')}>
+                      <span className={'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '')}>{n.icon}</span>
+                      <span className="text-[8.5px] font-extrabold tracking-wide font-display">{n.label}</span>
+                    </a>
+                  );
+                })}
+              </div>
+            </nav>
+
+            <div id="more-sheet" className="hidden fixed inset-0 z-50 flex items-end justify-center">
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => document.getElementById('more-sheet')?.classList.add('hidden')} />
+              <div className="relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp" onClick={(e) => e.stopPropagation()}>
+                <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-4" />
+                <div className="space-y-2">
+                  {MORE_PAGES.map((m) => (
+                    <a key={m.id} href={m.href} className="w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0">{m.icon}</div>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-extrabold font-display">{m.label}</div>
+                        <div className="text-[10px] text-white/40 font-bold mt-0.5">{m.desc}</div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {toast && (
+              <div className={'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' + (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')}>
+                {toast.msg}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

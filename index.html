@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Lagos Life — Home</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- PINNED BABEL VERSION 7.23.5 (NO MORE ERRORS) -->
+  <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+
+  <!-- FIREBASE CLIENT SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html, body {
+      margin: 0; padding: 0;
+      background: #08080B; color: #fff;
+      overflow-x: hidden; overscroll-behavior-y: none;
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    body {
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent);
+    }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+    .text-gradient-gold {
+      background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero-grid {
+      background-image:
+        linear-gradient(rgba(255,214,10,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,214,10,0.04) 1px, transparent 1px);
+      background-size: 22px 22px;
+      -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%);
+      mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%);
+    }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); }
+    .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); }
+    .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+    .tap-btn {
+      position: relative; border-radius: 9999px;
+      background: radial-gradient(circle at 30% 20%, #FFED4E 0%, #FFD60A 35%, #E6A800 70%, #B88600 100%);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.15) inset, 0 -8px 0 rgba(0,0,0,0.25) inset, 0 12px 0 rgba(139,100,0,0.55), 0 20px 50px -10px rgba(255,214,10,0.6), 0 30px 70px -20px rgba(255,184,0,0.45);
+      transition: transform 100ms ease, box-shadow 100ms ease;
+      user-select: none; touch-action: manipulation;
+    }
+    .tap-btn:active:not(:disabled) {
+      transform: translateY(6px) scale(0.97);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.15) inset, 0 -4px 0 rgba(0,0,0,0.25) inset, 0 4px 0 rgba(139,100,0,0.55), 0 10px 30px -10px rgba(255,214,10,0.7);
+    }
+    .tap-btn::before { content: ''; position: absolute; inset: 8px; border-radius: 9999px; background: radial-gradient(circle at 35% 25%, rgba(255,255,255,0.4), transparent 55%); pointer-events: none; }
+    .tap-btn::after { content: ''; position: absolute; inset: -6px; border-radius: 9999px; background: radial-gradient(circle, rgba(255,214,10,0.4), transparent 70%); filter: blur(20px); z-index: -1; animation: pulseGlow 2.5s ease-in-out infinite; pointer-events: none; }
+    @keyframes pulseGlow { 0%, 100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.08); } }
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      60% { opacity: 1; }
+      100% { opacity: 0; transform: translate(-50%, -110px) scale(1.5); }
+    }
+    .tap-float {
+      position: absolute; left: 50%; bottom: 100%;
+      font-weight: 900; font-size: 20px; color: #FFD60A;
+      text-shadow: 0 2px 12px rgba(255,214,10,0.8), 0 0 20px rgba(255,214,10,0.5);
+      pointer-events: none; animation: floatUp 900ms cubic-bezier(0.22,1,0.36,1) forwards;
+      white-space: nowrap; z-index: 100; font-family: 'Sora', sans-serif;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+    .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.18) 0%, rgba(255,214,10,0.06) 100%); border: 1px solid rgba(255,214,10,0.3); box-shadow: 0 0 20px rgba(255,214,10,0.2); }
+    .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    input { -webkit-user-select: text; user-select: text; }
+    input:focus { outline: none; }
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    
+    .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;">
+      <div style="font-size:48px;">🇳🇬</div>
+      <div style="font-family:Sora;font-weight:800;font-size:14px;color:#FFD60A;">Loading Lagos Life...</div>
+    </div>
+  </div>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    /* ═══ FIREBASE INITIALIZATION ═══ */
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    /* ═══ CONSTANTS ═══ */
+    const MAX_E = 100;
+    const ENERGY_MS = 5 * 60 * 1000;
+    const TOTAL_USERS = 256890;
+    const BASE_TAP = 500;
+
+    const BIZ_PRICES = { water: 10_000, suya: 250_000, keke: 500_000, phone: 2_000_000, danfo: 5_000_000, wash: 25_000_000, bet9ja: 50_000_000, lounge: 500_000_000, oil: 5_000_000_000 };
+    const BIZ_PER_HR = { water: 2_000, suya: 40_000, keke: 75_000, phone: 350_000, danfo: 800_000, wash: 4_000_000, bet9ja: 9_000_000, lounge: 90_000_000, oil: 1_000_000_000 };
+    const ASSET_PRICES = { chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000, gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000, mansion: 1_000_000_000_000 };
+    const DEST_BONUSES = { ikeja: 0, accra: 100, dubai: 500, uk: 1000, canada: 2000, usa: 5000, space: 25000 };
+
+    /* ═══ HELPERS ═══ */
+    const fmt = (n) => {
+      n = Math.floor(n || 0);
+      const s = n < 0 ? '-' : '';
+      n = Math.abs(n);
+      if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
+      if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return s + '₦' + (n / 1e3).toFixed(1) + 'K';
+      return s + '₦' + n.toLocaleString();
+    };
+    const fmtReal = (n) => '₦' + (n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const mmss = (ms) => {
+      const t = Math.max(0, Math.ceil(ms / 1000));
+      return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
+    };
+    const roundRect = (ctx, x, y, w, h, r) => {
+      ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r); ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r); ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+    };
+
+    /* ═══ AUDIO ENGINE (LAGOS AFROBEAT + SFX) ═══ */
+    const AudioEngine = (() => {
+      let ctx = null; let musicGain, sfxGain, musicPlaying = false, musicTimer, step = 0;
+      const STEP_MS = 300;
+      const bassPattern = [65.41, null, 65.41, null, 73.42, null, 87.31, null];
+      const penta = [523.25, 587.33, 659.25, 783.99, 880.0];
+
+      function init() {
+        if (ctx) return;
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        let master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination);
+        musicGain = ctx.createGain(); musicGain.gain.value = 0.15; musicGain.connect(master);
+        sfxGain = ctx.createGain(); sfxGain.gain.value = 0.5; sfxGain.connect(master);
+      }
+      function tone(f, d, t, dest, w=0, g=0.3) {
+        if (!ctx) return; const start = ctx.currentTime + w;
+        const o = ctx.createOscillator(), gain = ctx.createGain();
+        o.type = t; o.frequency.value = f;
+        gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(g, start+0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start+d);
+        o.connect(gain); gain.connect(dest); o.start(start); o.stop(start+d+0.05);
+      }
+      function kick() { if(!ctx) return; const t=ctx.currentTime; const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(40,t+0.14); g.gain.setValueAtTime(0.8,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2); o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+0.22); }
+      function hat() { if(!ctx) return; const t=ctx.currentTime; const b=ctx.createBuffer(1, ctx.sampleRate*0.04, ctx.sampleRate); const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const s=ctx.createBufferSource(); s.buffer=b; const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=6000; const g=ctx.createGain(); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04); s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); }
+      
+      function tick() {
+        if (!musicPlaying) return;
+        const s = step % 8;
+        if (s===0||s===3||s===4) kick();
+        hat();
+        if (bassPattern[s]) tone(bassPattern[s], 0.3, "sine", musicGain, 0, 0.4);
+        if (s===2||s===6) [329.63,415.3,493.88].forEach(f => tone(f, 0.3, "triangle", musicGain, 0, 0.06));
+        step++;
+      }
+
+      return {
+        startMusic: () => { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); },
+        stopMusic: () => { musicPlaying=false; clearInterval(musicTimer); },
+        toggle: () => { musicPlaying ? AudioEngine.stopMusic() : AudioEngine.startMusic(); return musicPlaying; },
+        tap: () => { init(); if(ctx.state==="suspended") ctx.resume(); tone(880, 0.09, "triangle", sfxGain, 0, 0.28); },
+        coin: () => { init(); tone(1046, 0.08, "square", sfxGain, 0, 0.15); tone(1318, 0.15, "square", sfxGain, 0.07, 0.15); },
+        error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
+        purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); },
+        isPlaying: () => musicPlaying
+      };
+    })();
+
+    /* ═══ UI ═══ */
+    const Card = ({ children, className = '', gold = false }) => (
+      <div className={'rounded-2xl ' + (gold ? 'card-gold' : 'card-gradient') + ' ' + className}>{children}</div>
+    );
+    const SectionTitle = ({ children, right }) => (
+      <div className="flex items-end justify-between mb-2.5 mt-6">
+        <h2 className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display">{children}</h2>
+        {right}
+      </div>
+    );
+
+    /* ═══ APP ═══ */
+    function App() {
+      const [s, setS] = useState(null);
+      const [uid, setUid] = useState(null);
+      const [authError, setAuthError] = useState(null);
+      const [toast, setToast] = useState(null);
+      const [online, setOnline] = useState(TOTAL_USERS);
+      const [tapFloats, setTapFloats] = useState([]);
+      const [shareOpen, setShareOpen] = useState(false);
+      const [shareUrl, setShareUrl] = useState(null);
+      const [sendOpen, setSendOpen] = useState(false);
+      const [sendTo, setSendTo] = useState('');
+      const [sendAmt, setSendAmt] = useState('');
+      const [musicOn, setMusicOn] = useState(false);
+      const tapCounter = useRef(0);
+
+      /* Initialize Firebase Auth & Sync */
+      useEffect(() => {
+        const tg = window?.Telegram?.WebApp;
+        if (tg) { tg.ready(); tg.expand(); }
+        
+        auth.signInAnonymously().then((cred) => {
+          const userId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : cred.user.uid;
+          setUid(userId);
+          
+          const userRef = db.collection("users").doc(userId);
+          const unsubscribe = userRef.onSnapshot((doc) => {
+            if (doc.exists) {
+              setS(doc.data());
+            } else {
+              const defaultData = {
+                name: tg?.initDataUnsafe?.user?.first_name || 'Aje Butler',
+                cash: 25000, real: 0, energy: MAX_E,
+                lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
+                taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+              };
+              userRef.set(defaultData);
+              setS(defaultData);
+            }
+          });
+          return unsubscribe;
+        }).catch(e => {
+          console.error("Firebase Auth Error:", e);
+          setAuthError(e.message);
+        });
+      }, []);
+
+      /* Start music on first user gesture */
+      useEffect(() => {
+        const unlock = () => { if (!musicOn) { AudioEngine.startMusic(); setMusicOn(true); } };
+        window.addEventListener("pointerdown", unlock, { once: true });
+        return () => window.removeEventListener("pointerdown", unlock);
+      }, [musicOn]);
+
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2400);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+
+      const updateUser = async (data) => {
+        setS(prev => ({ ...prev, ...data }));
+        if (uid) await db.collection("users").doc(uid).update({ ...data, lastSeen: Date.now() });
+      };
+
+      /* Tick: energy + business income */
+      useEffect(() => {
+        if (!s) return;
+        const iv = setInterval(() => {
+          const now = Date.now();
+          let energy = s.energy;
+          let lastEnergy = s.lastEnergy;
+          if (energy < MAX_E) {
+            const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
+            if (gained > 0) {
+              energy = Math.min(MAX_E, energy + gained);
+              lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
+            }
+          }
+          const perHr = Object.entries(s.businesses || {}).reduce((a, [id, cnt]) => a + cnt * (BIZ_PER_HR[id] || 0), 0);
+          const newCash = s.cash + perHr / 3600;
+          
+          if (energy !== s.energy || perHr > 0) {
+            setS(prev => ({ ...prev, energy, lastEnergy, cash: newCash }));
+            if (uid && perHr > 0) {
+              db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600), energy, lastEnergy });
+            }
+          }
+        }, 1000);
+        return () => clearInterval(iv);
+      }, [s, uid]);
+
+      /* Online count */
+      useEffect(() => {
+        const iv = setInterval(() => { setOnline((o) => o + 1 + Math.floor(Math.random() * 14)); }, 3200);
+        return () => clearInterval(iv);
+      }, []);
+
+      if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div><div className="text-xs text-white/50 mt-2">Go to Firebase Console → Authentication → Sign-in method → Enable Anonymous.</div></div>;
+      if (!s) return <div className="min-h-screen flex items-center justify-center flex-col gap-3"><div className="text-5xl">🇳🇬</div><div className="text-[12px] font-bold text-[#FFD60A] font-display">Loading...</div></div>;
+
+      /* Derived */
+      const bizValue = Object.entries(s.businesses || {}).reduce((a, [id, c]) => a + c * (BIZ_PRICES[id] || 0), 0);
+      const assetValue = Object.entries(s.assets || {}).reduce((a, [id, c]) => a + c * (ASSET_PRICES[id] || 0), 0);
+      const netWorth = Math.floor((s.cash || 0) + bizValue + assetValue);
+      const tapBonus = (s.travels || []).reduce((a, id) => a + (DEST_BONUSES[id] || 0), 0);
+      const TAP_VALUE = BASE_TAP + tapBonus;
+      const rank = netWorth <= 0 ? TOTAL_USERS : Math.max(1, Math.floor(TOTAL_USERS - Math.min(1, Math.log10(netWorth + 1) / 13) * (TOTAL_USERS - 1)));
+      const energyNextIn = s.energy >= MAX_E ? 0 : ENERGY_MS - ((Date.now() - s.lastEnergy) % ENERGY_MS);
+
+      /* Tap */
+      const doTap = () => {
+        if (s.energy < 1) { AudioEngine.error(); return notify('No energy! Wait or refill ⚡', 'bad'); }
+        AudioEngine.tap();
+        try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light'); } catch {}
+        
+        const newEnergy = Math.max(0, s.energy - 1);
+        updateUser({ cash: s.cash + TAP_VALUE, energy: newEnergy, lastEnergy: s.energy >= MAX_E ? Date.now() : s.lastEnergy, taps: s.taps + 1 });
+
+        const id = ++tapCounter.current;
+        setTapFloats((f) => [...f.slice(-6), { id, x: 40 + Math.random() * 20, amt: TAP_VALUE }]);
+        setTimeout(() => setTapFloats((f) => f.filter((x) => x.id !== id)), 950);
+      };
+
+      /* Canvas share card */
+      const generateShareCard = () => {
+        const c = document.createElement('canvas');
+        c.width = 1080; c.height = 1080;
+        const ctx = c.getContext('2d');
+        const bg = ctx.createLinearGradient(0, 0, 1080, 1080);
+        bg.addColorStop(0, '#0A0A10'); bg.addColorStop(1, '#1a1a22');
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, 1080, 1080);
+        const rad = ctx.createRadialGradient(540, 420, 0, 540, 420, 720);
+        rad.addColorStop(0, 'rgba(255,214,10,0.28)'); rad.addColorStop(1, 'rgba(255,214,10,0)');
+        ctx.fillStyle = rad; ctx.fillRect(0, 0, 1080, 1080);
+        ctx.strokeStyle = 'rgba(255,214,10,0.05)'; ctx.lineWidth = 2;
+        for (let i = 0; i < 1080; i += 60) {
+          ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1080); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(1080, i); ctx.stroke();
+        }
+        ctx.strokeStyle = 'rgba(255,214,10,0.35)'; ctx.lineWidth = 4;
+        roundRect(ctx, 40, 40, 1000, 1000, 40); ctx.stroke();
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#FFD60A'; ctx.font = 'bold 34px Sora, Inter, sans-serif';
+        ctx.fillText('🌴 LAGOS LIFE', 540, 130);
+        ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 56px Sora, Inter, sans-serif';
+        ctx.fillText(s.name || 'Aje Butler', 540, 260);
+        ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = 'bold 26px Inter, sans-serif';
+        ctx.fillText('TOTAL NET WORTH', 540, 400);
+        const goldGrad = ctx.createLinearGradient(180, 460, 900, 580);
+        goldGrad.addColorStop(0, '#FFE566'); goldGrad.addColorStop(0.5, '#FFD60A'); goldGrad.addColorStop(1, '#FFB800');
+        ctx.fillStyle = goldGrad; ctx.font = 'bold 130px Sora, Inter, sans-serif';
+        ctx.fillText(fmt(netWorth), 540, 530);
+        ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.font = 'bold 30px Inter, sans-serif';
+        ctx.fillText('Rank #' + rank.toLocaleString() + ' of ' + TOTAL_USERS.toLocaleString() + ' hustlers', 540, 610);
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(120, 680); ctx.lineTo(960, 680); ctx.stroke();
+        [{ label: 'CASH', value: fmt(s.cash) }, { label: 'BUSINESS', value: fmt(bizValue) }, { label: 'ASSETS', value: fmt(assetValue) }].forEach((st, i) => {
+          const x = 240 + i * 300;
+          ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = 'bold 22px Inter, sans-serif'; ctx.fillText(st.label, x, 740);
+          ctx.fillStyle = '#FFD60A'; ctx.font = 'bold 38px Sora, Inter, sans-serif'; ctx.fillText(st.value, x, 792);
+        });
+        ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.font = 'bold 26px Inter, sans-serif'; ctx.fillText('Hustle or Nothing 🇳🇬', 540, 900);
+        ctx.fillStyle = 'rgba(255,214,10,0.15)'; roundRect(ctx, 340, 940, 400, 70, 35); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,214,10,0.55)'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = '#FFD60A'; ctx.font = 'bold 28px Sora, Inter, sans-serif'; ctx.fillText('🎮 Play Lagos Life', 540, 986);
+        return c;
+      };
+
+      const openShare = async () => {
+        const canvas = generateShareCard();
+        setShareUrl(canvas.toDataURL('image/png'));
+        setShareOpen(true);
+        try {
+          canvas.toBlob(async (blob) => {
+            if (!blob) return;
+            const file = new File([blob], 'lagos-life.png', { type: 'image/png' });
+            const text = `I'm worth ${fmt(netWorth)} on Lagos Life 🇳🇬🔥 Rank #${rank.toLocaleString()} of ${TOTAL_USERS.toLocaleString()} hustlers. Can you beat me?`;
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              try { await navigator.share({ files: [file], text, title: 'Lagos Life' }); } catch {}
+            }
+          }, 'image/png');
+        } catch {}
+      };
+
+      const downloadCard = () => {
+        if (!shareUrl) return;
+        const a = document.createElement('a');
+        a.href = shareUrl; a.download = 'lagos-life-' + Date.now() + '.png';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        notify('Card downloaded! Post am on TikTok 🎵');
+      };
+
+      const shareToTikTok = async () => {
+        const text = `I'm worth ${fmt(netWorth)} on Lagos Life 🇳🇬🔥 Rank #${rank.toLocaleString()} of ${TOTAL_USERS.toLocaleString()} hustlers. Can you beat me?`;
+        try { if (navigator.clipboard) { await navigator.clipboard.writeText(text); notify('Caption copied! Paste am on TikTok 🎵'); } } catch {}
+        const url = 'https://www.tiktok.com/';
+        const tg = window?.Telegram?.WebApp;
+        try { if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank'); } catch {}
+      };
+
+      /* Send money (Simple Firestore implementation) */
+      const sendMoney = async () => {
+        const user = sendTo.trim().replace('@', '');
+        const amt = Math.floor(Number(sendAmt));
+        if (!user) return notify('Enter a username', 'bad');
+        if (!amt || amt < 100) return notify('Minimum send na ₦100', 'bad');
+        if (amt > s.cash) { AudioEngine.error(); return notify('You no get that money 💸', 'bad'); }
+        
+        try {
+          const snap = await db.collection("users").where("name", "==", user).get();
+          if (snap.empty) { AudioEngine.error(); return notify('User not found in Firebase', 'bad'); }
+          
+          const recipientRef = snap.docs[0].ref;
+          if (recipientRef.id === uid) { AudioEngine.error(); return notify('You cannot send to yourself', 'bad'); }
+
+          await db.runTransaction(async (t) => {
+            t.update(db.collection("users").doc(uid), { cash: firebase.firestore.FieldValue.increment(-amt) });
+            t.update(recipientRef, { cash: firebase.firestore.FieldValue.increment(amt) });
+          });
+          
+          AudioEngine.coin();
+          setSendOpen(false); setSendTo(''); setSendAmt('');
+          notify(`Sent ${fmt(amt)} to @${user} ✅`);
+        } catch (e) {
+          AudioEngine.error();
+          notify('Transaction failed', 'bad');
+        }
+      };
+
+      const NAV = [
+        { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
+        { id: 'hustle', label: 'Hustle', icon: '👊', href: 'hustle.html' },
+        { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
+        { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
+        { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: '#' },
+      ];
+      const MORE_PAGES = [
+        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
+        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
+        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
+      ];
+
+      return (
+        <div className="min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black">
+          <div className="mx-auto max-w-md min-h-screen flex flex-col pb-24 relative">
+            
+            <button onClick={() => { const on = AudioEngine.toggle(); setMusicOn(on); }} className="music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition backdrop-blur">
+              <span className="text-base">{musicOn ? "🔊" : "🔇"}</span>
+            </button>
+
+            <header className="sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]">
+              <div className="px-4 py-2.5 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display">L</div>
+                  <div className="min-w-0">
+                    <div className="text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display">Lagos Life</div>
+                    <div className="text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5">{fmt(s.cash)}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums">⚡ {s.energy}</div>
+                  <div className="px-2 py-1 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] text-[10px] font-extrabold tabular-nums">{fmtReal(s.real)}</div>
+                </div>
+              </div>
+            </header>
+
+            <main className="flex-1 px-4 pb-4 animate-slideDown">
+              <Card className="relative overflow-hidden p-5 mt-3 hero-grid" gold>
+                <div className="absolute -top-24 -right-16 w-64 h-64 rounded-full bg-[#FFD60A]/25 blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-20 -left-10 w-48 h-48 rounded-full bg-[#FFB800]/15 blur-3xl pointer-events-none" />
+                <div className="relative">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-[0.22em] font-extrabold text-white/50 font-display">Total Net Worth</span>
+                    <button onClick={openShare} className="flex items-center gap-1.5 rounded-lg bg-white/[0.1] border border-white/15 px-3 py-1.5 text-[10px] font-extrabold active:scale-95 transition">
+                      <span>🎵</span> SHARE
+                    </button>
+                  </div>
+                  <div className="mt-1.5 text-[44px] leading-none font-black tracking-tighter text-gradient-gold font-display tabular-nums">{fmt(netWorth)}</div>
+                  <div className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-white/60">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] glow-dot animate-pulse" />
+                    Rank #{rank.toLocaleString()} of {online.toLocaleString()} hustlers
+                  </div>
+                  <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/[0.08] pt-3.5">
+                    {[['Cash', fmt(s.cash)], ['Business', fmt(bizValue)], ['Assets', fmt(assetValue)]].map(([k, v]) => (
+                      <div key={k}>
+                        <div className="text-[9px] uppercase tracking-widest text-white/35 font-bold">{k}</div>
+                        <div className="text-[13px] font-black tabular-nums mt-0.5">{v}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </Card>
+
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <Card className="p-3.5">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[9px] uppercase tracking-widest text-white/35 font-bold">Real Earning</div>
+                    <span className="text-sm">💰</span>
+                  </div>
+                  <div className="text-xl font-black text-[#22C55E] tabular-nums mt-1 font-display">{fmtReal(s.real)}</div>
+                </Card>
+                <button onClick={() => setSendOpen(true)} className="text-left">
+                  <Card className="p-3.5 h-full hover:border-[#FFD60A]/40 transition">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[9px] uppercase tracking-widest text-white/35 font-bold">Send Money</div>
+                      <span className="text-sm">📤</span>
+                    </div>
+                    <div className="text-xl font-black text-[#FFD60A] tabular-nums mt-1 font-display">@user →</div>
+                  </Card>
+                </button>
+              </div>
+
+              <div className="mt-8 flex flex-col items-center">
+                <div className="relative">
+                  <button onClick={doTap} className="tap-btn w-56 h-56 grid place-items-center text-black">
+                    <div className="text-center relative z-10">
+                      <div className="text-5xl drop-shadow">👊🏾</div>
+                      <div className="text-2xl font-black tracking-tighter mt-1 font-display">HUSTLE</div>
+                      <div className="text-[11px] font-extrabold opacity-70 font-display">+{fmt(TAP_VALUE)}</div>
+                    </div>
+                  </button>
+                  {tapFloats.map((f) => (
+                    <span key={f.id} className="tap-float" style={{ left: f.x + '%' }}>+{fmt(f.amt)}</span>
+                  ))}
+                </div>
+                <div className="mt-6 w-full flex items-center gap-2 text-[11px] font-bold text-white/50">
+                  <span className="tabular-nums">⚡ {s.energy}/{MAX_E}</span>
+                  <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-[#FFD60A] to-[#FFB800] rounded-full transition-all" style={{ width: (s.energy / MAX_E * 100) + '%' }} />
+                  </div>
+                  <span className="tabular-nums">{s.energy >= MAX_E ? 'FULL' : mmss(energyNextIn)}</span>
+                </div>
+              </div>
+
+              <SectionTitle right={<span className="text-[10px] font-bold text-[#22C55E] flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse glow-dot" />LIVE</span>}>
+                Hustlers Online
+              </SectionTitle>
+              <Card className="p-4">
+                <div className="text-3xl font-black text-gradient-gold tabular-nums font-display">{online.toLocaleString()}</div>
+                <div className="text-[10px] text-white/40 mt-1">hustlers dey grind right now 🇳🇬</div>
+              </Card>
+            </main>
+
+            <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]">
+              <div className="grid grid-cols-6 px-1 pt-1.5 safe-bottom">
+                {NAV.map((n) => {
+                  const active = n.id === 'home';
+                  return (
+                    <a key={n.id} href={n.href}
+                       onClick={(e) => { if (n.id === 'more') { e.preventDefault(); document.getElementById('more-sheet')?.classList.remove('hidden'); } }}
+                       className={'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')}>
+                      <span className={'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '')}>{n.icon}</span>
+                      <span className="text-[8.5px] font-extrabold tracking-wide font-display">{n.label}</span>
+                    </a>
+                  );
+                })}
+              </div>
+            </nav>
+
+            <div id="more-sheet" className="hidden fixed inset-0 z-50 flex items-end justify-center">
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => document.getElementById('more-sheet')?.classList.add('hidden')} />
+              <div className="relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp" onClick={(e) => e.stopPropagation()}>
+                <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-4" />
+                <div className="space-y-2">
+                  {MORE_PAGES.map((m) => (
+                    <a key={m.id} href={m.href} className="w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0">{m.icon}</div>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-extrabold font-display">{m.label}</div>
+                        <div className="text-[10px] text-white/40 font-bold mt-0.5">{m.desc}</div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {sendOpen && (
+              <div className="fixed inset-0 z-50 grid place-items-center p-6">
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSendOpen(false)} />
+                <div className="relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn">
+                  <div className="text-3xl text-center">📤</div>
+                  <div className="text-center mt-2 text-[13px] font-black tracking-widest text-[#FFD60A] font-display">SEND LAGOS CASH</div>
+                  <p className="text-center text-[11px] text-white/50 mt-1">Send fake money to another hustler</p>
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Recipient In-Game Name</label>
+                      <input value={sendTo} onChange={(e) => setSendTo(e.target.value)} placeholder="e.g. Aje Butler"
+                             className="mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[13px] font-extrabold text-white placeholder-white/25 focus:border-[#FFD60A]/50 transition" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest text-white/40 font-bold">Amount</label>
+                      <input type="number" value={sendAmt} onChange={(e) => setSendAmt(e.target.value)} placeholder="Minimum ₦100"
+                             className="mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[13px] font-extrabold text-white placeholder-white/25 focus:border-[#FFD60A]/50 transition tabular-nums" />
+                    </div>
+                    <div className="text-[10px] text-white/40 tabular-nums">Available: {fmt(s.cash)}</div>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <button onClick={() => setSendOpen(false)} className="flex-1 rounded-xl bg-white/[0.06] border border-white/10 py-3 text-[12px] font-extrabold text-white/70 active:scale-95 transition">Cancel</button>
+                    <button onClick={sendMoney} className="flex-1 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] py-3 text-[12px] font-black text-black active:scale-95 transition shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)]">Send</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {shareOpen && shareUrl && (
+              <div className="fixed inset-0 z-50 grid place-items-center p-4">
+                <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={() => setShareOpen(false)} />
+                <div className="relative w-full max-w-sm animate-popIn">
+                  <div className="rounded-2xl overflow-hidden border border-[#FFD60A]/40 shadow-[0_0_60px_-10px_rgba(255,214,10,0.5)]">
+                    <img src={shareUrl} alt="Share card" className="w-full block" />
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button onClick={downloadCard} className="rounded-xl bg-white/[0.06] border border-white/10 py-3 text-[12px] font-extrabold text-white/85 active:scale-95 transition">⬇️ Download</button>
+                    <button onClick={shareToTikTok} className="rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] py-3 text-[12px] font-black text-black active:scale-95 transition shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)]">🎵 TikTok</button>
+                  </div>
+                  <button onClick={() => setShareOpen(false)} className="mt-2 w-full rounded-xl bg-white/[0.04] border border-white/10 py-2.5 text-[11px] font-extrabold text-white/60 active:scale-95 transition">Close</button>
+                </div>
+              </div>
+            )}
+
+            {toast && (
+              <div className={'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' + (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')}>
+                {toast.msg}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

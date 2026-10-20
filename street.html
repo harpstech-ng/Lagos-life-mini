@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Lagos Life — Street</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- PINNED BABEL VERSION 7.23.5 -->
+  <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+
+  <!-- FIREBASE CLIENT SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+      }},
+    };
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html, body {
+      margin: 0; padding: 0;
+      background: #08080B; color: #fff;
+      overflow-x: hidden; overscroll-behavior-y: none;
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent);
+    }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+    .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); }
+    .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); }
+    .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.18) 0%, rgba(255,214,10,0.06) 100%); border: 1px solid rgba(255,214,10,0.3); box-shadow: 0 0 20px rgba(255,214,10,0.2); }
+    .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+    .action-pulse { animation: pulse 1.2s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;">
+      <div style="font-size:48px;">🇳🇬</div>
+      <div style="font-family:Sora;font-weight:800;font-size:14px;color:#FFD60A;">Loading Street...</div>
+    </div>
+  </div>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useMemo } = React;
+
+    /* ═══ FIREBASE INITIALIZATION ═══ */
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const MAX_E = 100;
+    const ENERGY_MS = 5 * 60 * 1000;
+
+    const BIZ_PRICES = { water: 10_000, suya: 250_000, keke: 500_000, phone: 2_000_000, danfo: 5_000_000, wash: 25_000_000, bet9ja: 50_000_000, lounge: 500_000_000, oil: 5_000_000_000 };
+    const BIZ_PER_HR = { water: 2000, suya: 40000, keke: 75000, phone: 350000, danfo: 800000, wash: 4000000, bet9ja: 9000000, lounge: 90000000, oil: 1000000000 };
+    const ASSET_PRICES = { chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000, gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000, mansion: 1_000_000_000_000 };
+
+    const STREET_ACTIONS = [
+      { id: 'rob', label: 'Rob a Stranger', emoji: '🥷', cd: 45, desc: '45% chance of big money. 55% you get caught.', color: 'from-red-500/25 to-red-700/10' },
+      { id: 'beg', label: 'Beg for Money', emoji: '🙏', cd: 30, desc: 'Small but guaranteed cash from strangers.', color: 'from-amber-400/25 to-amber-700/10' },
+      { id: 'tax', label: 'Collect Street Tax', emoji: '💵', cd: 60, desc: '60% chance big money. 40% the boys chase you.', color: 'from-emerald-500/25 to-emerald-700/10' },
+      { id: 'spray', label: 'Spray at Owambe', emoji: '💸', cd: 90, desc: 'Costs ₦100,000. Gives +40 clout.', color: 'from-fuchsia-500/25 to-fuchsia-700/10' },
+    ];
+
+    const fmt = (n) => {
+      n = Math.floor(n || 0);
+      const s = n < 0 ? '-' : '';
+      n = Math.abs(n);
+      if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
+      if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return s + '₦' + (n / 1e3).toFixed(1) + 'K';
+      return s + '₦' + n.toLocaleString();
+    };
+    const fmtReal = (n) => '₦' + (n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const mmss = (ms) => {
+      const t = Math.max(0, Math.ceil(ms / 1000));
+      return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
+    };
+
+    /* ═══ AUDIO ENGINE ═══ */
+    const AudioEngine = (() => {
+      let ctx = null; let musicGain, sfxGain, musicPlaying = false, musicTimer, step = 0;
+      const STEP_MS = 300;
+      const bassPattern = [65.41, null, 65.41, null, 73.42, null, 87.31, null];
+      function init() {
+        if (ctx) return;
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        let master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination);
+        musicGain = ctx.createGain(); musicGain.gain.value = 0.12; musicGain.connect(master); // Slightly lower volume for background
+        sfxGain = ctx.createGain(); sfxGain.gain.value = 0.5; sfxGain.connect(master);
+      }
+      function tone(f, d, t, dest, w=0, g=0.3) {
+        if (!ctx) return; const start = ctx.currentTime + w;
+        const o = ctx.createOscillator(), gain = ctx.createGain();
+        o.type = t; o.frequency.value = f;
+        gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(g, start+0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start+d);
+        o.connect(gain); gain.connect(dest); o.start(start); o.stop(start+d+0.05);
+      }
+      function kick() { if(!ctx) return; const t=ctx.currentTime; const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(40,t+0.14); g.gain.setValueAtTime(0.8,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2); o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+0.22); }
+      function hat() { if(!ctx) return; const t=ctx.currentTime; const b=ctx.createBuffer(1, ctx.sampleRate*0.04, ctx.sampleRate); const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const s=ctx.createBufferSource(); s.buffer=b; const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=6000; const g=ctx.createGain(); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04); s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); }
+      
+      function tick() {
+        if (!musicPlaying) return;
+        const s = step % 8;
+        if (s===0||s===3||s===4) kick();
+        hat();
+        if (bassPattern[s]) tone(bassPattern[s], 0.3, "sine", musicGain, 0, 0.4);
+        if (s===2||s===6) [329.63,415.3,493.88].forEach(f => tone(f, 0.3, "triangle", musicGain, 0, 0.06));
+        step++;
+      }
+
+      return {
+        startMusic: () => { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); },
+        stopMusic: () => { musicPlaying=false; clearInterval(musicTimer); },
+        coin: () => { init(); tone(1046, 0.08, "square", sfxGain, 0, 0.15); tone(1318, 0.15, "square", sfxGain, 0.07, 0.15); },
+        error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
+      };
+    })();
+
+    const Card = ({ children, className = '', gold = false }) => (
+      <div className={'rounded-2xl ' + (gold ? 'card-gold' : 'card-gradient') + ' ' + className}>{children}</div>
+    );
+    const SectionTitle = ({ children, right }) => (
+      <div className="flex items-end justify-between mb-2.5 mt-6">
+        <h2 className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display">{children}</h2>
+        {right}
+      </div>
+    );
+
+    function App() {
+      const [s, setS] = useState(null);
+      const [uid, setUid] = useState(null);
+      const [authError, setAuthError] = useState(null);
+      const [toast, setToast] = useState(null);
+      const [log, setLog] = useState([]);
+      const [now, setNow] = useState(Date.now());
+
+      /* Initialize Firebase Auth & Sync */
+      useEffect(() => {
+        const tg = window?.Telegram?.WebApp;
+        if (tg) { tg.ready(); tg.expand(); }
+
+        // 2-Second Timeout Fallback
+        const timer = setTimeout(() => {
+          setS(prev => prev || {
+            name: tg?.initDataUnsafe?.user?.first_name || 'Aje Butler',
+            cash: 25000, real: 0, energy: MAX_E,
+            lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
+            taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+          });
+        }, 2000);
+
+        auth.signInAnonymously().then((cred) => {
+          const userId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : cred.user.uid;
+          setUid(userId);
+          
+          const userRef = db.collection("users").doc(userId);
+          const unsubscribe = userRef.onSnapshot((doc) => {
+            clearTimeout(timer);
+            if (doc.exists) {
+              setS(doc.data());
+            } else {
+              const defaultData = {
+                name: tg?.initDataUnsafe?.user?.first_name || 'Aje Butler',
+                cash: 25000, real: 0, energy: MAX_E,
+                lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
+                taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+              };
+              userRef.set(defaultData);
+              setS(defaultData);
+            }
+          });
+          return unsubscribe;
+        }).catch(e => {
+          clearTimeout(timer);
+          console.error("Firebase Auth Error:", e);
+          setAuthError(e.message);
+        });
+      }, []);
+
+      /* Start music on first user gesture anywhere on screen */
+      useEffect(() => {
+        const unlock = () => { AudioEngine.startMusic(); };
+        window.addEventListener("pointerdown", unlock, { once: true });
+        return () => window.removeEventListener("pointerdown", unlock);
+      }, []);
+
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2600);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+
+      /* 1s tick for cooldown + income */
+      useEffect(() => {
+        if (!s) return;
+        const iv = setInterval(() => {
+          setNow(Date.now());
+          setS((p) => {
+            const nowT = Date.now();
+            let energy = p.energy;
+            let lastEnergy = p.lastEnergy;
+            if (energy < MAX_E) {
+              const gained = Math.floor((nowT - lastEnergy) / ENERGY_MS);
+              if (gained > 0) {
+                energy = Math.min(MAX_E, energy + gained);
+                lastEnergy = energy >= MAX_E ? nowT : lastEnergy + gained * ENERGY_MS;
+              }
+            }
+            const perHr = Object.entries(p.businesses || {}).reduce((a, [id, cnt]) => a + cnt * (BIZ_PER_HR[id] || 0), 0);
+            const newCash = p.cash + perHr / 3600;
+            if (energy !== p.energy || perHr > 0) {
+              if (uid && perHr > 0) {
+                db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600), energy, lastEnergy });
+              }
+              return { ...p, energy, lastEnergy, cash: newCash };
+            }
+            return p;
+          });
+        }, 1000);
+        return () => clearInterval(iv);
+      }, [s, uid]);
+
+      if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div><div className="text-xs text-white/50 mt-2">Go to Firebase Console → Authentication → Sign-in method → Enable Anonymous.</div></div>;
+      if (!s) return <div className="min-h-screen flex items-center justify-center flex-col gap-3"><div className="text-5xl">🇳🇬</div><div className="text-[12px] font-bold text-[#FFD60A] font-display">Loading...</div></div>;
+
+      const bizValue = Object.entries(s.businesses || {}).reduce((a, [id, c]) => a + c * (BIZ_PRICES[id] || 0), 0);
+      const assetValue = Object.entries(s.assets || {}).reduce((a, [id, c]) => a + c * (ASSET_PRICES[id] || 0), 0);
+      const netWorth = Math.floor((s.cash || 0) + bizValue + assetValue);
+
+      const act = async (action) => {
+        const last = (s.street || {})[action.id] || 0;
+        if (Date.now() - last < action.cd * 1000) return;
+
+        let msg = '';
+        let delta = {};
+        let logKind = 'good';
+
+        if (action.id === 'rob') {
+          if (Math.random() < 0.45) {
+            const g = 50_000 + Math.floor(Math.random() * 450_000);
+            delta = { cash: g };
+            msg = `You robbed a stranger: +${fmt(g)} 🥷`;
+          } else {
+            delta = { energy: -20 };
+            msg = 'You got caught. Lost 20 energy 😩';
+            logKind = 'bad';
+          }
+        } else if (action.id === 'beg') {
+          const g = 5_000 + Math.floor(Math.random() * 45_000);
+          delta = { cash: g };
+          msg = `Person gave you ${fmt(g)} 🙏`;
+        } else if (action.id === 'tax') {
+          if (Math.random() < 0.6) {
+            const g = 200_000 + Math.floor(Math.random() * 1_800_000);
+            delta = { cash: g };
+            msg = `Street tax collected: +${fmt(g)} 💵`;
+          } else {
+            delta = { energy: -15 };
+            msg = 'The boys chased you. -15 energy 🏃🏾';
+            logKind = 'bad';
+          }
+        } else {
+          if (s.cash < 100_000) { AudioEngine.error(); return notify('Need ₦100,000 to spray', 'bad'); }
+          delta = { cash: -100_000, clout: 40 };
+          msg = 'You sprayed ₦100,000 at Owambe. +40 clout 💸';
+        }
+
+        if (logKind === 'bad') AudioEngine.error(); else AudioEngine.coin();
+
+        // Optimistic
+        setS((p) => ({
+          ...p,
+          cash: Math.max(0, p.cash + (delta.cash || 0)),
+          energy: Math.max(0, Math.min(MAX_E, p.energy + (delta.energy || 0))),
+          clout: p.clout + (delta.clout || 0),
+          street: { ...(p.street || {}), [action.id]: Date.now() },
+        }));
+        setLog((l) => [{ id: Date.now(), msg, kind: logKind }, ...l].slice(0, 10));
+        notify(msg, logKind);
+
+        try {
+          if (logKind === 'bad') window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
+          else window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
+        } catch {}
+
+        // Firestore
+        if (uid) {
+          await db.collection("users").doc(uid).update({
+            cash: firebase.firestore.FieldValue.increment(delta.cash || 0),
+            energy: firebase.firestore.FieldValue.increment(delta.energy || 0),
+            clout: firebase.firestore.FieldValue.increment(delta.clout || 0),
+            [`street.${action.id}`]: Date.now(),
+            lastSeen: Date.now()
+          });
+        }
+      };
+
+      const NAV = [
+        { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
+        { id: 'hustle', label: 'Hustle', icon: '👊', href: 'hustle.html' },
+        { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
+        { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
+        { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: '#' },
+      ];
+      const MORE_PAGES = [
+        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
+        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
+        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
+      ];
+
+      return (
+        <div className="min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black">
+          <div className="mx-auto max-w-md min-h-screen flex flex-col pb-24 relative">
+            <header className="sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]">
+              <div className="px-4 py-2.5 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display">L</div>
+                  <div className="min-w-0">
+                    <div className="text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display">Street</div>
+                    <div className="text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5">{fmt(s.cash)}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums">⚡ {s.energy}</div>
+                  <div className="px-2 py-1 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] text-[10px] font-extrabold tabular-nums">{fmtReal(s.real)}</div>
+                </div>
+              </div>
+            </header>
+
+            <main className="flex-1 px-4 pb-4 animate-slideDown">
+              <Card className="p-4 mt-3" gold>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Street Clout</div>
+                    <div className="text-3xl font-black text-gradient-gold tabular-nums font-display mt-1">{s.clout.toLocaleString()}</div>
+                  </div>
+                  <div className="text-3xl">🔥</div>
+                </div>
+                <div className="mt-2 text-[10px] text-white/45">The more clout, the more respect for street. Spray at owambe to build clout.</div>
+              </Card>
+
+              <SectionTitle right={<span className="text-[10px] font-bold text-white/30">4 moves</span>}>
+                Street Moves
+              </SectionTitle>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                {STREET_ACTIONS.map((a) => {
+                  const last = (s.street || {})[a.id] || 0;
+                  const left = a.cd * 1000 - (now - last);
+                  const onCd = left > 0;
+                  const canSpray = a.id !== 'spray' || s.cash >= 100_000;
+                  const disabled = onCd || !canSpray;
+                  return (
+                    <Card key={a.id} className="relative overflow-hidden p-3 flex flex-col">
+                      <div className={'absolute inset-0 bg-gradient-to-br ' + a.color + ' pointer-events-none opacity-70'} />
+                      <div className="relative">
+                        <div className="text-4xl text-center">{a.emoji}</div>
+                        <div className="text-[12px] font-extrabold mt-2 text-center leading-tight font-display">{a.label}</div>
+                        <div className="text-[9px] text-white/45 text-center leading-tight mt-1 mb-2">{a.desc}</div>
+                        <button
+                          onClick={() => act(a)}
+                          disabled={disabled}
+                          className={'relative w-full rounded-lg text-[11px] font-black py-2 active:scale-95 transition-all tabular-nums ' +
+                            (!disabled
+                              ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.6)] ' + (onCd ? '' : 'action-pulse')
+                              : onCd
+                                ? 'bg-white/[0.06] text-white/40 border border-white/[0.06]'
+                                : 'bg-white/[0.04] text-white/25 border border-white/[0.06]')}
+                        >
+                          {onCd ? '⏳ ' + mmss(left) : canSpray ? 'GO' : 'NEED ₦100K'}
+                        </button>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              <SectionTitle right={<span className="text-[10px] font-bold text-white/30">Last 10</span>}>
+                Street Log
+              </SectionTitle>
+              <Card className="divide-y divide-white/[0.05] overflow-hidden">
+                {log.length === 0 && (
+                  <div className="px-3 py-8 text-center text-[11px] text-white/30">No moves yet. Hit a button and make your story.</div>
+                )}
+                {log.map((l) => (
+                  <div key={l.id} className="px-3.5 py-2.5 flex items-start gap-2 text-[11px] animate-slideDown">
+                    <span className={'mt-1 w-1.5 h-1.5 rounded-full shrink-0 ' + (l.kind === 'bad' ? 'bg-[#EF4444]' : 'bg-[#22C55E]')} />
+                    <span className={l.kind === 'bad' ? 'text-[#EF4444]/90' : 'text-white/65'}>{l.msg}</span>
+                  </div>
+                ))}
+              </Card>
+
+              <Card className="p-3.5 mt-4">
+                <div className="flex items-start gap-2">
+                  <span className="text-base">🥷</span>
+                  <p className="text-[10.5px] text-white/50 leading-relaxed">
+                    Street na dog eat dog. Rob and Tax na high reward high risk. Beg na guaranteed small change. Spray na pure clout flex. Every move get cooldown — plan am well. 💪
+                  </p>
+                </div>
+              </Card>
+            </main>
+
+            <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]">
+              <div className="grid grid-cols-6 px-1 pt-1.5 safe-bottom">
+                {NAV.map((n) => {
+                  const active = n.id === 'more';
+                  return (
+                    <a key={n.id} href={n.href}
+                       onClick={(e) => { if (n.id === 'more') { e.preventDefault(); document.getElementById('more-sheet')?.classList.remove('hidden'); } }}
+                       className={'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')}>
+                      <span className={'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '')}>{n.icon}</span>
+                      <span className="text-[8.5px] font-extrabold tracking-wide font-display">{n.label}</span>
+                    </a>
+                  );
+                })}
+              </div>
+            </nav>
+
+            <div id="more-sheet" className="hidden fixed inset-0 z-50 flex items-end justify-center">
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => document.getElementById('more-sheet')?.classList.add('hidden')} />
+              <div className="relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp" onClick={(e) => e.stopPropagation()}>
+                <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-4" />
+                <div className="space-y-2">
+                  {MORE_PAGES.map((m) => (
+                    <a key={m.id} href={m.href} className="w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0">{m.icon}</div>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-extrabold font-display">{m.label}</div>
+                        <div className="text-[10px] text-white/40 font-bold mt-0.5">{m.desc}</div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {toast && (
+              <div className={'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' + (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')}>
+                {toast.msg}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

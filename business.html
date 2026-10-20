@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Lagos Life — Business</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- PINNED BABEL VERSION 7.23.5 -->
+  <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+
+  <!-- FIREBASE CLIENT SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html, body {
+      margin: 0; padding: 0;
+      background: #08080B; color: #fff;
+      overflow-x: hidden; overscroll-behavior-y: none;
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent);
+    }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+    .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); }
+    .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); }
+    .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.18) 0%, rgba(255,214,10,0.06) 100%); border: 1px solid rgba(255,214,10,0.3); box-shadow: 0 0 20px rgba(255,214,10,0.2); }
+    .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    @keyframes badgePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+    .badge-owned { animation: badgePulse 2s ease-in-out infinite; }
+    
+    .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;">
+      <div style="font-size:48px;">🇳🇬</div>
+      <div style="font-family:Sora;font-weight:800;font-size:14px;color:#FFD60A;">Loading Business...</div>
+    </div>
+  </div>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    /* ═══ FIREBASE INITIALIZATION ═══ */
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const MAX_E = 100;
+    const ENERGY_MS = 5 * 60 * 1000;
+
+    const BUSINESSES = [
+      { id: 'water',  name: 'Pure Water Stand', emoji: '💧', price: 10_000,          perHr: 2_000 },
+      { id: 'suya',   name: 'Suya Spot',        emoji: '🍢', price: 250_000,         perHr: 40_000 },
+      { id: 'keke',   name: 'Keke Napep',       emoji: '🛺', price: 500_000,         perHr: 75_000 },
+      { id: 'phone',  name: 'Phone Accessories',emoji: '📱', price: 2_000_000,       perHr: 350_000 },
+      { id: 'danfo',  name: 'Danfo Bus',        emoji: '🚌', price: 5_000_000,       perHr: 800_000 },
+      { id: 'wash',   name: 'Car Wash',         emoji: '🧼', price: 25_000_000,      perHr: 4_000_000 },
+      { id: 'bet9ja', name: 'Bet9ja Shop',      emoji: '🎰', price: 50_000_000,      perHr: 9_000_000 },
+      { id: 'lounge', name: 'Lekki Lounge',     emoji: '🍾', price: 500_000_000,     perHr: 90_000_000 },
+      { id: 'oil',    name: 'Oil & Gas Bloc',   emoji: '🛢️', price: 5_000_000_000,   perHr: 1_000_000_000 },
+    ];
+
+    const ASSET_PRICES = {
+      chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000,
+      gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000,
+      mansion: 1_000_000_000_000,
+    };
+
+    const fmt = (n) => {
+      n = Math.floor(n || 0);
+      const s = n < 0 ? '-' : '';
+      n = Math.abs(n);
+      if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
+      if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return s + '₦' + (n / 1e3).toFixed(1) + 'K';
+      return s + '₦' + n.toLocaleString();
+    };
+    const fmtReal = (n) => '₦' + (n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    /* ═══ AUDIO ENGINE ═══ */
+    const AudioEngine = (() => {
+      let ctx = null; let musicGain, sfxGain, musicPlaying = false, musicTimer, step = 0;
+      const STEP_MS = 300;
+      const bassPattern = [65.41, null, 65.41, null, 73.42, null, 87.31, null];
+      function init() {
+        if (ctx) return;
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        let master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination);
+        musicGain = ctx.createGain(); musicGain.gain.value = 0.15; musicGain.connect(master);
+        sfxGain = ctx.createGain(); sfxGain.gain.value = 0.5; sfxGain.connect(master);
+      }
+      function tone(f, d, t, dest, w=0, g=0.3) {
+        if (!ctx) return; const start = ctx.currentTime + w;
+        const o = ctx.createOscillator(), gain = ctx.createGain();
+        o.type = t; o.frequency.value = f;
+        gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(g, start+0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start+d);
+        o.connect(gain); gain.connect(dest); o.start(start); o.stop(start+d+0.05);
+      }
+      function kick() { if(!ctx) return; const t=ctx.currentTime; const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(40,t+0.14); g.gain.setValueAtTime(0.8,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2); o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+0.22); }
+      function hat() { if(!ctx) return; const t=ctx.currentTime; const b=ctx.createBuffer(1, ctx.sampleRate*0.04, ctx.sampleRate); const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const s=ctx.createBufferSource(); s.buffer=b; const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=6000; const g=ctx.createGain(); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04); s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); }
+      
+      function tick() {
+        if (!musicPlaying) return;
+        const s = step % 8;
+        if (s===0||s===3||s===4) kick();
+        hat();
+        if (bassPattern[s]) tone(bassPattern[s], 0.3, "sine", musicGain, 0, 0.4);
+        if (s===2||s===6) [329.63,415.3,493.88].forEach(f => tone(f, 0.3, "triangle", musicGain, 0, 0.06));
+        step++;
+      }
+
+      return {
+        startMusic: () => { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); },
+        stopMusic: () => { musicPlaying=false; clearInterval(musicTimer); },
+        toggle: () => { musicPlaying ? AudioEngine.stopMusic() : AudioEngine.startMusic(); return musicPlaying; },
+        coin: () => { init(); tone(1046, 0.08, "square", sfxGain, 0, 0.15); tone(1318, 0.15, "square", sfxGain, 0.07, 0.15); },
+        error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
+        purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); }
+      };
+    })();
+
+    const Card = ({ children, className = '', gold = false }) => (
+      <div className={'rounded-2xl ' + (gold ? 'card-gold' : 'card-gradient') + ' ' + className}>{children}</div>
+    );
+    const SectionTitle = ({ children, right }) => (
+      <div className="flex items-end justify-between mb-2.5 mt-6">
+        <h2 className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display">{children}</h2>
+        {right}
+      </div>
+    );
+
+    function App() {
+      const [s, setS] = useState(null);
+      const [uid, setUid] = useState(null);
+      const [authError, setAuthError] = useState(null);
+      const [toast, setToast] = useState(null);
+      const [musicOn, setMusicOn] = useState(false);
+
+      /* Initialize Firebase Auth & Sync */
+      useEffect(() => {
+        const tg = window?.Telegram?.WebApp;
+        if (tg) { tg.ready(); tg.expand(); }
+
+        // Timeout fallback: If Firebase takes > 2 seconds, show default state
+        const timer = setTimeout(() => {
+          setS(prev => prev || {
+            name: tg?.initDataUnsafe?.user?.first_name || 'Aje Butler',
+            cash: 25000, real: 0, energy: MAX_E,
+            lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
+            taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+          });
+        }, 2000);
+
+        auth.signInAnonymously().then((cred) => {
+          const userId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : cred.user.uid;
+          setUid(userId);
+          
+          const userRef = db.collection("users").doc(userId);
+          const unsubscribe = userRef.onSnapshot((doc) => {
+            clearTimeout(timer);
+            if (doc.exists) {
+              setS(doc.data());
+            } else {
+              const defaultData = {
+                name: tg?.initDataUnsafe?.user?.first_name || 'Aje Butler',
+                cash: 25000, real: 0, energy: MAX_E,
+                lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
+                taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+              };
+              userRef.set(defaultData);
+              setS(defaultData);
+            }
+          });
+          return unsubscribe;
+        }).catch(e => {
+          clearTimeout(timer);
+          console.error("Firebase Auth Error:", e);
+          setAuthError(e.message);
+        });
+      }, []);
+
+      /* Start music on first user gesture */
+      useEffect(() => {
+        const unlock = () => { if (!musicOn) { AudioEngine.startMusic(); setMusicOn(true); } };
+        window.addEventListener("pointerdown", unlock, { once: true });
+        return () => window.removeEventListener("pointerdown", unlock);
+      }, [musicOn]);
+
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2400);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+
+      const updateUser = async (data) => {
+        setS(prev => ({ ...prev, ...data }));
+        if (uid) await db.collection("users").doc(uid).update({ ...data, lastSeen: Date.now() });
+      };
+
+      /* Tick: energy + business income */
+      useEffect(() => {
+        if (!s) return;
+        const iv = setInterval(() => {
+          const now = Date.now();
+          let energy = s.energy;
+          let lastEnergy = s.lastEnergy;
+          if (energy < MAX_E) {
+            const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
+            if (gained > 0) {
+              energy = Math.min(MAX_E, energy + gained);
+              lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
+            }
+          }
+          const perHr = Object.entries(s.businesses || {}).reduce((a, [id, cnt]) => {
+            const biz = BUSINESSES.find((b) => b.id === id);
+            return a + cnt * (biz?.perHr || 0);
+          }, 0);
+          const newCash = s.cash + perHr / 3600;
+          
+          if (energy !== s.energy || perHr > 0) {
+            setS(prev => ({ ...prev, energy, lastEnergy, cash: newCash }));
+            if (uid && perHr > 0) {
+              db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600), energy, lastEnergy });
+            }
+          }
+        }, 1000);
+        return () => clearInterval(iv);
+      }, [s, uid]);
+
+      if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div><div className="text-xs text-white/50 mt-2">Go to Firebase Console → Authentication → Sign-in method → Enable Anonymous.</div></div>;
+      if (!s) return <div className="min-h-screen flex items-center justify-center flex-col gap-3"><div className="text-5xl">🇳🇬</div><div className="text-[12px] font-bold text-[#FFD60A] font-display">Loading...</div></div>;
+
+      const bizValue = Object.entries(s.businesses || {}).reduce((a, [id, c]) => {
+        const biz = BUSINESSES.find((b) => b.id === id);
+        return a + c * (biz?.price || 0);
+      }, 0);
+      const perHr = Object.entries(s.businesses || {}).reduce((a, [id, c]) => {
+        const biz = BUSINESSES.find((b) => b.id === id);
+        return a + c * (biz?.perHr || 0);
+      }, 0);
+      const assetValue = Object.entries(s.assets || {}).reduce((a, [id, c]) => a + c * (ASSET_PRICES[id] || 0), 0);
+      const netWorth = Math.floor((s.cash || 0) + bizValue + assetValue);
+      const ownedCount = Object.values(s.businesses || {}).reduce((a, c) => a + c, 0);
+
+      const buyBusiness = (b) => {
+        if (s.cash < b.price) {
+          AudioEngine.error();
+          return notify('Not enough Lagos Cash 💸', 'bad');
+        }
+        updateUser({
+          cash: s.cash - b.price,
+          businesses: { ...s.businesses, [b.id]: (s.businesses[b.id] || 0) + 1 },
+        });
+        AudioEngine.purchase();
+        notify(b.emoji + ' ' + b.name + ' bought! +' + fmt(b.perHr) + '/hr');
+        try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium'); } catch {}
+      };
+
+      const NAV = [
+        { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
+        { id: 'hustle', label: 'Hustle', icon: '👊', href: 'hustle.html' },
+        { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
+        { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
+        { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: '#' },
+      ];
+      const MORE_PAGES = [
+        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
+        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
+        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
+      ];
+
+      return (
+        <div className="min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black">
+          <div className="mx-auto max-w-md min-h-screen flex flex-col pb-24 relative">
+            
+            <button onClick={() => { const on = AudioEngine.toggle(); setMusicOn(on); }} className="music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition backdrop-blur">
+              <span className="text-base">{musicOn ? "🔊" : "🔇"}</span>
+            </button>
+
+            <header className="sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]">
+              <div className="px-4 py-2.5 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display">L</div>
+                  <div className="min-w-0">
+                    <div className="text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display">Business</div>
+                    <div className="text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5">{fmt(s.cash)}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums">⚡ {s.energy}</div>
+                  <div className="px-2 py-1 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] text-[10px] font-extrabold tabular-nums">{fmtReal(s.real)}</div>
+                </div>
+              </div>
+            </header>
+
+            <main className="flex-1 px-4 pb-4 animate-slideDown">
+              <Card className="p-4 mt-3" gold>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Business Value</div>
+                    <div className="text-xl font-black tabular-nums font-display mt-1 text-gradient-gold">{fmt(bizValue)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Per Hour</div>
+                    <div className="text-xl font-black text-[#22C55E] tabular-nums font-display mt-1">+{fmt(perHr)}</div>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-white/[0.08] flex items-center justify-between">
+                  <div className="text-[10px] text-white/45 font-bold">
+                    <span className="text-[#FFD60A] font-black">{ownedCount}</span> business{ownedCount !== 1 ? 'es' : ''} owned
+                  </div>
+                  <div className="text-[10px] text-white/45 font-bold tabular-nums">
+                    Net Worth: <span className="text-[#FFD60A] font-black">{fmt(netWorth)}</span>
+                  </div>
+                </div>
+              </Card>
+
+              {ownedCount > 0 && (
+                <>
+                  <SectionTitle right={<span className="text-[10px] font-bold text-[#22C55E] flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse glow-dot" />LIVE INCOME</span>}>
+                    Your Businesses
+                  </SectionTitle>
+                  <Card className="divide-y divide-white/[0.05] overflow-hidden">
+                    {BUSINESSES.filter((b) => (s.businesses[b.id] || 0) > 0).map((b) => {
+                      const owned = s.businesses[b.id];
+                      return (
+                        <div key={b.id} className="px-3.5 py-2.5 flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-white/[0.06] grid place-items-center text-base shrink-0">{b.emoji}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[12px] font-extrabold truncate font-display">{b.name}</div>
+                            <div className="text-[10px] text-white/40 font-bold tabular-nums">×{owned} · {fmt(b.perHr * owned)}/hr</div>
+                          </div>
+                          <div className="text-[11px] font-black text-[#FFD60A] tabular-nums shrink-0">{fmt(b.price * owned)}</div>
+                        </div>
+                      );
+                    })}
+                  </Card>
+                </>
+              )}
+
+              <SectionTitle right={<span className="text-[10px] font-bold text-white/30">{BUSINESSES.length} options</span>}>
+                Buy Businesses
+              </SectionTitle>
+
+              <div className="space-y-2">
+                {BUSINESSES.map((b) => {
+                  const owned = s.businesses[b.id] || 0;
+                  const canAfford = s.cash >= b.price;
+                  const roiHours = (b.price / b.perHr).toFixed(1);
+                  return (
+                    <Card key={b.id} className={'p-3 flex items-center gap-3 ' + (owned > 0 ? 'border-[#FFD60A]/25' : '')}>
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-2xl shrink-0 relative">
+                        {b.emoji}
+                        {owned > 0 && (
+                          <span className="badge-owned absolute -top-1.5 -right-1.5 bg-gradient-to-br from-[#FFE566] to-[#FFB800] text-black text-[9px] font-black rounded-full w-5 h-5 grid place-items-center shadow-lg">
+                            {owned}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-extrabold truncate font-display">{b.name}</div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-black text-[#22C55E] tabular-nums">+{fmt(b.perHr)}/hr</span>
+                          <span className="text-[9px] text-white/30 font-bold">· ROI {roiHours}h</span>
+                        </div>
+                      </div>
+                      <button onClick={() => buyBusiness(b)} disabled={!canAfford}
+                              className={'shrink-0 rounded-lg text-[11px] font-black px-3 py-2 active:scale-95 transition-all tabular-nums ' + (canAfford
+                                ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.5)]'
+                                : 'bg-white/[0.07] text-white/30')}>
+                        {fmt(b.price)}
+                      </button>
+                    </Card>
+                  );
+                })}
+              </div>
+
+              <Card className="p-3.5 mt-4">
+                <div className="flex items-start gap-2">
+                  <span className="text-base">💡</span>
+                  <p className="text-[10.5px] text-white/50 leading-relaxed">
+                    Business income dey land for your cash <span className="text-[#FFD60A] font-bold">every second</span> — even when you close the app. Buy more copies to multiply the hourly rate. Every business you buy go add to your <span className="text-[#FFD60A] font-bold">Net Worth</span>.
+                  </p>
+                </div>
+              </Card>
+            </main>
+
+            <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]">
+              <div className="grid grid-cols-6 px-1 pt-1.5 safe-bottom">
+                {NAV.map((n) => {
+                  const active = n.id === 'biz';
+                  return (
+                    <a key={n.id} href={n.href}
+                       onClick={(e) => { if (n.id === 'more') { e.preventDefault(); document.getElementById('more-sheet')?.classList.remove('hidden'); } }}
+                       className={'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')}>
+                      <span className={'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '')}>{n.icon}</span>
+                      <span className="text-[8.5px] font-extrabold tracking-wide font-display">{n.label}</span>
+                    </a>
+                  );
+                })}
+              </div>
+            </nav>
+
+            <div id="more-sheet" className="hidden fixed inset-0 z-50 flex items-end justify-center">
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => document.getElementById('more-sheet')?.classList.add('hidden')} />
+              <div className="relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp" onClick={(e) => e.stopPropagation()}>
+                <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-4" />
+                <div className="space-y-2">
+                  {MORE_PAGES.map((m) => (
+                    <a key={m.id} href={m.href} className="w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0">{m.icon}</div>
+                      <div className="min-w-0">
+                        <div className="text-[13px] font-extrabold font-display">{m.label}</div>
+                        <div className="text-[10px] text-white/40 font-bold mt-0.5">{m.desc}</div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {toast && (
+              <div className={'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' + (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')}>
+                {toast.msg}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
