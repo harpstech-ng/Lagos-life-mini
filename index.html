@@ -6,14 +6,14 @@
   <meta name="theme-color" content="#08080B" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Lagos Life —  Home</title>
+  <title>Lagos Life — Home</title>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   
-  <!-- PINNED BABEL VERSION 7.23.5 (NO MORE ERRORS) -->
+  <!-- PINNED BABEL VERSION 7.23.5 -->
   <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
 
   <!-- FIREBASE CLIENT SDK -->
@@ -115,7 +115,7 @@
   <div id="root">
     <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;">
       <div style="font-size:48px;">🇳🇬</div>
-      <div style="font-family:Sora;font-weight:800;font-size:14px;color:#FFD60A;">Loading Lagos Life...</div>
+      <div style="font-family:Sora;font-weight:800;font-size:14px;color:#FFD60A;">Loading...</div>
     </div>
   </div>
 
@@ -147,6 +147,12 @@
     const ASSET_PRICES = { chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000, gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000, mansion: 1_000_000_000_000 };
     const DEST_BONUSES = { ikeja: 0, accra: 100, dubai: 500, uk: 1000, canada: 2000, usa: 5000, space: 25000 };
 
+    const DEFAULT_DATA = {
+      name: 'Aje Butler', cash: 25000, real: 0, energy: MAX_E,
+      lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
+      taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+    };
+
     /* ═══ HELPERS ═══ */
     const fmt = (n) => {
       n = Math.floor(n || 0);
@@ -167,13 +173,11 @@
       ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r); ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r); ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
     };
 
-    /* ═══ AUDIO ENGINE (LAGOS AFROBEAT + SFX) ═══ */
+    /* ═══ AUDIO ENGINE ═══ */
     const AudioEngine = (() => {
       let ctx = null; let musicGain, sfxGain, musicPlaying = false, musicTimer, step = 0;
       const STEP_MS = 300;
       const bassPattern = [65.41, null, 65.41, null, 73.42, null, 87.31, null];
-      const penta = [523.25, 587.33, 659.25, 783.99, 880.0];
-
       function init() {
         if (ctx) return;
         ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -227,7 +231,7 @@
 
     /* ═══ APP ═══ */
     function App() {
-      const [s, setS] = useState(null);
+      const [s, setS] = useState(DEFAULT_DATA); // Instant Load
       const [uid, setUid] = useState(null);
       const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
@@ -240,6 +244,9 @@
       const [sendAmt, setSendAmt] = useState('');
       const [musicOn, setMusicOn] = useState(false);
       const tapCounter = useRef(0);
+      
+      // Tap Batching Refs (Fixes Lag)
+      const pendingTaps = useRef({ cash: 0, energy: 0, taps: 0 });
 
       /* Initialize Firebase Auth & Sync */
       useEffect(() => {
@@ -253,7 +260,16 @@
           const userRef = db.collection("users").doc(userId);
           const unsubscribe = userRef.onSnapshot((doc) => {
             if (doc.exists) {
-              setS(doc.data());
+              // Merge cloud data with local state, but keep local pending taps
+              setS(prev => {
+                const dbData = doc.data();
+                return {
+                  ...dbData,
+                  cash: dbData.cash + pendingTaps.current.cash,
+                  energy: dbData.energy + pendingTaps.current.energy,
+                  taps: dbData.taps + pendingTaps.current.taps
+                };
+              });
             } else {
               const defaultData = {
                 name: tg?.initDataUnsafe?.user?.first_name || 'Aje Butler',
@@ -272,6 +288,31 @@
         });
       }, []);
 
+      /* Background Firebase Sync (Every 1.5 seconds) */
+      useEffect(() => {
+        if (!uid) return;
+        const syncInterval = setInterval(async () => {
+          const toSync = { ...pendingTaps.current };
+          if (toSync.cash === 0 && toSync.energy === 0 && toSync.taps === 0) return;
+          
+          // Reset pending immediately so we don't double send
+          pendingTaps.current = { cash: 0, energy: 0, taps: 0 };
+
+          try {
+            await db.collection("users").doc(uid).update({
+              cash: firebase.firestore.FieldValue.increment(toSync.cash),
+              energy: firebase.firestore.FieldValue.increment(toSync.energy),
+              taps: firebase.firestore.FieldValue.increment(toSync.taps),
+              lastEnergy: Date.now(), // update refill timer
+              lastSeen: Date.now()
+            });
+          } catch (e) {
+            console.error("Sync error:", e);
+          }
+        }, 1500);
+        return () => clearInterval(syncInterval);
+      }, [uid]);
+
       /* Start music on first user gesture */
       useEffect(() => {
         const unlock = () => { if (!musicOn) { AudioEngine.startMusic(); setMusicOn(true); } };
@@ -287,11 +328,6 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      const updateUser = async (data) => {
-        setS(prev => ({ ...prev, ...data }));
-        if (uid) await db.collection("users").doc(uid).update({ ...data, lastSeen: Date.now() });
-      };
-
       /* Tick: energy + business income */
       useEffect(() => {
         if (!s) return;
@@ -299,20 +335,24 @@
           const now = Date.now();
           let energy = s.energy;
           let lastEnergy = s.lastEnergy;
+          
           if (energy < MAX_E) {
             const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
             if (gained > 0) {
               energy = Math.min(MAX_E, energy + gained);
               lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
+              // Sync energy gain immediately
+              if (uid) db.collection("users").doc(uid).update({ energy, lastEnergy });
             }
           }
+          
           const perHr = Object.entries(s.businesses || {}).reduce((a, [id, cnt]) => a + cnt * (BIZ_PER_HR[id] || 0), 0);
           const newCash = s.cash + perHr / 3600;
           
           if (energy !== s.energy || perHr > 0) {
             setS(prev => ({ ...prev, energy, lastEnergy, cash: newCash }));
             if (uid && perHr > 0) {
-              db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600), energy, lastEnergy });
+              db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600) });
             }
           }
         }, 1000);
@@ -326,7 +366,6 @@
       }, []);
 
       if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div><div className="text-xs text-white/50 mt-2">Go to Firebase Console → Authentication → Sign-in method → Enable Anonymous.</div></div>;
-      if (!s) return <div className="min-h-screen flex items-center justify-center flex-col gap-3"><div className="text-5xl">🇳🇬</div><div className="text-[12px] font-bold text-[#FFD60A] font-display">Loading...</div></div>;
 
       /* Derived */
       const bizValue = Object.entries(s.businesses || {}).reduce((a, [id, c]) => a + c * (BIZ_PRICES[id] || 0), 0);
@@ -337,15 +376,23 @@
       const rank = netWorth <= 0 ? TOTAL_USERS : Math.max(1, Math.floor(TOTAL_USERS - Math.min(1, Math.log10(netWorth + 1) / 13) * (TOTAL_USERS - 1)));
       const energyNextIn = s.energy >= MAX_E ? 0 : ENERGY_MS - ((Date.now() - s.lastEnergy) % ENERGY_MS);
 
-      /* Tap */
+      /* Instant Tap */
       const doTap = () => {
         if (s.energy < 1) { AudioEngine.error(); return notify('No energy! Wait or refill ⚡', 'bad'); }
         AudioEngine.tap();
         try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light'); } catch {}
         
         const newEnergy = Math.max(0, s.energy - 1);
-        updateUser({ cash: s.cash + TAP_VALUE, energy: newEnergy, lastEnergy: s.energy >= MAX_E ? Date.now() : s.lastEnergy, taps: s.taps + 1 });
+        
+        // 1. Instantly update UI
+        setS(prev => ({ ...prev, cash: prev.cash + TAP_VALUE, energy: newEnergy, taps: prev.taps + 1 }));
+        
+        // 2. Queue for Firebase
+        pendingTaps.current.cash += TAP_VALUE;
+        pendingTaps.current.energy -= 1;
+        pendingTaps.current.taps += 1;
 
+        // 3. Animation
         const id = ++tapCounter.current;
         setTapFloats((f) => [...f.slice(-6), { id, x: 40 + Math.random() * 20, amt: TAP_VALUE }]);
         setTimeout(() => setTapFloats((f) => f.filter((x) => x.id !== id)), 950);
@@ -428,7 +475,7 @@
         try { if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank'); } catch {}
       };
 
-      /* Send money (Simple Firestore implementation) */
+      /* Send money */
       const sendMoney = async () => {
         const user = sendTo.trim().replace('@', '');
         const amt = Math.floor(Number(sendAmt));
