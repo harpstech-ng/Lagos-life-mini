@@ -192,7 +192,6 @@
       let ctx = null; let musicGain, sfxGain, musicPlaying = false, musicTimer, step = 0;
       const STEP_MS = 300;
       const bassPattern = [65.41, null, 65.41, null, 73.42, null, 87.31, null];
-      const penta = [523.25, 587.33, 659.25, 783.99, 880.0];
 
       function init() {
         if (ctx) return;
@@ -209,8 +208,8 @@
         gain.gain.exponentialRampToValueAtTime(0.0001, start+d);
         o.connect(gain); gain.connect(dest); o.start(start); o.stop(start+d+0.05);
       }
-      function kick() { if(!ctx) return; const t=ctx.currentTime; const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(140,t); o.f")requency.exponentialRampToValueAtTime(40,t+0.14); g.gain.setValueAtTime(0.8,t); ctx g.gain.exponentialRampToValueAtTime(0.001,t+0.2); o.connect(g); g.connect(musicGain.res); o.start(t); o.stop(t+0.22); }
-      function hat() { if(!ctx) return; const t=ctx.currentTime;ume const b=ctx.createBuffer(1, ctx.sampleRate*0.04, ctx.sampleRate); const d();=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random() tone*2-1; const s=ctx.createBufferSource(); s.buffer=b; const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=6000; const g=ctx.createGain(); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04); s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); }
+      function kick() { if(!ctx) return; const t=ctx.currentTime; const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(40,t+0.14); g.gain.setValueAtTime(0.8,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2); o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+0.22); }
+      function hat() { if(!ctx) return; const t=ctx.currentTime; const b=ctx.createBuffer(1, ctx.sampleRate*0.04, ctx.sampleRate); const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const s=ctx.createBufferSource(); s.buffer=b; const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=6000; const g=ctx.createGain(); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04); s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); }
       
       function tick() {
         if (!musicPlaying) return;
@@ -226,7 +225,7 @@
         startMusic: () => { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); },
         stopMusic: () => { musicPlaying=false; clearInterval(musicTimer); },
         toggle: () => { musicPlaying ? AudioEngine.stopMusic() : AudioEngine.startMusic(); return musicPlaying; },
-        tap: () => { init(); if(ctx.state==="suspended(880, 0.09, "triangle", sfxGain, 0, 0.28); },
+        tap: () => { init(); if(ctx.state==="suspended") ctx.resume(); tone(880, 0.09, "triangle", sfxGain, 0, 0.28); },
         coin: () => { init(); tone(1046, 0.08, "square", sfxGain, 0, 0.15); tone(1318, 0.15, "square", sfxGain, 0.07, 0.15); },
         error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
         purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); },
@@ -270,7 +269,6 @@
           const userRef = db.collection("users").doc(userId);
           const unsubscribe = userRef.onSnapshot((doc) => {
             if (doc.exists) {
-              // Merge cloud data with local pending taps
               setS(prev => {
                 const dbData = doc.data();
                 return {
@@ -283,27 +281,26 @@
             } else {
               const defaultData = {
                 name: tg?.initDataUnsafe?.user?.first_name || 'Aje Butler',
-                cash: ,25000, real: 0, energy: MAX_E,
+                cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
-                ... taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+                taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
               };
               userRef.set(defaultData);
-              setdataS(defaultData);
+              setS(defaultData);
             }
           });
           return unsubscribe;
         }).catch(e => {
           console.error("Firebase Auth Error:", e);
-          setAuth }));
-Error(e.message);
+          setAuthError(e.message);
         });
       }, []);
 
       /* Background Firebase Sync (Every 1.5 seconds) */
       useEffect(() => {
-               if (!uid) return;
+        if (!uid) return;
         const syncInterval = setInterval(async () => {
-          const toSync = { ...pendingTaps.current if };
+          const toSync = { ...pendingTaps.current };
           if (toSync.cash === 0 && toSync.energy === 0 && toSync.taps === 0) return;
           
           pendingTaps.current = { cash: 0, energy: 0, taps: 0 };
@@ -339,8 +336,8 @@ Error(e.message);
 
       /* Immediate Direct Update (for events/refills) */
       const updateUser = async (data) => {
-        setS(prev => ({ ...prev (uid) {
-          // Sync taps first so they aren't overwritten
+        setS(prev => ({ ...prev, ...data }));
+        if (uid) {
           const toSync = { ...pendingTaps.current };
           if (toSync.cash !== 0 || toSync.energy !== 0 || toSync.taps !== 0) {
              await db.collection("users").doc(uid).update({
@@ -354,32 +351,32 @@ Error(e.message);
         }
       };
 
-      /* Tick: energy + business income */
+      /* Tick: energy + business income (FIXED LAG) */
       useEffect(() => {
-        if (!s) return;
+        if (!uid) return;
         const iv = setInterval(() => {
-          const now = Date.now();
-          let energy = s.energy;
-          let lastEnergy = s.lastEnergy;
-          if (energy < MAX_E) {
-            const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
-            if (gained > 0) {
-              energy = Math.min(MAX_E, energy + gained);
-              lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
+          setS(prev => {
+            const now = Date.now();
+            let energy = prev.energy;
+            let lastEnergy = prev.lastEnergy;
+            if (energy < MAX_E) {
+              const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
+              if (gained > 0) {
+                energy = Math.min(MAX_E, energy + gained);
+                lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
+              }
             }
-          }
-          const perHr = Object.entries(s.businesses || {}).reduce((a, [id, cnt]) => a + cnt * (BIZ_PER_HR[id] || 0), 0);
-          const newCash = s.cash + perHr / 3600;
-          
-          if (energy !== s.energy || perHr > 0) {
-            setS(prev => ({ ...prev, energy, lastEnergy, cash: newCash }));
-            if (uid && perHr > 0) {
-              db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600), energy, lastEnergy });
+            const perHr = Object.entries(prev.businesses || {}).reduce((a, [id, cnt]) => a + cnt * (BIZ_PER_HR[id] || 0), 0);
+            const newCash = prev.cash + perHr / 3600;
+            
+            if (perHr > 0) {
+              db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600) });
             }
-          }
+            return { ...prev, energy, lastEnergy, cash: newCash };
+          });
         }, 1000);
         return () => clearInterval(iv);
-      }, [s, uid]);
+      }, [uid]);
 
       if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div><div className="text-xs text-white/50 mt-2">Go to Firebase Console → Authentication → Sign-in method → Enable Anonymous.</div></div>;
 
@@ -394,10 +391,8 @@ Error(e.message);
         
         const newEnergy = Math.max(0, s.energy - 1);
         
-        // Instant local update
         setS(prev => ({ ...prev, cash: prev.cash + TAP_VALUE, energy: newEnergy, taps: prev.taps + 1 }));
         
-        // Queue for background sync
         pendingTaps.current.cash += TAP_VALUE;
         pendingTaps.current.energy -= 1;
         pendingTaps.current.taps += 1;
