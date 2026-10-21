@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#08080B" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Lagos Life — Street</title>
+  <title>Lagos Life Mini — Street</title>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -52,19 +52,23 @@
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
     .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
     .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); }
-    .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); box-shadow: 0 8px 30px -10px rgba(255,214,10,0.3); }
     .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
     .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
-    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.18) 0%, rgba(255,214,10,0.06) 100%); border: 1px solid rgba(255,214,10,0.3); box-shadow: 0 0 20px rgba(255,214,10,0.2); }
+    .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
     @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
     .action-pulse { animation: pulse 1.2s ease-in-out infinite; }
+    
+    .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
   </style>
 </head>
 <body>
@@ -100,11 +104,28 @@
     const ASSET_PRICES = { chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000, gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000, mansion: 1_000_000_000_000 };
 
     const STREET_ACTIONS = [
-      { id: 'rob', label: 'Rob a Stranger', emoji: '🥷', cd: 45, desc: '45% chance of big money. 55% you get caught.', color: 'from-red-500/25 to-red-700/10' },
-      { id: 'beg', label: 'Beg for Money', emoji: '🙏', cd: 30, desc: 'Small but guaranteed cash from strangers.', color: 'from-amber-400/25 to-amber-700/10' },
-      { id: 'tax', label: 'Collect Street Tax', emoji: '💵', cd: 60, desc: '60% chance big money. 40% the boys chase you.', color: 'from-emerald-500/25 to-emerald-700/10' },
-      { id: 'spray', label: 'Spray at Owambe', emoji: '💸', cd: 90, desc: 'Costs ₦100,000. Gives +40 clout.', color: 'from-fuchsia-500/25 to-fuchsia-700/10' },
+      { id: 'rob', label: 'Rob a Stranger', emoji: '🥷', cd: 45, desc: 'High risk, high reward. Might get caught.', color: 'from-red-500/25 to-red-700/10' },
+      { id: 'beg', label: 'Beg for Money', emoji: '🙏', cd: 20, desc: 'Low risk, small change. People might insult you.', color: 'from-amber-400/25 to-amber-700/10' },
+      { id: 'tax', label: 'Collect Street Tax', emoji: '💵', cd: 60, desc: 'Demand money from shops. They might fight back.', color: 'from-emerald-500/25 to-emerald-700/10' },
+      { id: 'spray', label: 'Spray at Owambe', emoji: '💸', cd: 90, desc: 'Show off your money. Gain massive clout.', color: 'from-fuchsia-500/25 to-fuchsia-700/10' },
+      { id: 'hawk', label: 'Hawk in Traffic', emoji: '🍎', cd: 30, desc: 'Sell Gala and Pure Water to frustrated drivers.', color: 'from-orange-500/25 to-orange-700/10' },
+      { id: 'wallet', label: 'Find Lost Wallet', emoji: '👛', cd: 120, desc: 'Look on the floor. Might find gold, might find trash.', color: 'from-blue-500/25 to-blue-700/10' },
     ];
+
+    const getCachedData = () => {
+      try {
+        const cached = localStorage.getItem("lagos_user_data");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+      const tg = window?.Telegram?.WebApp;
+      return {
+        name: tg?.initDataUnsafe?.user?.first_name || 'Hustler', 
+        cash: 25000, real: 0, energy: MAX_E,
+        lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
+        taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+        transactions: []
+      };
+    };
 
     const fmt = (n) => {
       n = Math.floor(n || 0);
@@ -131,7 +152,7 @@
         if (ctx) return;
         ctx = new (window.AudioContext || window.webkitAudioContext)();
         let master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination);
-        musicGain = ctx.createGain(); musicGain.gain.value = 0.12; musicGain.connect(master); // Slightly lower volume for background
+        musicGain = ctx.createGain(); musicGain.gain.value = 0.12; musicGain.connect(master);
         sfxGain = ctx.createGain(); sfxGain.gain.value = 0.5; sfxGain.connect(master);
       }
       function tone(f, d, t, dest, w=0, g=0.3) {
@@ -174,27 +195,20 @@
     );
 
     function App() {
-      const [s, setS] = useState(null);
+      const [s, setS] = useState(getCachedData); 
       const [uid, setUid] = useState(null);
       const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
       const [log, setLog] = useState([]);
       const [now, setNow] = useState(Date.now());
+      
+      // Outcome Modal State
+      const [outcome, setOutcome] = useState(null);
 
       /* Initialize Firebase Auth & Sync */
       useEffect(() => {
         const tg = window?.Telegram?.WebApp;
         if (tg) { tg.ready(); tg.expand(); }
-
-        // 2-Second Timeout Fallback
-        const timer = setTimeout(() => {
-          setS(prev => prev || {
-            name: tg?.initDataUnsafe?.user?.first_name || 'Aje Butler',
-            cash: 25000, real: 0, energy: MAX_E,
-            lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
-            taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-          });
-        }, 2000);
 
         auth.signInAnonymously().then((cred) => {
           const userId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : cred.user.uid;
@@ -202,29 +216,34 @@
           
           const userRef = db.collection("users").doc(userId);
           const unsubscribe = userRef.onSnapshot((doc) => {
-            clearTimeout(timer);
             if (doc.exists) {
-              setS(doc.data());
+              setS(prev => {
+                const dbData = doc.data();
+                const newData = {
+                  ...dbData,
+                  transactions: dbData.transactions || [],
+                };
+                localStorage.setItem("lagos_user_data", JSON.stringify(newData));
+                return newData;
+              });
             } else {
               const defaultData = {
-                name: tg?.initDataUnsafe?.user?.first_name || 'Aje Butler',
+                name: tg?.initDataUnsafe?.user?.first_name || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+                transactions: []
               };
               userRef.set(defaultData);
               setS(defaultData);
+              localStorage.setItem("lagos_user_data", JSON.stringify(defaultData));
             }
           });
           return unsubscribe;
-        }).catch(e => {
-          clearTimeout(timer);
-          console.error("Firebase Auth Error:", e);
-          setAuthError(e.message);
-        });
+        }).catch(e => setAuthError(e.message));
       }, []);
 
-      /* Start music on first user gesture anywhere on screen */
+      /* Start music */
       useEffect(() => {
         const unlock = () => { AudioEngine.startMusic(); };
         window.addEventListener("pointerdown", unlock, { once: true });
@@ -239,7 +258,7 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      /* 1s tick for cooldown + income */
+      /* Tick: energy + income */
       useEffect(() => {
         if (!s) return;
         const iv = setInterval(() => {
@@ -269,8 +288,7 @@
         return () => clearInterval(iv);
       }, [s, uid]);
 
-      if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div><div className="text-xs text-white/50 mt-2">Go to Firebase Console → Authentication → Sign-in method → Enable Anonymous.</div></div>;
-      if (!s) return <div className="min-h-screen flex items-center justify-center flex-col gap-3"><div className="text-5xl">🇳🇬</div><div className="text-[12px] font-bold text-[#FFD60A] font-display">Loading...</div></div>;
+      if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div></div>;
 
       const bizValue = Object.entries(s.businesses || {}).reduce((a, [id, c]) => a + c * (BIZ_PRICES[id] || 0), 0);
       const assetValue = Object.entries(s.assets || {}).reduce((a, [id, c]) => a + c * (ASSET_PRICES[id] || 0), 0);
@@ -283,40 +301,152 @@
         let msg = '';
         let delta = {};
         let logKind = 'good';
+        let title = '';
 
+        // --- ROBBING ---
         if (action.id === 'rob') {
-          if (Math.random() < 0.45) {
+          const roll = Math.random();
+          if (roll < 0.3) {
             const g = 50_000 + Math.floor(Math.random() * 450_000);
             delta = { cash: g };
-            msg = `You robbed a stranger: +${fmt(g)} 🥷`;
-          } else {
-            delta = { energy: -20 };
-            msg = 'You got caught. Lost 20 energy 😩';
-            logKind = 'bad';
-          }
-        } else if (action.id === 'beg') {
-          const g = 5_000 + Math.floor(Math.random() * 45_000);
-          delta = { cash: g };
-          msg = `Person gave you ${fmt(g)} 🙏`;
-        } else if (action.id === 'tax') {
-          if (Math.random() < 0.6) {
-            const g = 200_000 + Math.floor(Math.random() * 1_800_000);
+            msg = `You robbed a guy, but he was broke. You got ${fmt(g)} and a pack of Indomie. 🍜`;
+            title = "E CHOKE!";
+          } else if (roll < 0.45) {
+            const g = 250_000 + Math.floor(Math.random() * 1_000_000);
             delta = { cash: g };
-            msg = `Street tax collected: +${fmt(g)} 💵`;
+            msg = `You robbed a politician's PA. You found ${fmt(g)} in his briefcase! 🤑`;
+            title = "BIG BOY!";
+          } else if (roll < 0.8) {
+            delta = { energy: -25 };
+            msg = "You tried to rob a bouncer. He slapped you into next week. -25 Energy 😵‍💫";
+            logKind = 'bad';
+            title = "WAHALA!";
+          } else {
+            delta = { energy: -50 };
+            msg = "You got caught. The mob beat you and collected your phone. -50 Energy 📱";
+            logKind = 'bad';
+            title = "E DON CAST!";
+          }
+
+        // --- BEGGING ---
+        } else if (action.id === 'beg') {
+          const roll = Math.random();
+          if (roll < 0.4) {
+            const g = 2_000 + Math.floor(Math.random() * 5_000);
+            delta = { cash: g };
+            msg = `An old woman gave you ${fmt(g)} and told you to go and learn a skill. 🧓🏾`;
+            title = "SMALL WIN";
+          } else if (roll < 0.6) {
+            const g = 50_000 + Math.floor(Math.random() * 100_000);
+            delta = { cash: g };
+            msg = `A rich man in a G-Wagon threw ${fmt(g)} at you. "Go and make something of yourself!" 💰`;
+            title = "GRACE FOUND YOU!";
+          } else if (roll < 0.9) {
+            msg = "You begged a guy, and he told you to 'use your hands'. -0 Cash. 😑";
+            title = "EMPTY HANDED";
           } else {
             delta = { energy: -15 };
-            msg = 'The boys chased you. -15 energy 🏃🏾';
+            msg = "You begged a dog. The dog chased you. -15 Energy 🐕";
             logKind = 'bad';
+            title = "DOG WAHALA";
           }
-        } else {
+
+        // --- TAXING ---
+        } else if (action.id === 'tax') {
+          const roll = Math.random();
+          if (roll < 0.4) {
+            const g = 150_000 + Math.floor(Math.random() * 350_000);
+            delta = { cash: g };
+            msg = `You collected tax from a Bet9ja shop. The owner paid you ${fmt(g)} to leave. 🎰`;
+            title = "TAX COLLECTOR";
+          } else if (roll < 0.6) {
+            const g = 500_000 + Math.floor(Math.random() * 1_500_000);
+            delta = { cash: g };
+            msg = `You taxed a Danfo driver. He gave you ${fmt(g)}. You are now a kingpin. 👑`;
+            title = "KINGPIN!";
+          } else if (roll < 0.85) {
+            delta = { energy: -20 };
+            msg = "You tried to tax a shop. The owner released a dog on you. -20 Energy 🐕";
+            logKind = 'bad';
+            title = "RUN!";
+          } else {
+            delta = { energy: -40 };
+            msg = "You taxed the wrong guy. He was a cultist. You ran for your life. -40 Energy 🏃🏾‍♂️";
+            logKind = 'bad';
+            title = "CULTIST!";
+          }
+
+        // --- SPRAYING ---
+        } else if (action.id === 'spray') {
           if (s.cash < 100_000) { AudioEngine.error(); return notify('Need ₦100,000 to spray', 'bad'); }
-          delta = { cash: -100_000, clout: 40 };
-          msg = 'You sprayed ₦100,000 at Owambe. +40 clout 💸';
+          
+          const roll = Math.random();
+          if (roll < 0.7) {
+            delta = { cash: -100_000, clout: 40 };
+            msg = "You sprayed ₦100,000. The MC announced your name. Everyone screamed 'God when!' +40 Clout. 🎉";
+            title = "OWAMBE LEGEND";
+          } else if (roll < 0.9) {
+            delta = { cash: -100_000, clout: 10, energy: -20 };
+            msg = "You sprayed money, but the agbada you wore was fake. People laughed at you. +10 Clout, -20 Energy 😅";
+            logKind = 'bad';
+            title = "FAKE LIFE";
+          } else {
+            delta = { cash: -100_000, clout: 100 };
+            msg = "You sprayed the bride's mother. She started crying and blessed you. +100 Clout. 👑";
+            title = "BLESSINGS";
+          }
+
+        // --- HAWKING ---
+        } else if (action.id === 'hawk') {
+          const roll = Math.random();
+          if (roll < 0.5) {
+            const g = 10_000 + Math.floor(Math.random() * 20_000);
+            delta = { cash: g };
+            msg = `You sold 50 bottles of water in 3 mins. +${fmt(g)} 💧`;
+            title = "HUSTLE DEY PAY";
+          } else if (roll < 0.8) {
+            delta = { energy: -15 };
+            msg = "You sold Gala to a LASTMA officer. He arrested you for noise pollution. -15 Energy 👮🏾";
+            logKind = 'bad';
+            title = "LASTMA WAHALA";
+          } else {
+            const g = 20_000 + Math.floor(Math.random() * 30_000);
+            delta = { cash: g };
+            msg = `You sold to a crazy driver. He gave you ${fmt(g)} and said keep the change. +${fmt(g)} 🚗`;
+            title = "CRAZY DRIVER";
+          }
+
+        // --- WALLET ---
+        } else if (action.id === 'wallet') {
+          const roll = Math.random();
+          if (roll < 0.4) {
+            const g = 10_000 + Math.floor(Math.random() * 50_000);
+            delta = { cash: g };
+            msg = `You found a wallet with ${fmt(g)} inside. No ID. Finders keepers! 😈`;
+            title = "FINDERS KEEPERS";
+          } else if (roll < 0.7) {
+            msg = "You found a wallet with ₦0. The owner was a broke hustler like you. +0 Cash 😂";
+            title = "BROKE WALLET";
+          } else {
+            const g = 20_000 + Math.floor(Math.random() * 30_000);
+            delta = { cash: g };
+            msg = `You found a wallet with an ID. The owner saw you and gave you ${fmt(g)} as a reward. 🙏`;
+            title = "GOOD SAMARITAN";
+          }
         }
 
+        // Play sound
         if (logKind === 'bad') AudioEngine.error(); else AudioEngine.coin();
 
-        // Optimistic
+        // Set Outcome Modal
+        setOutcome({
+          title,
+          msg,
+          delta,
+          isBad: logKind === 'bad'
+        });
+
+        // Optimistic Update
         setS((p) => ({
           ...p,
           cash: Math.max(0, p.cash + (delta.cash || 0)),
@@ -324,9 +454,9 @@
           clout: p.clout + (delta.clout || 0),
           street: { ...(p.street || {}), [action.id]: Date.now() },
         }));
+        
         setLog((l) => [{ id: Date.now(), msg, kind: logKind }, ...l].slice(0, 10));
-        notify(msg, logKind);
-
+        
         try {
           if (logKind === 'bad') window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
           else window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
@@ -367,7 +497,7 @@
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display">L</div>
                   <div className="min-w-0">
                     <div className="text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display">Street</div>
-                    <div className="text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5">{fmt(s.cash)}</div>
+                    <div className="text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5">{s.name || 'Hustler'} · {fmt(s.cash)}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -389,7 +519,7 @@
                 <div className="mt-2 text-[10px] text-white/45">The more clout, the more respect for street. Spray at owambe to build clout.</div>
               </Card>
 
-              <SectionTitle right={<span className="text-[10px] font-bold text-white/30">4 moves</span>}>
+              <SectionTitle right={<span className="text-[10px] font-bold text-white/30">6 moves</span>}>
                 Street Moves
               </SectionTitle>
 
@@ -449,6 +579,46 @@
                 </div>
               </Card>
             </main>
+
+            {/* OUTCOME MODAL */}
+            {outcome && (
+              <div className="fixed inset-0 z-50 grid place-items-center p-6">
+                <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setOutcome(null)} />
+                <div className="relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn text-center">
+                  <div className={`text-5xl mb-2 ${outcome.isBad ? 'animate-bounce' : 'animate-pulse'}`}>
+                    {outcome.isBad ? '😭' : '🤑'}
+                  </div>
+                  <div className={`text-[14px] font-black tracking-widest font-display mb-2 ${outcome.isBad ? 'text-[#EF4444]' : 'text-[#22C55E]'}`}>
+                    {outcome.title}
+                  </div>
+                  <p className="text-[13px] text-white/80 leading-relaxed mb-4">
+                    {outcome.msg}
+                  </p>
+                  
+                  <div className="flex justify-center gap-3 mb-5">
+                    {outcome.delta.cash !== undefined && (
+                      <div className={`px-3 py-1.5 rounded-lg text-[12px] font-black tabular-nums border ${outcome.delta.cash > 0 ? 'bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30' : 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/30'}`}>
+                        {outcome.delta.cash > 0 ? '+' : ''}{fmt(outcome.delta.cash)}
+                      </div>
+                    )}
+                    {outcome.delta.energy !== undefined && (
+                      <div className={`px-3 py-1.5 rounded-lg text-[12px] font-black tabular-nums border ${outcome.delta.energy > 0 ? 'bg-[#FFD60A]/10 text-[#FFD60A] border-[#FFD60A]/30' : 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/30'}`}>
+                        {outcome.delta.energy > 0 ? '+' : ''}{outcome.delta.energy} ⚡
+                      </div>
+                    )}
+                    {outcome.delta.clout !== undefined && (
+                      <div className={`px-3 py-1.5 rounded-lg text-[12px] font-black tabular-nums border ${outcome.delta.clout > 0 ? 'bg-[#FFD60A]/10 text-[#FFD60A] border-[#FFD60A]/30' : 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/30'}`}>
+                        {outcome.delta.clout > 0 ? '+' : ''}{outcome.delta.clout} 🔥
+                      </div>
+                    )}
+                  </div>
+
+                  <button onClick={() => setOutcome(null)} className="w-full rounded-xl bg-white/[0.06] border border-white/10 py-3 text-[12px] font-extrabold text-white/80 active:scale-95 transition">
+                    Collect / Dismiss
+                  </button>
+                </div>
+              </div>
+            )}
 
             <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]">
               <div className="grid grid-cols-6 px-1 pt-1.5 safe-bottom">
