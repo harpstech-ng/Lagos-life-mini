@@ -172,17 +172,7 @@
     const getCachedData = () => {
       try {
         const cached = localStorage.getItem("lagos_user_data");
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          return {
-            ...parsed,
-            businesses: parsed.businesses || {},
-            assets: parsed.assets || {},
-            cash: Number(parsed.cash) || 0,
-            real: Number(parsed.real) || 0,
-            energy: Number(parsed.energy) || MAX_E
-          };
-        }
+        if (cached) return JSON.parse(cached);
       } catch (e) {}
       const tg = window?.Telegram?.WebApp;
       return {
@@ -297,14 +287,9 @@
               setS(prev => {
                 const newData = {
                   ...dbData,
-                  businesses: dbData.businesses || {},
-                  assets: dbData.assets || {},
-                  travels: dbData.travels || [],
-                  transactions: dbData.transactions || [],
                   telegramId: dbData.telegramId || tgUser?.id, 
-                  cash: Number(dbData.cash) || 0,
-                  real: Number(dbData.real) || 0,
-                  energy: Number(dbData.energy) || MAX_E
+                  transactions: dbData.transactions || [],
+                  cash: dbData.cash
                 };
                 localStorage.setItem("lagos_user_data", JSON.stringify(newData));
                 return newData;
@@ -350,8 +335,8 @@
           setS(prev => {
             if (!prev) return prev;
             const now = Date.now();
-            let energy = prev.energy || MAX_E;
-            let lastEnergy = prev.lastEnergy || now;
+            let energy = prev.energy;
+            let lastEnergy = prev.lastEnergy;
             
             if (energy < MAX_E) {
               const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
@@ -363,9 +348,9 @@
             
             const perHr = Object.entries(prev.businesses || {}).reduce((a, [id, cnt]) => {
               const biz = BUSINESSES.find((b) => b.id === id);
-              return a + (Number(cnt) || 0) * (biz?.perHr || 0);
+              return a + cnt * (biz?.perHr || 0);
             }, 0);
-            const newCash = (Number(prev.cash) || 0) + perHr / 3600;
+            const newCash = prev.cash + perHr / 3600;
             
             if (energy !== prev.energy || perHr > 0) {
               if (perHr > 0) {
@@ -399,15 +384,15 @@
 
       const bizValue = Object.entries(s.businesses || {}).reduce((a, [id, c]) => {
         const biz = BUSINESSES.find((b) => b.id === id);
-        return a + (Number(c) || 0) * (biz?.price || 0);
+        return a + c * (biz?.price || 0);
       }, 0);
       const perHr = Object.entries(s.businesses || {}).reduce((a, [id, c]) => {
         const biz = BUSINESSES.find((b) => b.id === id);
-        return a + (Number(c) || 0) * (biz?.perHr || 0);
+        return a + c * (biz?.perHr || 0);
       }, 0);
-      const assetValue = Object.entries(s.assets || {}).reduce((a, [id, c]) => a + (Number(c) || 0) * (ASSET_PRICES[id] || 0), 0);
-      const netWorth = Math.floor((Number(s.cash) || 0) + bizValue + assetValue);
-      const ownedCount = Object.values(s.businesses || {}).reduce((a, c) => a + (Number(c) || 0), 0);
+      const assetValue = Object.entries(s.assets || {}).reduce((a, [id, c]) => a + c * (ASSET_PRICES[id] || 0), 0);
+      const netWorth = Math.floor((s.cash || 0) + bizValue + assetValue);
+      const ownedCount = Object.values(s.businesses || {}).reduce((a, c) => a + c, 0);
 
       const buyBusiness = (b) => {
         if (s.cash < b.price) {
@@ -503,27 +488,27 @@
                 {CATEGORIES.map(cat => (
                   <button key={cat} onClick={() => setActiveTab(cat)}
                           className={'whitespace-nowrap px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all ' + 
-                            (activeTab === cat ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12</px_-4px_rgba(255,214,10,0.5)]' : 'bg-white/[0.06] text-white/50 borderdiv border-white/10')}>
+                            (activeTab === cat ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.5)]' : 'bg-white/[0.06] text-white/50 border border-white/10')}>
                     {cat}
                   </button>
                 ))}
               </div>
 
-              {ownedCount > 0 && activeTab ===>
- 'All' && (
+              {ownedCount > 0 && activeTab === 'All' && (
                 <>
-                  <SectionTitle right={<span className="text-[10px] font-bold text-[#22C55E] flex items-center gap-1                         .5"><span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse </ glow-dot" />LIVE INCOME</span>}>
+                  <SectionTitle right={<span className="text-[10px] font-bold text-[#22C55E] flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse glow-dot" />LIVE INCOME</span>}>
                     Your Businesses
                   </SectionTitle>
                   <Card className="divide-y divide-white/[0.05] overflow-hidden">
-                    {BUSINESSES.filter((b) => ((s.businesses || {})[b.id] || 0) > 0).map((b) => {
-                      const owned = (s.businesses || {})[b.id] || 0;
+                    {BUSINESSES.filter((b) => (s.businesses[b.id] || 0) > 0).map((b) => {
+                      const owned = s.businesses[b.id];
                       return (
                         <div key={b.id} className="px-3.5 py-2.5 flex items-center gap-3">
                           <div className="w-8 h-8 rounded-lg bg-white/[0.06] grid place-items-center text-base shrink-0">{b.emoji}</div>
                           <div className="flex-1 min-w-0">
                             <div className="text-[12px] font-extrabold truncate font-display">{b.name}</div>
-                            <div className="text-[10px] text-white/40 font-bold tabular-nums">×{owned} · {fmt(b.perHr * owned)}/hrdiv>
+                            <div className="text-[10px] text-white/40 font-bold tabular-nums">×{owned} · {fmt(b.perHr * owned)}/hr</div>
+                          </div>
                           <div className="text-[11px] font-black text-[#FFD60A] tabular-nums shrink-0">{fmt(b.price * owned)}</div>
                         </div>
                       );
@@ -538,7 +523,7 @@
 
               <div className="space-y-2">
                 {filteredBusinesses.map((b) => {
-                  const owned = (s.businesses || {})[b.id] || 0;
+                  const owned = s.businesses[b.id] || 0;
                   const canAfford = s.cash >= b.price;
                   const roiHours = (b.price / b.perHr).toFixed(1);
                   return (
