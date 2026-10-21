@@ -13,7 +13,6 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   
-  <!-- PINNED BABEL VERSION 7.23.5 -->
   <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
 
   <!-- FIREBASE CLIENT SDK -->
@@ -38,18 +37,8 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-    html, body {
-      margin: 0; padding: 0;
-      background: #08080B; color: #fff;
-      overflow-x: hidden; overscroll-behavior-y: none;
-      font-family: 'Inter', system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
-    body {
-      background-image:
-        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent),
-        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent);
-    }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent); }
     ::-webkit-scrollbar { width: 0; height: 0; }
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
     .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
@@ -57,22 +46,13 @@
     .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
     .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); box-shadow: 0 8px 30px -10px rgba(255,214,10,0.3); }
     .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
-    .tap-btn {
-      position: relative; border-radius: 9999px;
-      background: radial-gradient(circle at 30% 20%, #FFED4E 0%, #FFD60A 35%, #E6A800 70%, #B88600 100%);
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.2) inset, 0 -8px 0 rgba(0,0,0,0.25) inset, 0 12px 0 rgba(139,100,0,0.55), 0 20px 50px -10px rgba(255,214,10,0.8), 0 30px 80px -20px rgba(255,184,0,0.6);
-      transition: transform 100ms ease, box-shadow 100ms ease;
-      user-select: none; touch-action: manipulation;
-    }
-    .tap-btn:active:not(:disabled) {
-      transform: translateY(6px) scale(0.97);
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.2) inset, 0 -4px 0 rgba(0,0,0,0.25) inset, 0 4px 0 rgba(139,100,0,0.55), 0 10px 30px -10px rgba(255,214,10,0.9);
-    }
+    .tap-btn { position: relative; border-radius: 9999px; background: radial-gradient(circle at 30% 20%, #FFED4E 0%, #FFD60A 35%, #E6A800 70%, #B88600 100%); box-shadow: 0 0 0 1px rgba(255,255,255,0.2) inset, 0 -8px 0 rgba(0,0,0,0.25) inset, 0 12px 0 rgba(139,100,0,0.55), 0 20px 50px -10px rgba(255,214,10,0.8); transition: transform 100ms ease, box-shadow 100ms ease; user-select: none; touch-action: manipulation; }
+    .tap-btn:active:not(:disabled) { transform: translateY(6px) scale(0.97); box-shadow: 0 0 0 1px rgba(255,255,255,0.2) inset, 0 -4px 0 rgba(0,0,0,0.25) inset, 0 4px 0 rgba(139,100,0,0.55), 0 10px 30px -10px rgba(255,214,10,0.9); }
     .tap-btn::before { content: ''; position: absolute; inset: 8px; border-radius: 9999px; background: radial-gradient(circle at 35% 25%, rgba(255,255,255,0.5), transparent 55%); pointer-events: none; }
     .tap-btn::after { content: ''; position: absolute; inset: -6px; border-radius: 9999px; background: radial-gradient(circle, rgba(255,214,10,0.5), transparent 70%); filter: blur(25px); z-index: -1; animation: pulseGlow 2.5s ease-in-out infinite; pointer-events: none; }
     @keyframes pulseGlow { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.1); } }
     @keyframes floatUp { 0% { opacity: 1; transform: translate(-50%, 0) scale(1); } 60% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -110px) scale(1.6); } }
-    .tap-float { position: absolute; left: 50%; bottom: 100%; font-weight: 900; font-size: 22px; color: #FFD60A; text-shadow: 0 2px 15px rgba(255,214,10,0.9), 0 0 25px rgba(255,214,10,0.6); pointer-events: none; animation: floatUp 900ms cubic-bezier(0.22,1,0.36,1) forwards; white-space: nowrap; z-index: 100; font-family: 'Sora', sans-serif; }
+    .tap-float { position: absolute; left: 50%; bottom: 100%; font-weight: 900; font-size: 22px; color: #FFD60A; text-shadow: 0 2px 15px rgba(255,214,10,0.9); pointer-events: none; animation: floatUp 900ms cubic-bezier(0.22,1,0.36,1) forwards; white-space: nowrap; z-index: 100; font-family: 'Sora', sans-serif; }
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
@@ -86,17 +66,11 @@
   </style>
 </head>
 <body>
-  <div id="root">
-    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;">
-      <div style="font-size:48px;">🇳🇬</div>
-      <div style="font-family:Sora;font-weight:800;font-size:14px;color:#FFD60A;">Loading Hustle...</div>
-    </div>
-  </div>
+  <div id="root"></div>
 
   <script type="text/babel" data-presets="react">
     const { useState, useEffect, useMemo, useRef } = React;
 
-    /* ═══ FIREBASE INITIALIZATION ═══ */
     const firebaseConfig = {
       apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
       authDomain: "lagos-life-a8706.firebaseapp.com",
@@ -110,7 +84,6 @@
     const db = firebase.firestore();
     const auth = firebase.auth();
 
-    /* ═══ CONSTANTS ═══ */
     const MAX_E = 100;
     const ENERGY_MS = 5 * 60 * 1000;
     const REFILL_COST = 25000;
@@ -120,13 +93,12 @@
     const BIZ_PER_HR = { water: 2_000, suya: 40_000, keke: 75_000, phone: 350_000, danfo: 800_000, wash: 4_000_000, bet9ja: 9_000_000, lounge: 90_000_000, oil: 1_000_000_000 };
     const DEST_BONUSES = { ikeja: 0, accra: 100, dubai: 500, uk: 1000, canada: 2000, usa: 5000, space: 25000 };
 
-    /* Cached Load */
     const getCachedData = () => {
       try {
         const cached = localStorage.getItem("lagos_user_data");
         if (cached) {
           const parsed = JSON.parse(cached);
-          return { ...parsed, transactions: parsed.transactions || [] };
+          return { ...parsed, transactions: parsed.transactions || [], referrals: parsed.referrals || 0 };
         }
       } catch (e) {}
       const tg = window?.Telegram?.WebApp;
@@ -135,7 +107,7 @@
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-        transactions: []
+        transactions: [], referrals: 0
       };
     };
 
@@ -182,7 +154,6 @@
         { label: 'Cash out creator fund', delta: { cash: 100000, clout: 200 }, msg: 'You cashed out ₦100,000 +200 clout 🎵' },
         { label: 'Post another one', delta: { clout: 300 }, msg: 'You went viral again! +300 clout 🔥' },
       ]},
-      /* NEW EVENTS */
       { title: 'DANFO CONDUCTOR', emoji: '🚌', color: 'red', text: '"Oga where you dey go? Enter with your change!"', options: [
         { label: 'Pay ₦500', delta: { cash: -500 }, msg: 'Conductor collected ₦500. The bus is moving.' },
         { label: 'Tell am you get change', delta: { energy: -5, cash: 1000 }, msg: 'He shouted but you still entered.' }
@@ -221,7 +192,6 @@
       return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
     };
 
-    /* ═══ AUDIO ENGINE ═══ */
     const AudioEngine = (() => {
       let ctx = null; let musicGain, sfxGain, musicPlaying = false, musicTimer, step = 0;
       const STEP_MS = 300;
@@ -284,10 +254,12 @@
       const [event, setEvent] = useState(null);
       const [eventHistory, setEventHistory] = useState([]);
       
-      // New Bonus States
       const [isWatchingAd, setIsWatchingAd] = useState(false);
       const [adTimer, setAdTimer] = useState(5);
       const [hasJoinedWA, setHasJoinedWA] = useState(localStorage.getItem('joined_wa') === 'true');
+      
+      // MAINTENANCE MODE STATE
+      const [isMaintenance, setIsMaintenance] = useState(false);
 
       const tapCounter = useRef(0);
       const lastEventAt = useRef(0);
@@ -297,6 +269,15 @@
       useEffect(() => {
         const tg = window?.Telegram?.WebApp;
         if (tg) { tg.ready(); tg.expand(); }
+
+        // Listen to Maintenance Mode
+        const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
+          if (doc.exists && doc.data().maintenance === true) {
+            setIsMaintenance(true);
+          } else {
+            setIsMaintenance(false);
+          }
+        });
         
         auth.signInAnonymously().then((cred) => {
           const userId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : cred.user.uid;
@@ -310,6 +291,7 @@
                 const newData = {
                   ...dbData,
                   transactions: dbData.transactions || [],
+                  referrals: dbData.referrals || 0,
                   cash: dbData.cash + pendingTaps.current.cash,
                   energy: dbData.energy + pendingTaps.current.energy,
                   taps: dbData.taps + pendingTaps.current.taps
@@ -323,7 +305,7 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-                transactions: []
+                transactions: [], referrals: 0
               };
               userRef.set(defaultData);
               setS(defaultData);
@@ -332,6 +314,8 @@
           });
           return unsubscribe;
         }).catch(e => setAuthError(e.message));
+        
+        return () => unsubSettings();
       }, []);
 
       /* Background Firebase Sync */
@@ -415,6 +399,17 @@
 
       if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div></div>;
 
+      /* MAINTENANCE SCREEN */
+      if (isMaintenance) {
+        return (
+          <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center bg-[#08080B]">
+            <div className="text-7xl animate-bounce">🚧</div>
+            <h1 className="text-2xl font-black text-[#FFD60A] font-display mt-4">GAME UNDER MAINTENANCE</h1>
+            <p className="text-white/50 text-sm max-w-xs">We dey upgrade the game for you. Check back in a few minutes!</p>
+          </div>
+        );
+      }
+
       const energyNextIn = s.energy >= MAX_E ? 0 : ENERGY_MS - ((Date.now() - s.lastEnergy) % ENERGY_MS);
       const tapBonus = (s.travels || []).reduce((a, id) => a + (DEST_BONUSES[id] || 0), 0);
       const TAP_VALUE = BASE_TAP + tapBonus;
@@ -497,13 +492,9 @@
       /* JOIN WHATSAPP LOGIC */
       const joinWA = () => {
         if (hasJoinedWA) return notify('You already claimed this bonus!', 'bad');
-        
-        // Open the link
         const tg = window?.Telegram?.WebApp;
         if (tg?.openLink) tg.openLink('https://whatsapp.com/channel/0029VbBlJUeFy72KIFuQoP38');
         else window.open('https://whatsapp.com/channel/0029VbBlJUeFy72KIFuQoP38', '_blank');
-
-        // Reward after 2 seconds (simulating them joining)
         notify('Verifying join...', 'good');
         setTimeout(() => {
           updateUser({ cash: s.cash + 10000 });
@@ -512,6 +503,25 @@
           AudioEngine.purchase();
           notify('Thanks for joining! +₦10,000 💬');
         }, 2000);
+      };
+
+      /* SHARE REFERRAL LOGIC */
+      const shareReferral = () => {
+        // Replace 'LagosLifeMiniBot' with your actual bot username if different
+        const botUsername = "LagosLifeMiniBot"; 
+        const refLink = `https://t.me/${botUsername}?start=REF_${uid}`;
+        const text = `Join me on Lagos Life Mini and let's hustle together! 🇳🇬🔥 Tap the link to play and we both get ₦10,000 bonus: ${refLink}`;
+        
+        if (navigator.share) {
+          navigator.share({
+            title: 'Lagos Life Mini',
+            text: text,
+            url: refLink,
+          }).catch(() => {});
+        } else {
+          navigator.clipboard.writeText(text);
+          notify('Referral link copied! Share with friends 🚀');
+        }
       };
 
       const NAV = [
@@ -579,8 +589,8 @@
                 </div>
               </div>
 
-              <div className="mt-6 grid grid-cols-3 gap-2 text-center">
-                {[['Taps', s.taps.toLocaleString()], ['Cash', fmt(s.cash)], ['Clout', s.clout.toLocaleString()]].map(([k, v]) => (
+              <div className="mt-6 grid grid-cols-4 gap-2 text-center">
+                {[['Taps', s.taps.toLocaleString()], ['Cash', fmt(s.cash)], ['Clout', s.clout.toLocaleString()], ['Referrals', s.referrals || 0]].map(([k, v]) => (
                   <Card key={k} className="py-2.5">
                     <div className="text-[9px] uppercase tracking-widest text-white/35 font-bold">{k}</div>
                     <div className="text-[13px] font-black tabular-nums mt-0.5">{v}</div>
@@ -592,30 +602,40 @@
               <SectionTitle right={<span className="text-[10px] font-bold text-[#FFD60A]">Free Money</span>}>
                 Bonuses
               </SectionTitle>
-              <div className="grid grid-cols-2 gap-2">
-                <Card className="p-3 flex flex-col items-center text-center">
-                  <div className="text-3xl mb-1">📺</div>
-                  <div className="text-[12px] font-black font-display">Watch Ad</div>
-                  <div className="text-[10px] text-[#22C55E] font-bold mb-2">+₦30,000</div>
+              <div className="grid grid-cols-3 gap-2">
+                <Card className="p-2.5 flex flex-col items-center text-center">
+                  <div className="text-2xl mb-1">📺</div>
+                  <div className="text-[11px] font-black font-display">Watch Ad</div>
+                  <div className="text-[9px] text-[#22C55E] font-bold mb-2">+₦30K</div>
                   <button onClick={watchAd} disabled={isWatchingAd}
-                          className={'w-full rounded-lg text-[11px] font-black py-2 active:scale-95 transition-all tabular-nums ' + 
+                          className={'w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition-all tabular-nums ' + 
                           (!isWatchingAd 
                             ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.6)]' 
                             : 'bg-white/[0.06] text-white/50 border border-white/[0.06]')}>
-                    {isWatchingAd ? `Wait ${adTimer}s...` : 'Watch Now'}
+                    {isWatchingAd ? `${adTimer}s` : 'Watch'}
                   </button>
                 </Card>
 
-                <Card className="p-3 flex flex-col items-center text-center">
-                  <div className="text-3xl mb-1">🟢</div>
-                  <div className="text-[12px] font-black font-display">WhatsApp Channel</div>
-                  <div className="text-[10px] text-[#22C55E] font-bold mb-2">+₦10,000</div>
+                <Card className="p-2.5 flex flex-col items-center text-center">
+                  <div className="text-2xl mb-1">🟢</div>
+                  <div className="text-[11px] font-black font-display">WhatsApp</div>
+                  <div className="text-[9px] text-[#22C55E] font-bold mb-2">+₦10K</div>
                   <button onClick={joinWA} disabled={hasJoinedWA}
-                          className={'w-full rounded-lg text-[11px] font-black py-2 active:scale-95 transition-all tabular-nums ' + 
+                          className={'w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition-all tabular-nums ' + 
                           (!hasJoinedWA 
                             ? 'bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black shadow-[0_4px_12px_-4px_rgba(34,197,94,0.6)]' 
                             : 'bg-white/[0.06] text-white/50 border border-white/[0.06]')}>
-                    {hasJoinedWA ? 'Claimed ✅' : 'Join Now'}
+                    {hasJoinedWA ? '✅' : 'Join'}
+                  </button>
+                </Card>
+
+                <Card className="p-2.5 flex flex-col items-center text-center">
+                  <div className="text-2xl mb-1">🤝</div>
+                  <div className="text-[11px] font-black font-display">Refer</div>
+                  <div className="text-[9px] text-[#22C55E] font-bold mb-2">+₦10K</div>
+                  <button onClick={shareReferral} 
+                          className="w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition-all tabular-nums bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.6)]">
+                    Invite
                   </button>
                 </Card>
               </div>
