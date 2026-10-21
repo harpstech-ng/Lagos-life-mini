@@ -1,13 +1,15 @@
 import { Telegraf, Markup } from "telegraf";
 
-// ═══ YOUR EXISTING FIREBASE CONFIG ═══
+// ═══ YOUR FIREBASE CONFIG ═══
 const API_KEY = "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs";
 const PROJECT_ID = "lagos-life-a8706";
-const BASE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+const DATABASE_ID = "(default)"; // ✅ Hardcoded to default
+
+const BASE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents`;
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// Helper: Get Anonymous Auth Token via REST API
+// Helper: Get Anonymous Auth Token
 async function getAuthToken() {
   const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${API_KEY}`, {
     method: 'POST',
@@ -19,18 +21,18 @@ async function getAuthToken() {
   return data.idToken;
 }
 
-// Helper: Get User from Firestore via REST
+// Helper: Get User from Firestore
 async function getUser(tgId, token) {
   const res = await fetch(`${BASE_URL}/users/${tgId}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
-  if (res.status === 404) return null; // User doesn't exist
+  if (res.status === 404) return null;
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   return data;
 }
 
-// Helper: Create/Update User in Firestore via REST
+// Helper: Save User to Firestore
 async function saveUser(tgId, userData, token, updateMask = "") {
   const fields = {};
   for (const [k, v] of Object.entries(userData)) {
@@ -56,7 +58,7 @@ async function saveUser(tgId, userData, token, updateMask = "") {
   return data;
 }
 
-// 1. Handle /start command
+// 1. Handle /start
 bot.start(async (ctx) => {
   try {
     const token = await getAuthToken();
@@ -86,7 +88,7 @@ bot.start(async (ctx) => {
   }
 });
 
-// 2. Handle user replying with their name
+// 2. Handle Name Reply
 bot.on("text", async (ctx, next) => {
   try {
     if (ctx.message.reply_to_message && ctx.message.text) {
