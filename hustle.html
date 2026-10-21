@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#08080B" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Lagos Life — Hustle</title>
+  <title>Lagos Life Mini — Hustle</title>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -54,32 +54,32 @@
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
     .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
     .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); }
-    .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); box-shadow: 0 8px 30px -10px rgba(255,214,10,0.3); }
     .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
     .tap-btn {
       position: relative; border-radius: 9999px;
       background: radial-gradient(circle at 30% 20%, #FFED4E 0%, #FFD60A 35%, #E6A800 70%, #B88600 100%);
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.15) inset, 0 -8px 0 rgba(0,0,0,0.25) inset, 0 12px 0 rgba(139,100,0,0.55), 0 20px 50px -10px rgba(255,214,10,0.6), 0 30px 70px -20px rgba(255,184,0,0.45);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.2) inset, 0 -8px 0 rgba(0,0,0,0.25) inset, 0 12px 0 rgba(139,100,0,0.55), 0 20px 50px -10px rgba(255,214,10,0.8), 0 30px 80px -20px rgba(255,184,0,0.6);
       transition: transform 100ms ease, box-shadow 100ms ease;
       user-select: none; touch-action: manipulation;
     }
     .tap-btn:active:not(:disabled) {
       transform: translateY(6px) scale(0.97);
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.15) inset, 0 -4px 0 rgba(0,0,0,0.25) inset, 0 4px 0 rgba(139,100,0,0.55), 0 10px 30px -10px rgba(255,214,10,0.7);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.2) inset, 0 -4px 0 rgba(0,0,0,0.25) inset, 0 4px 0 rgba(139,100,0,0.55), 0 10px 30px -10px rgba(255,214,10,0.9);
     }
-    .tap-btn::before { content: ''; position: absolute; inset: 8px; border-radius: 9999px; background: radial-gradient(circle at 35% 25%, rgba(255,255,255,0.4), transparent 55%); pointer-events: none; }
-    .tap-btn::after { content: ''; position: absolute; inset: -6px; border-radius: 9999px; background: radial-gradient(circle, rgba(255,214,10,0.4), transparent 70%); filter: blur(20px); z-index: -1; animation: pulseGlow 2.5s ease-in-out infinite; pointer-events: none; }
-    @keyframes pulseGlow { 0%, 100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 0.9; transform: scale(1.08); } }
-    @keyframes floatUp { 0% { opacity: 1; transform: translate(-50%, 0) scale(1); } 60% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -110px) scale(1.5); } }
-    .tap-float { position: absolute; left: 50%; bottom: 100%; font-weight: 900; font-size: 20px; color: #FFD60A; text-shadow: 0 2px 12px rgba(255,214,10,0.8), 0 0 20px rgba(255,214,10,0.5); pointer-events: none; animation: floatUp 900ms cubic-bezier(0.22,1,0.36,1) forwards; white-space: nowrap; z-index: 100; font-family: 'Sora', sans-serif; }
+    .tap-btn::before { content: ''; position: absolute; inset: 8px; border-radius: 9999px; background: radial-gradient(circle at 35% 25%, rgba(255,255,255,0.5), transparent 55%); pointer-events: none; }
+    .tap-btn::after { content: ''; position: absolute; inset: -6px; border-radius: 9999px; background: radial-gradient(circle, rgba(255,214,10,0.5), transparent 70%); filter: blur(25px); z-index: -1; animation: pulseGlow 2.5s ease-in-out infinite; pointer-events: none; }
+    @keyframes pulseGlow { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.1); } }
+    @keyframes floatUp { 0% { opacity: 1; transform: translate(-50%, 0) scale(1); } 60% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -110px) scale(1.6); } }
+    .tap-float { position: absolute; left: 50%; bottom: 100%; font-weight: 900; font-size: 22px; color: #FFD60A; text-shadow: 0 2px 15px rgba(255,214,10,0.9), 0 0 25px rgba(255,214,10,0.6); pointer-events: none; animation: floatUp 900ms cubic-bezier(0.22,1,0.36,1) forwards; white-space: nowrap; z-index: 100; font-family: 'Sora', sans-serif; }
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
     .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
     .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
-    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.18) 0%, rgba(255,214,10,0.06) 100%); border: 1px solid rgba(255,214,10,0.3); box-shadow: 0 0 20px rgba(255,214,10,0.2); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
@@ -120,10 +120,23 @@
     const BIZ_PER_HR = { water: 2_000, suya: 40_000, keke: 75_000, phone: 350_000, danfo: 800_000, wash: 4_000_000, bet9ja: 9_000_000, lounge: 90_000_000, oil: 1_000_000_000 };
     const DEST_BONUSES = { ikeja: 0, accra: 100, dubai: 500, uk: 1000, canada: 2000, usa: 5000, space: 25000 };
 
-    const DEFAULT_DATA = {
-      name: 'Aje Butler', cash: 25000, real: 0, energy: MAX_E,
-      lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
-      taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+    /* Cached Load */
+    const getCachedData = () => {
+      try {
+        const cached = localStorage.getItem("lagos_user_data");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return { ...parsed, transactions: parsed.transactions || [] };
+        }
+      } catch (e) {}
+      const tg = window?.Telegram?.WebApp;
+      return {
+        name: tg?.initDataUnsafe?.user?.first_name || 'Hustler', 
+        cash: 25000, real: 0, energy: MAX_E,
+        lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
+        taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+        transactions: []
+      };
     };
 
     const EVENTS = [
@@ -169,6 +182,27 @@
         { label: 'Cash out creator fund', delta: { cash: 100000, clout: 200 }, msg: 'You cashed out ₦100,000 +200 clout 🎵' },
         { label: 'Post another one', delta: { clout: 300 }, msg: 'You went viral again! +300 clout 🔥' },
       ]},
+      /* NEW EVENTS */
+      { title: 'DANFO CONDUCTOR', emoji: '🚌', color: 'red', text: '"Oga where you dey go? Enter with your change!"', options: [
+        { label: 'Pay ₦500', delta: { cash: -500 }, msg: 'Conductor collected ₦500. The bus is moving.' },
+        { label: 'Tell am you get change', delta: { energy: -5, cash: 1000 }, msg: 'He shouted but you still entered.' }
+      ]},
+      { title: 'NEPA LIGHT', emoji: '💡', color: 'green', text: '"UP NEPA!!!" The whole street is shouting.', options: [
+        { label: 'Charge your phone fast', delta: { energy: 20 }, msg: 'You charged your phone. +20 energy ⚡' },
+        { label: 'Use gen instead', delta: { cash: -2000 }, msg: 'You bought fuel for gen. -₦2,000' }
+      ]},
+      { title: 'STREET HAWKER', emoji: '🍎', color: 'green', text: '"Buy apple, buy pure water!" A small girl is begging you.', options: [
+        { label: 'Buy everything', delta: { cash: -5000, clout: 20 }, msg: 'You bought everything. +20 clout' },
+        { label: 'Walk away', delta: { cash: 0 }, msg: 'You walked away. No gain, no loss.' }
+      ]},
+      { title: 'YAHOO BOY', emoji: '💻', color: 'red', text: 'A guy is asking you to do "Yahoo Yahoo" with him.', options: [
+        { label: 'Collect the money', delta: { cash: 150000, clout: -20 }, msg: 'You collected ₦150,000 but lost clout.' },
+        { label: 'Run away', delta: { energy: -5 }, msg: 'You ran away. This life is not by force.' }
+      ]},
+      { title: 'JOLLOF RICE', emoji: '🍚', color: 'green', text: 'Party don finish, but plenty jollof rice dey remain.', options: [
+        { label: 'Pack am', delta: { cash: 5000, energy: 10 }, msg: 'You packed plenty jollof. +₦5,000 & +10 energy' },
+        { label: 'Leave am', delta: {}, msg: 'You left am. Your belle go thank you.' }
+      ]}
     ];
 
     const fmt = (n) => {
@@ -187,7 +221,7 @@
       return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
     };
 
-    /* ═══ AUDIO ENGINE (LAGOS AFROBEAT + SFX) ═══ */
+    /* ═══ AUDIO ENGINE ═══ */
     const AudioEngine = (() => {
       let ctx = null; let musicGain, sfxGain, musicPlaying = false, musicTimer, step = 0;
       const STEP_MS = 300;
@@ -224,12 +258,10 @@
       return {
         startMusic: () => { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); },
         stopMusic: () => { musicPlaying=false; clearInterval(musicTimer); },
-        toggle: () => { musicPlaying ? AudioEngine.stopMusic() : AudioEngine.startMusic(); return musicPlaying; },
         tap: () => { init(); if(ctx.state==="suspended") ctx.resume(); tone(880, 0.09, "triangle", sfxGain, 0, 0.28); },
         coin: () => { init(); tone(1046, 0.08, "square", sfxGain, 0, 0.15); tone(1318, 0.15, "square", sfxGain, 0.07, 0.15); },
         error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
-        purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); },
-        isPlaying: () => musicPlaying
+        purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); }
       };
     })();
 
@@ -244,17 +276,21 @@
     );
 
     function App() {
-      const [s, setS] = useState(DEFAULT_DATA); // Instant Load
+      const [s, setS] = useState(getCachedData); 
       const [uid, setUid] = useState(null);
       const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
       const [tapFloats, setTapFloats] = useState([]);
       const [event, setEvent] = useState(null);
       const [eventHistory, setEventHistory] = useState([]);
+      
+      // New Bonus States
+      const [isWatchingAd, setIsWatchingAd] = useState(false);
+      const [adTimer, setAdTimer] = useState(5);
+      const [hasJoinedWA, setHasJoinedWA] = useState(localStorage.getItem('joined_wa') === 'true');
+
       const tapCounter = useRef(0);
       const lastEventAt = useRef(0);
-
-      // Tap Batching Ref (Fixes Lag)
       const pendingTaps = useRef({ cash: 0, energy: 0, taps: 0 });
 
       /* Initialize Firebase Auth & Sync */
@@ -271,32 +307,34 @@
             if (doc.exists) {
               setS(prev => {
                 const dbData = doc.data();
-                return {
+                const newData = {
                   ...dbData,
+                  transactions: dbData.transactions || [],
                   cash: dbData.cash + pendingTaps.current.cash,
                   energy: dbData.energy + pendingTaps.current.energy,
                   taps: dbData.taps + pendingTaps.current.taps
                 };
+                localStorage.setItem("lagos_user_data", JSON.stringify(newData));
+                return newData;
               });
             } else {
               const defaultData = {
-                name: tg?.initDataUnsafe?.user?.first_name || 'Aje Butler',
+                name: tg?.initDataUnsafe?.user?.first_name || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+                transactions: []
               };
               userRef.set(defaultData);
               setS(defaultData);
+              localStorage.setItem("lagos_user_data", JSON.stringify(defaultData));
             }
           });
           return unsubscribe;
-        }).catch(e => {
-          console.error("Firebase Auth Error:", e);
-          setAuthError(e.message);
-        });
+        }).catch(e => setAuthError(e.message));
       }, []);
 
-      /* Background Firebase Sync (Every 1.5 seconds) */
+      /* Background Firebase Sync */
       useEffect(() => {
         if (!uid) return;
         const syncInterval = setInterval(async () => {
@@ -312,14 +350,12 @@
               taps: firebase.firestore.FieldValue.increment(toSync.taps),
               lastSeen: Date.now()
             });
-          } catch (e) {
-            console.error("Sync error:", e);
-          }
+          } catch (e) { console.error("Sync error:", e); }
         }, 1500);
         return () => clearInterval(syncInterval);
       }, [uid]);
 
-      /* Start music on first user gesture anywhere on screen */
+      /* Start music */
       useEffect(() => {
         const unlock = () => { AudioEngine.startMusic(); };
         window.addEventListener("pointerdown", unlock, { once: true });
@@ -334,7 +370,6 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      /* Immediate Direct Update (for events/refills) */
       const updateUser = async (data) => {
         setS(prev => ({ ...prev, ...data }));
         if (uid) {
@@ -351,7 +386,7 @@
         }
       };
 
-      /* Tick: energy + business income (FIXED LAG) */
+      /* Tick: energy + income */
       useEffect(() => {
         if (!uid) return;
         const iv = setInterval(() => {
@@ -378,7 +413,7 @@
         return () => clearInterval(iv);
       }, [uid]);
 
-      if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div><div className="text-xs text-white/50 mt-2">Go to Firebase Console → Authentication → Sign-in method → Enable Anonymous.</div></div>;
+      if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div></div>;
 
       const energyNextIn = s.energy >= MAX_E ? 0 : ENERGY_MS - ((Date.now() - s.lastEnergy) % ENERGY_MS);
       const tapBonus = (s.travels || []).reduce((a, id) => a + (DEST_BONUSES[id] || 0), 0);
@@ -390,7 +425,6 @@
         try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light'); } catch {}
         
         const newEnergy = Math.max(0, s.energy - 1);
-        
         setS(prev => ({ ...prev, cash: prev.cash + TAP_VALUE, energy: newEnergy, taps: prev.taps + 1 }));
         
         pendingTaps.current.cash += TAP_VALUE;
@@ -438,6 +472,48 @@
         setEvent(EVENTS[Math.floor(Math.random() * EVENTS.length)]);
       };
 
+      /* WATCH AD LOGIC */
+      const watchAd = () => {
+        if (isWatchingAd) return;
+        setIsWatchingAd(true);
+        setAdTimer(5);
+        AudioEngine.tap();
+        
+        let timer = 5;
+        const iv = setInterval(() => {
+          timer--;
+          setAdTimer(timer);
+          if (timer <= 0) {
+            clearInterval(iv);
+            setIsWatchingAd(false);
+            updateUser({ cash: s.cash + 30000 });
+            AudioEngine.coin();
+            notify('Ad watched! +₦30,000 💰');
+            try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('heavy'); } catch {}
+          }
+        }, 1000);
+      };
+
+      /* JOIN WHATSAPP LOGIC */
+      const joinWA = () => {
+        if (hasJoinedWA) return notify('You already claimed this bonus!', 'bad');
+        
+        // Open the link
+        const tg = window?.Telegram?.WebApp;
+        if (tg?.openLink) tg.openLink('https://whatsapp.com/channel/0029VbBlJUeFy72KIFuQoP38');
+        else window.open('https://whatsapp.com/channel/0029VbBlJUeFy72KIFuQoP38', '_blank');
+
+        // Reward after 2 seconds (simulating them joining)
+        notify('Verifying join...', 'good');
+        setTimeout(() => {
+          updateUser({ cash: s.cash + 10000 });
+          localStorage.setItem('joined_wa', 'true');
+          setHasJoinedWA(true);
+          AudioEngine.purchase();
+          notify('Thanks for joining! +₦10,000 💬');
+        }, 2000);
+      };
+
       const NAV = [
         { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
         { id: 'hustle', label: 'Hustle', icon: '👊', href: 'hustle.html' },
@@ -463,7 +539,7 @@
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display">L</div>
                   <div className="min-w-0">
                     <div className="text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display">Hustle</div>
-                    <div className="text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5">{fmt(s.cash)}</div>
+                    <div className="text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5">{s.name || 'Hustler'} · {fmt(s.cash)}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -488,11 +564,11 @@
                 </button>
               </Card>
 
-              <div className="mt-8 flex flex-col items-center">
+              <div className="mt-6 flex flex-col items-center">
                 <div className="relative">
                   <button onClick={doTap} className="tap-btn w-64 h-64 grid place-items-center text-black">
                     <div className="text-center relative z-10">
-                      <div className="text-6xl drop-shadow">👊🏾</div>
+                      <div className="text-6xl drop-shadow-md">👊🏾</div>
                       <div className="text-2xl font-black tracking-tighter mt-1 font-display">HUSTLE</div>
                       <div className="text-[11px] font-extrabold opacity-70 font-display">+{fmt(TAP_VALUE)}</div>
                     </div>
@@ -510,6 +586,38 @@
                     <div className="text-[13px] font-black tabular-nums mt-0.5">{v}</div>
                   </Card>
                 ))}
+              </div>
+
+              {/* BONUS SECTION */}
+              <SectionTitle right={<span className="text-[10px] font-bold text-[#FFD60A]">Free Money</span>}>
+                Bonuses
+              </SectionTitle>
+              <div className="grid grid-cols-2 gap-2">
+                <Card className="p-3 flex flex-col items-center text-center">
+                  <div className="text-3xl mb-1">📺</div>
+                  <div className="text-[12px] font-black font-display">Watch Ad</div>
+                  <div className="text-[10px] text-[#22C55E] font-bold mb-2">+₦30,000</div>
+                  <button onClick={watchAd} disabled={isWatchingAd}
+                          className={'w-full rounded-lg text-[11px] font-black py-2 active:scale-95 transition-all tabular-nums ' + 
+                          (!isWatchingAd 
+                            ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.6)]' 
+                            : 'bg-white/[0.06] text-white/50 border border-white/[0.06]')}>
+                    {isWatchingAd ? `Wait ${adTimer}s...` : 'Watch Now'}
+                  </button>
+                </Card>
+
+                <Card className="p-3 flex flex-col items-center text-center">
+                  <div className="text-3xl mb-1">🟢</div>
+                  <div className="text-[12px] font-black font-display">WhatsApp Channel</div>
+                  <div className="text-[10px] text-[#22C55E] font-bold mb-2">+₦10,000</div>
+                  <button onClick={joinWA} disabled={hasJoinedWA}
+                          className={'w-full rounded-lg text-[11px] font-black py-2 active:scale-95 transition-all tabular-nums ' + 
+                          (!hasJoinedWA 
+                            ? 'bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black shadow-[0_4px_12px_-4px_rgba(34,197,94,0.6)]' 
+                            : 'bg-white/[0.06] text-white/50 border border-white/[0.06]')}>
+                    {hasJoinedWA ? 'Claimed ✅' : 'Join Now'}
+                  </button>
+                </Card>
               </div>
 
               <SectionTitle right={<span className="text-[10px] font-bold text-[#FFD60A]">~5.5% per tap</span>}>
