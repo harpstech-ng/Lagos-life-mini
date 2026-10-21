@@ -25,7 +25,8 @@ async function getUser(tgId, token) {
   return data;
 }
 
-async function saveUser(tgId, userData, token, updateMask = "") {
+// ✅ FIXED: Properly formats the updateMask for multiple fields
+async function saveUser(tgId, userData, token, updateMaskFields = []) {
   const fields = {};
   for (const [k, v] of Object.entries(userData)) {
     if (typeof v === 'number') fields[k] = { integerValue: String(v) };
@@ -34,13 +35,19 @@ async function saveUser(tgId, userData, token, updateMask = "") {
   }
 
   let url = `${BASE_URL}/users/${tgId}`;
-  if (updateMask) url += `?updateMask.fieldPaths=${updateMask}`;
+  
+  // If we are updating specific fields, build the query string correctly
+  if (updateMaskFields.length > 0) {
+    const maskQuery = updateMaskFields.map(f => `updateMask.fieldPaths=${f}`).join('&');
+    url += `?${maskQuery}`;
+  }
 
   const res = await fetch(url, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ fields })
   });
+  
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   return data;
@@ -64,7 +71,8 @@ bot.start(async (ctx) => {
         onboardingStep: 1, 
         createdAt: Date.now()
       };
-      // NO updateMask here for new users to prevent crashes
+      
+      // Create or completely replace the document (no updateMask needed here)
       await saveUser(tgId, defaultData, token); 
       
       await ctx.reply(`🇳🇬 *Welcome to Lagos Life Mini!*\n\nMake we know you small. What name do you want to use in the game?`, { parse_mode: "Markdown", ...Markup.forceReply() });
@@ -102,19 +110,20 @@ bot.on("text", async (ctx, next) => {
     const step = doc.fields.onboardingStep?.integerValue || "1";
 
     if (step === "1") {
-      await saveUser(tgId, { name: text, onboardingStep: 2 }, token, "name,onboardingStep");
+      // ✅ Pass an array of fields to update
+      await saveUser(tgId, { name: text, onboardingStep: 2 }, token, ["name", "onboardingStep"]);
       await ctx.reply(`Sharp! *${text}*, na correct name. 💪\n\nAbeg, wetin be your hustle for Lagos? (e.g. Tech Bro, Agbero, Hustler, Musician)`, { parse_mode: "Markdown", ...Markup.forceReply() });
     
     } else if (step === "2") {
-      await saveUser(tgId, { hustle: text, onboardingStep: 3 }, token, "hustle,onboardingStep");
+      await saveUser(tgId, { hustle: text, onboardingStep: 3 }, token, ["hustle", "onboardingStep"]);
       await ctx.reply(`Odogwu! 💼\n\nWhere you dey stay for Lagos? (e.g. Lekki, Mushin, Ikeja)`, Markup.forceReply());
     
     } else if (step === "3") {
-      await saveUser(tgId, { location: text, onboardingStep: 4 }, token, "location,onboardingStep");
+      await saveUser(tgId, { location: text, onboardingStep: 4 }, token, ["location", "onboardingStep"]);
       await ctx.reply(`I know that place! 📍\n\nDrop one sharp Lagos motto for us! (e.g. God When, No Gree For Anybody)`, Markup.forceReply());
     
     } else if (step === "4") {
-      await saveUser(tgId, { motto: text, onboardingStep: 5 }, token, "motto,onboardingStep");
+      await saveUser(tgId, { motto: text, onboardingStep: 5 }, token, ["motto", "onboardingStep"]);
       await ctx.reply(`E choke! 🔥 You are officially a Lagosian.`);
       await sendPlayButton(ctx, doc.fields.name?.stringValue || ctx.from.first_name);
     }
