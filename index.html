@@ -122,7 +122,6 @@
   <script type="text/babel" data-presets="react">
     const { useState, useEffect, useMemo, useRef } = React;
 
-    /* ═══ FIREBASE INITIALIZATION ═══ */
     const firebaseConfig = {
       apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
       authDomain: "lagos-life-a8706.firebaseapp.com",
@@ -136,7 +135,6 @@
     const db = firebase.firestore();
     const auth = firebase.auth();
 
-    /* ═══ CONSTANTS ═══ */
     const MAX_E = 100;
     const ENERGY_MS = 5 * 60 * 1000;
     const TOTAL_USERS = 256890;
@@ -165,7 +163,6 @@
       };
     };
 
-    /* ═══ HELPERS ═══ */
     const fmt = (n) => {
       n = Math.floor(n || 0);
       const s = n < 0 ? '-' : '';
@@ -185,7 +182,6 @@
       ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r); ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r); ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
     };
 
-    /* ═══ AUDIO ENGINE ═══ */
     const AudioEngine = (() => {
       let ctx = null; let musicGain, sfxGain, musicPlaying = false, musicTimer, step = 0;
       const STEP_MS = 300;
@@ -230,7 +226,6 @@
       };
     })();
 
-    /* ═══ UI ═══ */
     const Card = ({ children, className = '', gold = false }) => (
       <div className={'rounded-2xl ' + (gold ? 'card-gold' : 'card-gradient') + ' ' + className}>{children}</div>
     );
@@ -241,7 +236,6 @@
       </div>
     );
 
-    /* ═══ APP ═══ */
     function App() {
       const [s, setS] = useState(getCachedData); 
       const [uid, setUid] = useState(null);
@@ -257,16 +251,24 @@
       const [sendAmt, setSendAmt] = useState('');
       const [isSending, setIsSending] = useState(false); 
       const [musicOn, setMusicOn] = useState(false);
+      const [isMaintenance, setIsMaintenance] = useState(false);
+
       const tapCounter = useRef(0);
-      
       const pendingTaps = useRef({ cash: 0, energy: 0, taps: 0 });
 
-      /* Initialize Firebase Auth & Sync */
       useEffect(() => {
         const tg = window?.Telegram?.WebApp;
         if (tg) { tg.ready(); tg.expand(); }
 
-        const tgUser = tg?.initDataUnsafe?.user; // Get Telegram User object
+        const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
+          if (doc.exists && doc.data().maintenance === true) {
+            setIsMaintenance(true);
+          } else {
+            setIsMaintenance(false);
+          }
+        });
+
+        const tgUser = tg?.initDataUnsafe?.user;
         
         auth.signInAnonymously().then((cred) => {
           const userId = tgUser?.id ? String(tgUser.id) : cred.user.uid;
@@ -277,15 +279,14 @@
             if (doc.exists) {
               const dbData = doc.data();
               
-              // 🔥 CRITICAL FIX: If user is in Telegram but telegramId is missing in DB, save it!
               if (!dbData.telegramId && tgUser?.id) {
-                userRef.update({ telegramId: tgUser.id });
+                userRef.update({ telegramId: tgUser.id }).catch(() => {});
               }
 
               setS(prev => {
                 const newData = {
                   ...dbData,
-                  telegramId: dbData.telegramId || tgUser?.id, // Keep local state updated
+                  telegramId: dbData.telegramId || tgUser?.id, 
                   transactions: dbData.transactions || [], 
                   cash: dbData.cash + pendingTaps.current.cash,
                   energy: dbData.energy + pendingTaps.current.energy,
@@ -295,7 +296,6 @@
                 return newData;
               });
             } else {
-              // 🔥 CRITICAL FIX: Save telegramId for brand new users
               const defaultData = {
                 name: tgUser?.first_name || 'Hustler',
                 telegramId: tgUser?.id || null, 
@@ -304,18 +304,21 @@
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
                 transactions: []
               };
-              userRef.set(defaultData);
+              userRef.set(defaultData).catch(() => {});
               setS(defaultData);
               localStorage.setItem("lagos_user_data", JSON.stringify(defaultData));
             }
+          }, (error) => {
+             console.error("Firestore snapshot error:", error);
           });
           return unsubscribe;
         }).catch(e => {
           setAuthError(e.message);
         });
+
+        return () => unsubSettings();
       }, []);
 
-      /* Background Firebase Sync */
       useEffect(() => {
         if (!uid) return;
         const syncInterval = setInterval(async () => {
@@ -337,7 +340,6 @@
         return () => clearInterval(syncInterval);
       }, [uid]);
 
-      /* Start music on first user gesture */
       useEffect(() => {
         const unlock = () => { if (!musicOn) { AudioEngine.startMusic(); setMusicOn(true); } };
         window.addEventListener("pointerdown", unlock, { once: true });
@@ -352,7 +354,6 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      /* Tick */
       useEffect(() => {
         if (!s) return;
         const iv = setInterval(() => {
@@ -365,7 +366,7 @@
             if (gained > 0) {
               energy = Math.min(MAX_E, energy + gained);
               lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
-              if (uid) db.collection("users").doc(uid).update({ energy, lastEnergy });
+              if (uid) db.collection("users").doc(uid).update({ energy, lastEnergy }).catch(() => {});
             }
           }
           
@@ -375,7 +376,7 @@
           if (energy !== s.energy || perHr > 0) {
             setS(prev => ({ ...prev, energy, lastEnergy, cash: newCash }));
             if (uid && perHr > 0) {
-              db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600) });
+              db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600) }).catch(() => {});
             }
           }
         }, 1000);
@@ -389,7 +390,16 @@
 
       if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div></div>;
 
-      /* Derived */
+      if (isMaintenance) {
+        return (
+          <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center bg-[#08080B]">
+            <div className="text-7xl animate-bounce">🚧</div>
+            <h1 className="text-2xl font-black text-[#FFD60A] font-display mt-4">GAME UNDER MAINTENANCE</h1>
+            <p className="text-white/50 text-sm max-w-xs">We dey upgrade the game for you. Check back in a few minutes!</p>
+          </div>
+        );
+      }
+
       const bizValue = Object.entries(s.businesses || {}).reduce((a, [id, c]) => a + c * (BIZ_PRICES[id] || 0), 0);
       const assetValue = Object.entries(s.assets || {}).reduce((a, [id, c]) => a + c * (ASSET_PRICES[id] || 0), 0);
       const netWorth = Math.floor((s.cash || 0) + bizValue + assetValue);
@@ -398,7 +408,6 @@
       const rank = netWorth <= 0 ? TOTAL_USERS : Math.max(1, Math.floor(TOTAL_USERS - Math.min(1, Math.log10(netWorth + 1) / 13) * (TOTAL_USERS - 1)));
       const energyNextIn = s.energy >= MAX_E ? 0 : ENERGY_MS - ((Date.now() - s.lastEnergy) % ENERGY_MS);
 
-      /* Tap */
       const doTap = () => {
         if (s.energy < 1) { AudioEngine.error(); return notify('No energy! Wait or refill ⚡', 'bad'); }
         AudioEngine.tap();
@@ -416,7 +425,6 @@
         setTimeout(() => setTapFloats((f) => f.filter((x) => x.id !== id)), 950);
       };
 
-      /* Share Card */
       const generateShareCard = () => {
         const c = document.createElement('canvas');
         c.width = 1080; c.height = 1080;
@@ -493,7 +501,6 @@
         try { if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank'); } catch {}
       };
 
-      /* Send Money with Logging & Telegram Notification */
       const sendMoney = async () => {
         const user = sendTo.trim();
         const amt = Math.floor(Number(sendAmt));
@@ -538,7 +545,6 @@
             });
           });
           
-          // ═══ TRIGGER TELEGRAM NOTIFICATION ═══
           if (recipientData.telegramId) {
             try {
               fetch('/api/notify', {
@@ -553,7 +559,6 @@
               });
             } catch (err) { console.error("Notification failed", err); }
           }
-          // ═══════════════════════════════════════
 
           AudioEngine.coin();
           setSendOpen(false); setSendTo(''); setSendAmt('');
