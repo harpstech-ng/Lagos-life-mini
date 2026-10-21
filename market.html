@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#08080B" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Lagos Life — Market</title>
+  <title>Lagos Life Mini — Market</title>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -54,14 +54,14 @@
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
     .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
     .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); }
-    .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); box-shadow: 0 8px 30px -10px rgba(255,214,10,0.3); }
     .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
-    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.18) 0%, rgba(255,214,10,0.06) 100%); border: 1px solid rgba(255,214,10,0.3); box-shadow: 0 0 20px rgba(255,214,10,0.2); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
@@ -70,6 +70,8 @@
     @keyframes shine { 0% { transform: translateX(-100%) skewX(-15deg); } 100% { transform: translateX(200%) skewX(-15deg); } }
     .shine::after { content: ''; position: absolute; top: 0; left: 0; width: 60%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); animation: shine 3s ease-in-out infinite; pointer-events: none; }
     .hero-grid { background-image: linear-gradient(rgba(255,214,10,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,214,10,0.04) 1px, transparent 1px); background-size: 22px 22px; -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
     .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
   </style>
@@ -102,14 +104,41 @@
     const MAX_E = 100;
     const ENERGY_MS = 5 * 60 * 1000;
 
+    const CATEGORIES = ["All", "Street Flex", "Rides", "Real Estate", "Aje Status"];
+
     const ASSETS = [
-      { id: 'chain',   name: 'Gold Chain',            emoji: '📿', price: 5_000_000,           tier: 'Starter', color: 'from-yellow-500/20 to-yellow-700/10' },
-      { id: 'rolex',   name: 'Rolex',                 emoji: '⌚', price: 50_000_000,          tier: 'Baller',  color: 'from-amber-400/25 to-amber-700/10' },
-      { id: 'tesla',   name: 'Tesla',                 emoji: '🚗', price: 500_000_000,         tier: 'Sharp',   color: 'from-red-500/20 to-red-700/10' },
-      { id: 'gwag',    name: 'G-Wagon',               emoji: '🚙', price: 5_000_000_000,       tier: 'Big Boy', color: 'from-slate-400/20 to-slate-700/10' },
-      { id: 'yacht',   name: 'Yacht',                 emoji: '🛥️', price: 20_000_000_000,      tier: 'Odogwu',  color: 'from-cyan-400/20 to-blue-700/10' },
-      { id: 'jet',     name: 'Private Jet',           emoji: '✈️', price: 100_000_000_000,     tier: 'Aje',     color: 'from-purple-400/20 to-purple-700/10' },
-      { id: 'mansion', name: 'Banana Island Mansion', emoji: '🏰', price: 1_000_000_000_000,   tier: 'Legend',  color: 'from-pink-400/20 to-pink-700/10' },
+      // STREET FLEX (6)
+      { id: 'af1',     name: 'Air Force 1',           emoji: '👟', price: 150_000,        tier: 'Starter', color: 'from-gray-400/20 to-gray-700/10', cat: 'Street Flex', desc: 'White on white. Clean.' },
+      { id: 'shades',  name: 'Designer Shades',       emoji: '🕶️', price: 500_000,        tier: 'Baller',  color: 'from-black/40 to-gray-800/20', cat: 'Street Flex', desc: 'To hide your eyes from haters.' },
+      { id: 'chain',   name: 'Gold Chain',            emoji: '📿', price: 5_000_000,      tier: 'Starter', color: 'from-yellow-500/20 to-yellow-700/10', cat: 'Street Flex', desc: 'Heavy neck, heavy pockets.' },
+      { id: 'iphone',  name: 'iPhone 15 Pro Max',     emoji: '📱', price: 2_500_000,      tier: 'Sharp',   color: 'from-blue-400/20 to-blue-700/10', cat: 'Street Flex', desc: 'Titanium finish. Sharp.' },
+      { id: 'grillz',  name: 'Gold Grillz',           emoji: '🦷', price: 10_000_000,     tier: 'Baller',  color: 'from-amber-400/20 to-amber-700/10', cat: 'Street Flex', desc: 'Smile and blind them.' },
+      { id: 'rolex',   name: 'Rolex',                 emoji: '⌚', price: 50_000_000,     tier: 'Baller',  color: 'from-amber-400/25 to-amber-700/10', cat: 'Street Flex', desc: 'Time is money.' },
+
+      // RIDES (6)
+      { id: 'honda',   name: 'Honda Accord',          emoji: '🚗', price: 15_000_000,     tier: 'Sharp',   color: 'from-slate-400/20 to-slate-700/10', cat: 'Rides', desc: 'End of discussion.' },
+      { id: 'camry',   name: 'Toyota Camry',          emoji: '🚘', price: 25_000_000,     tier: 'Sharp',   color: 'from-gray-400/20 to-gray-700/10', cat: 'Rides', desc: 'Muscle car for the big boys.' },
+      { id: 'tesla',   name: 'Tesla',                 emoji: '⚡', price: 500_000_000,    tier: 'Sharp',   color: 'from-red-500/20 to-red-700/10', cat: 'Rides', desc: 'Electric. Zero noise.' },
+      { id: 'gwag',    name: 'G-Wagon',               emoji: '🚙', price: 5_000_000_000,  tier: 'Big Boy', color: 'from-slate-400/20 to-slate-700/10', cat: 'Rides', desc: 'Boxy but expensive.' },
+      { id: 'rr',      name: 'Range Rover',           emoji: '🚐', price: 15_000_000_000, tier: 'Odogwu',  color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Rides', desc: 'The official car of the rich.' },
+      { id: 'lambo',   name: 'Lamborghini',           emoji: '🏎️', price: 50_000_000_000, tier: 'Aje',     color: 'from-yellow-400/20 to-yellow-700/10', cat: 'Rides', desc: 'Scissor doors. Pure flex.' },
+
+      // REAL ESTATE (5)
+      { id: 'lekki_flat', name: 'Lekki 2-Bedroom',    emoji: '🏢', price: 100_000_000,     tier: 'Baller',  color: 'from-amber-400/20 to-amber-700/10', cat: 'Real Estate', desc: 'Where the tech bros live.' },
+      { id: 'ikeja_duplex', name: 'Ikeja Duplex',     emoji: '🏡', price: 300_000_000,     tier: 'Big Boy', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Real Estate', desc: 'Close to the airport.' },
+      { id: 'ikoyi_penthouse', name: 'Ikoyi Penthouse', emoji: '🏙️', price: 1_500_000_000, tier: 'Odogwu',  color: 'from-cyan-400/20 to-cyan-700/10', cat: 'Real Estate', desc: 'High above the noise.' },
+      { id: 'yacht',   name: 'Private Yacht',         emoji: '🛥️', price: 20_000_000_000,  tier: 'Odogwu',  color: 'from-cyan-400/20 to-blue-700/10', cat: 'Real Estate', desc: 'Party on the water.' },
+      { id: 'mansion', name: 'Banana Island Mansion', emoji: '🏰', price: 1_000_000_000_000, tier: 'Legend', color: 'from-pink-400/20 to-pink-700/10', cat: 'Real Estate', desc: 'The ultimate Lagos dream.' },
+
+      // AJE STATUS (8)
+      { id: 'bodyguard', name: 'Personal Bodyguard',  emoji: '💪🏾', price: 150_000_000,    tier: 'Big Boy', color: 'from-red-400/20 to-red-700/10', cat: 'Aje Status', desc: 'Keep the area boys away.' },
+      { id: 'chef',    name: 'Private Chef',          emoji: '👨🏾‍🍳', price: 50_000_000,    tier: 'Baller',  color: 'from-white/20 to-gray-700/10', cat: 'Aje Status', desc: 'Breakfast, lunch and dinner.' },
+      { id: 'plate',   name: 'Custom Plate Number',   emoji: '🔠', price: 200_000_000,    tier: 'Sharp',   color: 'from-blue-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'E.g. "BIG-BOY-1".' },
+      { id: 'jet',     name: 'Private Jet',           emoji: '✈️', price: 100_000_000_000, tier: 'Aje',    color: 'from-purple-400/20 to-purple-700/10', cat: 'Aje Status', desc: 'Fly above the traffic.' },
+      { id: 'helicopter', name: 'Helicopter',         emoji: '🚁', price: 300_000_000_000, tier: 'Aje',    color: 'from-indigo-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'Beat the traffic.' },
+      { id: 'island',  name: 'Private Island',        emoji: '🏝️', price: 2_000_000_000_000, tier: 'Legend', color: 'from-teal-400/20 to-teal-700/10', cat: 'Aje Status', desc: 'For when Lagos is too loud.' },
+      { id: 'football', name: 'Football Club',        emoji: '⚽', price: 5_000_000_000_000, tier: 'Legend', color: 'from-lime-400/20 to-lime-700/10', cat: 'Aje Status', desc: 'Buy a whole team.' },
+      { id: 'crypto',  name: 'Crypto Exchange',       emoji: '🪙', price: 10_000_000_000_000, tier: 'Legend', color: 'from-orange-400/20 to-orange-700/10', cat: 'Aje Status', desc: 'Control the blockchain.' },
     ];
 
     const BIZ_PRICES = {
@@ -121,6 +150,21 @@
       water: 2000, suya: 40000, keke: 75000, phone: 350000,
       danfo: 800000, wash: 4000000, bet9ja: 9000000,
       lounge: 90000000, oil: 1000000000,
+    };
+
+    const getCachedData = () => {
+      try {
+        const cached = localStorage.getItem("lagos_user_data");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+      const tg = window?.Telegram?.WebApp;
+      return {
+        name: tg?.initDataUnsafe?.user?.first_name || 'Hustler', 
+        cash: 25000, real: 0, energy: MAX_E,
+        lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
+        taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+        transactions: []
+      };
     };
 
     const fmt = (n) => {
@@ -189,27 +233,18 @@
     );
 
     function App() {
-      const [s, setS] = useState(null);
+      const [s, setS] = useState(getCachedData); 
       const [uid, setUid] = useState(null);
       const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
       const [flexAnim, setFlexAnim] = useState(null);
       const [musicOn, setMusicOn] = useState(false);
+      const [activeTab, setActiveTab] = useState("All");
 
       /* Initialize Firebase Auth & Sync */
       useEffect(() => {
         const tg = window?.Telegram?.WebApp;
         if (tg) { tg.ready(); tg.expand(); }
-
-        // 2-Second Timeout Fallback
-        const timer = setTimeout(() => {
-          setS(prev => prev || {
-            name: tg?.initDataUnsafe?.user?.first_name || 'Aje Butler',
-            cash: 25000, real: 0, energy: MAX_E,
-            lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
-            taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-          });
-        }, 2000);
 
         auth.signInAnonymously().then((cred) => {
           const userId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : cred.user.uid;
@@ -217,29 +252,34 @@
           
           const userRef = db.collection("users").doc(userId);
           const unsubscribe = userRef.onSnapshot((doc) => {
-            clearTimeout(timer);
             if (doc.exists) {
-              setS(doc.data());
+              setS(prev => {
+                const dbData = doc.data();
+                const newData = {
+                  ...dbData,
+                  transactions: dbData.transactions || [],
+                };
+                localStorage.setItem("lagos_user_data", JSON.stringify(newData));
+                return newData;
+              });
             } else {
               const defaultData = {
-                name: tg?.initDataUnsafe?.user?.first_name || 'Aje Butler',
+                name: tg?.initDataUnsafe?.user?.first_name || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+                transactions: []
               };
               userRef.set(defaultData);
               setS(defaultData);
+              localStorage.setItem("lagos_user_data", JSON.stringify(defaultData));
             }
           });
           return unsubscribe;
-        }).catch(e => {
-          clearTimeout(timer);
-          console.error("Firebase Auth Error:", e);
-          setAuthError(e.message);
-        });
+        }).catch(e => setAuthError(e.message));
       }, []);
 
-      /* Start music on first user gesture */
+      /* Start music */
       useEffect(() => {
         const unlock = () => { if (!musicOn) { AudioEngine.startMusic(); setMusicOn(true); } };
         window.addEventListener("pointerdown", unlock, { once: true });
@@ -254,12 +294,7 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      const updateUser = async (data) => {
-        setS(prev => ({ ...prev, ...data }));
-        if (uid) await db.collection("users").doc(uid).update({ ...data, lastSeen: Date.now() });
-      };
-
-      /* Tick: energy + business income */
+      /* Tick: energy + income */
       useEffect(() => {
         if (!s) return;
         const iv = setInterval(() => {
@@ -286,8 +321,7 @@
         return () => clearInterval(iv);
       }, [s, uid]);
 
-      if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div><div className="text-xs text-white/50 mt-2">Go to Firebase Console → Authentication → Sign-in method → Enable Anonymous.</div></div>;
-      if (!s) return <div className="min-h-screen flex items-center justify-center flex-col gap-3"><div className="text-5xl">🇳🇬</div><div className="text-[12px] font-bold text-[#FFD60A] font-display">Loading...</div></div>;
+      if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div></div>;
 
       const bizValue = Object.entries(s.businesses || {}).reduce((a, [id, c]) => a + c * (BIZ_PRICES[id] || 0), 0);
       const assetValue = Object.entries(s.assets || {}).reduce((a, [id, c]) => {
@@ -303,7 +337,6 @@
           return notify('Not enough Lagos Cash 💸', 'bad');
         }
 
-        // Optimistic Update
         setS((p) => ({
           ...p,
           cash: p.cash - a.price,
@@ -317,7 +350,6 @@
         notify(a.emoji + ' ' + a.name + ' added to Net Worth 🔥');
         try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('heavy'); } catch {}
 
-        // Firestore update with dot notation for map increment
         if (uid) {
           await db.collection("users").doc(uid).update({
             cash: firebase.firestore.FieldValue.increment(-a.price),
@@ -326,6 +358,10 @@
           });
         }
       };
+
+      const filteredAssets = activeTab === "All" 
+        ? ASSETS 
+        : ASSETS.filter(a => a.cat === activeTab);
 
       const NAV = [
         { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
@@ -355,7 +391,7 @@
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display">L</div>
                   <div className="min-w-0">
                     <div className="text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display">Market</div>
-                    <div className="text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5">{fmt(s.cash)}</div>
+                    <div className="text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5">{s.name || 'Hustler'} · {fmt(s.cash)}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -382,7 +418,18 @@
                 </div>
               </Card>
 
-              {ownedCount > 0 && (
+              {/* TABS */}
+              <div className="mt-4 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                {CATEGORIES.map(cat => (
+                  <button key={cat} onClick={() => setActiveTab(cat)}
+                          className={'whitespace-nowrap px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all ' + 
+                            (activeTab === cat ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.5)]' : 'bg-white/[0.06] text-white/50 border border-white/10')}>
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              {ownedCount > 0 && activeTab === 'All' && (
                 <>
                   <SectionTitle right={<span className="text-[10px] font-bold text-[#FFD60A] flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#FFD60A] animate-pulse glow-dot" />FLEX</span>}>
                     Your Garage
@@ -405,12 +452,12 @@
                 </>
               )}
 
-              <SectionTitle right={<span className="text-[10px] font-bold text-white/30">{ASSETS.length} items</span>}>
-                Flex Market
+              <SectionTitle right={<span className="text-[10px] font-bold text-white/30">{filteredAssets.length} items</span>}>
+                {activeTab === "All" ? "Flex Market" : activeTab}
               </SectionTitle>
 
               <div className="space-y-2.5">
-                {ASSETS.map((a) => {
+                {filteredAssets.map((a) => {
                   const owned = s.assets[a.id] || 0;
                   const canAfford = s.cash >= a.price;
                   const justBought = flexAnim === a.id;
@@ -432,7 +479,8 @@
                       </div>
                       <div className="relative flex-1 min-w-0">
                         <div className="text-[13px] font-extrabold truncate font-display">{a.name}</div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="text-[9px] text-white/40 truncate mb-1">{a.desc}</div>
+                        <div className="flex items-center gap-2">
                           <span className={'text-[8.5px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ' +
                             (a.tier === 'Legend' ? 'bg-pink-500/20 text-pink-300' :
                              a.tier === 'Aje' ? 'bg-purple-500/20 text-purple-300' :
