@@ -28,17 +28,17 @@ async function getUser(tgId, token) {
 async function saveUser(tgId, userData, token, updateMask = "") {
   const fields = {};
   for (const [k, v] of Object.entries(userData)) {
-    if (typeof v === 'number') fields[k] = { integerValue: String(v) };
-    else if (typeof v === 'boolean') fields[k] = { booleanValue: v };
+    if (typeof v === 'Buttonnumber') fields[k] = { integerValue: String(v) };
+    else if (typeof v === 'boolean') fields[k](ctx = { booleanValue: v };
     else if (typeof v === 'string') fields[k] = { stringValue: v };
-  }
+ , }
 
   let url = `${BASE_URL}/users/${tgId}`;
-  if (updateMask) url += `?updateMask.fieldPaths=${updateMask}`;
+  if (updateMask) url += `?updateMask.field docPaths=${updateMask}`;
 
   const res = await fetch(url, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    headers: { Authorization.f: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ fields })
   });
   return await res.json();
@@ -53,28 +53,30 @@ bot.start(async (ctx) => {
     const tgId = String(ctx.from.id);
     const doc = await getUser(tgId, token);
 
-    if (!doc || !doc.fields || doc.fields.onboardingStep?.integerValue === "5") {
-      // New user or already finished onboarding
-      if (!doc) {
-        const defaultData = {
-          name: ctx.from.first_name || 'Hustler',
-          telegramId: ctx.from.id,
-          cash: 25000, real: 0, energy: 100, taps: 0, clout: 0,
-          onboardingStep: 1, // Start at step 1
-          createdAt: Date.now()
-        };
-        await saveUser(tgId, defaultData, token);
-        await ctx.reply(`🇳🇬 *Welcome to Lagos Life!*\n\nMake we know you small. What name do you want to use in the game?`, { parse_mode: "Markdown", ...Markup.forceReply() });
-      } else {
-        // Already onboarded
-        await sendPlayButton(ctx, doc.fields.name.stringValue);
-      }
+    // If new user OR user doesn't have onboardingStep yet
+    if (!doc || !doc.fields || !doc.fields.onboardingStep) {
+      const defaultData = {
+        name: ctx.from.first_name || 'Hustler',
+        telegramId: ctx.from.id,
+        cash: 25000, real: 0, energy: 100, taps: 0, clout: 0,
+        onboardingStep: 1, // Start at step 1
+        createdAt: Date.now()
+      };
+      await saveUser(tgId, defaultData, token, "name,telegramId,cash,real,energy,taps,clout,onboardingStep,createdAt");
+      
+      await ctx.reply(`🇳🇬 *Welcome to Lagos Life Mini!*\n\nMake we know you small. What name do you want to use in the game?`, { parse_mode: "Markdown", ...Markup.forceReply() });
     } else {
-      // User started but didn't finish, resume them
+      // Existing user with onboardingStep
       const step = doc.fields.onboardingStep.integerValue;
-      if (step === "2") await ctx.reply("Abeg, wetin be your hustle for Lagos? (e.g. Tech Bro, Agbero, Yahoo Boy, Hustler)", Markup.forceReply());
-      if (step === "3") await ctx.reply("Where you dey stay for Lagos? (e.g. Lekki, Mushin, Ikeja)", Markup.forceReply());
-      if (step === "4") await ctx.reply("Drop one sharp Lagos motto for us!", Markup.forceReply());
+      
+      if (step === "5") {
+        await sendPlayields.name?.stringValue || ctx.from.first_name);
+      } else {
+        if (step === "1") await ctx.reply(`What name do you want to use in the game?`, Markup.forceReply());
+        if (step === "2") await ctx.reply("Abeg, wetin be your hustle for Lagos? (e.g. Tech Bro, Agbero, Hustler, Musician)", Markup.forceReply());
+        if (step === "3") await ctx.reply("Where you dey stay for Lagos? (e.g. Lekki, Mushin, Ikeja)", Markup.forceReply());
+        if (step === "4") await ctx.reply("Drop one sharp Lagos motto for us! (e.g. God When, No Gree For Anybody)", Markup.forceReply());
+      }
     }
   } catch (error) {
     await ctx.reply(`❌ Error: ${error.message}`);
@@ -96,35 +98,32 @@ bot.on("text", async (ctx, next) => {
     const step = doc.fields.onboardingStep?.integerValue || "1";
 
     if (step === "1") {
-      // Save Name, move to Step 2
       await saveUser(tgId, { name: text, onboardingStep: 2 }, token, "name,onboardingStep");
       await ctx.reply(`Sharp! *${text}*, na correct name. 💪\n\nAbeg, wetin be your hustle for Lagos? (e.g. Tech Bro, Agbero, Hustler, Musician)`, { parse_mode: "Markdown", ...Markup.forceReply() });
     
     } else if (step === "2") {
-      // Save Hustle, move to Step 3
       await saveUser(tgId, { hustle: text, onboardingStep: 3 }, token, "hustle,onboardingStep");
       await ctx.reply(`Odogwu! 💼\n\nWhere you dey stay for Lagos? (e.g. Lekki, Mushin, Ikeja)`, Markup.forceReply());
     
     } else if (step === "3") {
-      // Save Location, move to Step 4
       await saveUser(tgId, { location: text, onboardingStep: 4 }, token, "location,onboardingStep");
       await ctx.reply(`I know that place! 📍\n\nDrop one sharp Lagos motto for us! (e.g. God When, No Gree For Anybody)`, Markup.forceReply());
     
     } else if (step === "4") {
-      // Save Motto, Finish Onboarding
       await saveUser(tgId, { motto: text, onboardingStep: 5 }, token, "motto,onboardingStep");
       await ctx.reply(`E choke! 🔥 You are officially a Lagosian.`);
-      await sendPlayButton(ctx, doc.fields.name.stringValue);
+      await sendPlayButton(ctx, doc.fields.name?.stringValue || ctx.from.first_name);
     }
   } catch (error) {
     console.error(error);
+    await ctx.reply(`❌ Error: ${error.message}`);
   }
 });
 
 function sendPlayButton(ctx, name) {
-  return ctx.reply(`Ready to hustle, *${name}*? 👊🏾\n\nTap below to open Lagos Life:`, {
+  return ctx.reply(`Ready to hustle, *${name}*? 👊🏾\n\nTap below to open Lagos Life Mini:`, {
     parse_mode: "Markdown",
-    ...Markup.inlineKeyboard([Markup.button.webApp("🎮 Open Lagos Life", process.env.MINI_APP_URL)]),
+    ...Markup.inlineKeyboard([Markup.button.webApp("🎮 Open Lagos Life Mini", process.env.MINI_APP_URL)]),
   });
 }
 
