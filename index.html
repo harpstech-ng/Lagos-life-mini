@@ -147,10 +147,27 @@
     const ASSET_PRICES = { chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000, gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000, mansion: 1_000_000_000_000 };
     const DEST_BONUSES = { ikeja: 0, accra: 100, dubai: 500, uk: 1000, canada: 2000, usa: 5000, space: 25000 };
 
-    const DEFAULT_DATA = {
-      name: 'Aje Butler', cash: 25000, real: 0, energy: MAX_E,
-      lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
-      taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+    /* FIXED: Handle old cache data without transactions */
+    const getCachedData = () => {
+      try {
+        const cached = localStorage.getItem("lagos_user_data");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return {
+            ...parsed,
+            transactions: parsed.transactions || [] 
+          };
+        }
+      } catch (e) {}
+      
+      const tg = window?.Telegram?.WebApp;
+      return {
+        name: tg?.initDataUnsafe?.user?.first_name || 'Hustler', 
+        cash: 25000, real: 0, energy: MAX_E,
+        lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
+        taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+        transactions: []
+      };
     };
 
     /* ═══ HELPERS ═══ */
@@ -231,7 +248,7 @@
 
     /* ═══ APP ═══ */
     function App() {
-      const [s, setS] = useState(DEFAULT_DATA); 
+      const [s, setS] = useState(getCachedData); 
       const [uid, setUid] = useState(null);
       const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
@@ -240,9 +257,10 @@
       const [shareOpen, setShareOpen] = useState(false);
       const [shareUrl, setShareUrl] = useState(null);
       const [sendOpen, setSendOpen] = useState(false);
+      const [txHistoryOpen, setTxHistoryOpen] = useState(false);
       const [sendTo, setSendTo] = useState('');
       const [sendAmt, setSendAmt] = useState('');
-      const [isSending, setIsSending] = useState(false); // New state for checking user
+      const [isSending, setIsSending] = useState(false); 
       const [musicOn, setMusicOn] = useState(false);
       const tapCounter = useRef(0);
       
@@ -262,22 +280,27 @@
             if (doc.exists) {
               setS(prev => {
                 const dbData = doc.data();
-                return {
+                const newData = {
                   ...dbData,
+                  transactions: dbData.transactions || [], 
                   cash: dbData.cash + pendingTaps.current.cash,
                   energy: dbData.energy + pendingTaps.current.energy,
                   taps: dbData.taps + pendingTaps.current.taps
                 };
+                localStorage.setItem("lagos_user_data", JSON.stringify(newData));
+                return newData;
               });
             } else {
               const defaultData = {
-                name: tg?.initDataUnsafe?.user?.first_name || 'Aje Butler',
+                name: tg?.initDataUnsafe?.user?.first_name || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+                transactions: []
               };
               userRef.set(defaultData);
               setS(defaultData);
+              localStorage.setItem("lagos_user_data", JSON.stringify(defaultData));
             }
           });
           return unsubscribe;
@@ -464,7 +487,7 @@
         try { if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank'); } catch {}
       };
 
-      /* Send Money with User Check */
+      /* Send Money with Logging */
       const sendMoney = async () => {
         const user = sendTo.trim();
         const amt = Math.floor(Number(sendAmt));
@@ -473,11 +496,10 @@
         if (!amt || amt < 100) return notify('Minimum send na ₦100', 'bad');
         if (amt > s.cash) { AudioEngine.error(); return notify('You no get that money 💸', 'bad'); }
         
-        setIsSending(true); // Show loading state
+        setIsSending(true);
         AudioEngine.tap();
 
         try {
-          // 1. Check if user exists in the database
           const snap = await db.collection("users").where("name", "==", user).get();
           
           if (snap.empty) { 
@@ -493,10 +515,19 @@
             return notify('You cannot send to yourself', 'bad'); 
           }
 
-          // 2. Process Transaction
+          const txId = Date.now().toString();
+          const sentTx = { id: txId, type: 'sent', name: user, amount: amt, date: Date.now() };
+          const receiveTx = { id: txId, type: 'received', name: s.name, amount: amt, date: Date.now() };
+
           await db.runTransaction(async (t) => {
-            t.update(db.collection("users").doc(uid), { cash: firebase.firestore.FieldValue.increment(-amt) });
-            t.update(recipientRef, { cash: firebase.firestore.FieldValue.increment(amt) });
+            t.update(db.collection("users").doc(uid), { 
+              cash: firebase.firestore.FieldValue.increment(-amt),
+              transactions: firebase.firestore.FieldValue.arrayUnion(sentTx)
+            });
+            t.update(recipientRef, { 
+              cash: firebase.firestore.FieldValue.increment(amt),
+              transactions: firebase.firestore.FieldValue.arrayUnion(receiveTx)
+            });
           });
           
           AudioEngine.coin();
@@ -583,15 +614,26 @@
                   </div>
                   <div className="text-xl font-black text-[#22C55E] tabular-nums mt-1 font-display drop-shadow-sm">{fmtReal(s.real)}</div>
                 </Card>
-                <button onClick={() => setSendOpen(true)} className="text-left">
-                  <Card className="p-3.5 h-full hover:border-[#FFD60A]/40 transition">
-                    <div className="flex items-center justify-between">
-                      <div className="text-[9px] uppercase tracking-widest text-white/35 font-bold">Send Money</div>
-                      <span className="text-sm">📤</span>
-                    </div>
-                    <div className="text-xl font-black text-[#FFD60A] tabular-nums mt-1 font-display">@user →</div>
-                  </Card>
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button onClick={() => setSendOpen(true)} className="text-left">
+                    <Card className="p-2.5 h-full hover:border-[#FFD60A]/40 transition">
+                      <div className="flex items-center justify-between">
+                        <div className="text-[9px] uppercase tracking-widest text-white/35 font-bold">Send Money</div>
+                        <span className="text-sm">📤</span>
+                      </div>
+                      <div className="text-[15px] font-black text-[#FFD60A] tabular-nums mt-0.5 font-display">@user →</div>
+                    </Card>
+                  </button>
+                  <button onClick={() => setTxHistoryOpen(true)} className="text-left">
+                    <Card className="p-2.5 h-full hover:border-[#FFD60A]/40 transition">
+                      <div className="flex items-center justify-between">
+                        <div className="text-[9px] uppercase tracking-widest text-white/35 font-bold">History</div>
+                        <span className="text-sm">🕒</span>
+                      </div>
+                      <div className="text-[15px] font-black text-white/70 tabular-nums mt-0.5 font-display">View All</div>
+                    </Card>
+                  </button>
+                </div>
               </div>
 
               <div className="mt-8 flex flex-col items-center">
@@ -684,6 +726,46 @@
                     <button onClick={sendMoney} disabled={isSending} className="flex-1 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] py-3 text-[12px] font-black text-black active:scale-95 transition shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)] disabled:opacity-50 disabled:shadow-none">
                       {isSending ? "Checking..." : "Send"}
                     </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {txHistoryOpen && (
+              <div className="fixed inset-0 z-50 grid place-items-center p-6">
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setTxHistoryOpen(false)} />
+                <div className="relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-3">
+                    <div className="text-[13px] font-black tracking-widest text-[#FFD60A] font-display">TRANSACTION HISTORY</div>
+                    <button onClick={() => setTxHistoryOpen(false)} className="text-white/50 text-xl leading-none">&times;</button>
+                  </div>
+                  
+                  <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
+                    {(!s.transactions || s.transactions.length === 0) ? (
+                      <div className="text-center text-white/40 text-[11px] py-6">No transactions yet.</div>
+                    ) : (
+                      // FIXED: Spread array before sorting to prevent state mutation crash
+                      [...s.transactions].sort((a,b) => b.date - a.date).map((tx, i) => (
+                        <div key={i} className="flex items-center justify-between bg-white/[0.03] border border-white/[0.05] p-2.5 rounded-xl">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-8 h-8 rounded-full grid place-items-center text-sm ${tx.type === 'sent' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                              {tx.type === 'sent' ? '↗️' : '↙️'}
+                            </div>
+                            <div>
+                              <div className="text-[12px] font-extrabold text-white">
+                                {tx.type === 'sent' ? 'Sent to' : 'Received from'} {tx.name}
+                              </div>
+                              <div className="text-[9px] text-white/40">
+                                {new Date(tx.date).toLocaleDateString()} {new Date(tx.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              </div>
+                            </div>
+                          </div>
+                          <div className={`text-[13px] font-black tabular-nums ${tx.type === 'sent' ? 'text-red-400' : 'text-green-400'}`}>
+                            {tx.type === 'sent' ? '-' : '+'}{fmt(tx.amount)}
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
