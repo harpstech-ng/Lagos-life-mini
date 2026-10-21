@@ -6,13 +6,20 @@
   <meta name="theme-color" content="#08080B" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Lagos Life — Leaderboard</title>
+  <title>Lagos Life Mini — Leaderboard</title>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- PINNED BABEL VERSION 7.23.5 -->
+  <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+
+  <!-- FIREBASE CLIENT SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -45,49 +52,76 @@
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
     .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
     .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); }
-    .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); box-shadow: 0 8px 30px -10px rgba(255,214,10,0.3); }
     .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
-    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.18) 0%, rgba(255,214,10,0.06) 100%); border: 1px solid rgba(255,214,10,0.3); box-shadow: 0 0 20px rgba(255,214,10,0.2); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     input { -webkit-user-select: text; user-select: text; }
     input:focus { outline: none; }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
     .hero-grid { background-image: linear-gradient(rgba(255,214,10,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,214,10,0.04) 1px, transparent 1px); background-size: 22px 22px; -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); }
+    
+    .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
   </style>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;">
+      <div style="font-size:48px;">🇳🇬</div>
+      <div style="font-family:Sora;font-weight:800;font-size:14px;color:#FFD60A;">Loading Leaderboard...</div>
+    </div>
+  </div>
 
-  <script type="text/babel">
-    const { useState, useEffect, useMemo } = React;
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useMemo, useRef } = React;
 
-    const KEY = 'lagos-life-mini';
+    /* ═══ FIREBASE INITIALIZATION ═══ */
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    /* ═══ CONSTANTS ═══ */
     const MAX_E = 100;
     const ENERGY_MS = 5 * 60 * 1000;
     const TOTAL_USERS = 256890;
-    const MIN_WITHDRAW = 10_000_000_000;
+    
+    // New Withdrawal Math: 1 Trillion Fake = 150 Naira Real
+    // To get 1,000 Naira real, they need (1000 / 150) * 1 Trillion = 6,666,666,666,667 fake
+    const MIN_WITHDRAW = 6_666_666_666_667; 
     const REAL_PER_WITHDRAW = 1000;
 
-    const BIZ_PRICES = {
-      water: 10_000, suya: 250_000, keke: 500_000, phone: 2_000_000,
-      danfo: 5_000_000, wash: 25_000_000, bet9ja: 50_000_000,
-      lounge: 500_000_000, oil: 5_000_000_000,
-    };
-    const BIZ_PER_HR = {
-      water: 2000, suya: 40000, keke: 75000, phone: 350000,
-      danfo: 800000, wash: 4000000, bet9ja: 9000000,
-      lounge: 90000000, oil: 1000000000,
-    };
-    const ASSET_PRICES = {
-      chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000,
-      gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000,
-      mansion: 1_000_000_000_000,
+    const BIZ_PRICES = { water: 10_000, suya: 250_000, keke: 500_000, phone: 2_000_000, danfo: 5_000_000, wash: 25_000_000, bet9ja: 50_000_000, lounge: 500_000_000, oil: 5_000_000_000 };
+    const BIZ_PER_HR = { water: 2000, suya: 40000, keke: 75000, phone: 350000, danfo: 800000, wash: 4000000, bet9ja: 9000000, lounge: 90000000, oil: 1000000000 };
+    const ASSET_PRICES = { chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000, gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000, mansion: 1_000_000_000_000 };
+
+    const getCachedData = () => {
+      try {
+        const cached = localStorage.getItem("lagos_user_data");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+      const tg = window?.Telegram?.WebApp;
+      return {
+        name: tg?.initDataUnsafe?.user?.first_name || 'Hustler', 
+        cash: 25000, real: 0, energy: MAX_E,
+        lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
+        taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+        transactions: []
+      };
     };
 
     const fmt = (n) => {
@@ -102,55 +136,72 @@
     };
     const fmtReal = (n) => '₦' + (n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    function makeLeaderboard() {
-      let seed = 1337;
+    /* ═══ DYNAMIC LEADERBOARD ═══ */
+    function generateDynamicLeaderboard() {
+      let seed = Math.floor(Date.now() / (1000 * 60 * 5)); // Changes every 5 mins
       const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+      
       const first = ['Tunde', 'Chidi', 'Bisi', 'Emeka', 'Ngozi', 'Femi', 'Yemi', 'Ada', 'Kelechi', 'Seyi', 'Ifeanyi', 'Amaka', 'Bola', 'Dapo', 'Funke', 'Uche', 'Tope', 'Zainab', 'Musa', 'Chioma', 'Segun', 'Kemi'];
       const last = ['Ade', 'Okoye', 'Balogun', 'Eze', 'Ogun', 'Nwosu', 'Bello', 'Achebe', 'Ibrahim', 'Ojo', 'Chukwu', 'Lawal', 'Adebayo', 'Nnamdi', 'Salami'];
-      const faces = ['🦍', '🐐', '🦅', '🐆', '🦁', '🐊', '🦈', '🐘', '🦂', '🐍'];
+      const faces = ['🦍', '🐐', '🦅', '🐆', '🦁', '🐊', '🦈', '🐘', '🦂', '🐍', '🦍', '🐐'];
+      
       const out = [];
       for (let i = 0; i < 100; i++) {
+        // Base score drops exponentially
+        const baseNw = Math.pow(10, 13.7 - i * 0.055);
+        // Add random drift so they feel alive (up to 5% fluctuation)
+        const drift = baseNw * (rnd() * 0.05); 
+        
         out.push({
           name: first[Math.floor(rnd() * first.length)] + ' ' + last[Math.floor(rnd() * last.length)],
-          nw: Math.floor(Math.pow(10, 13.7 - i * 0.055)),
+          nw: Math.floor(baseNw + drift),
           emoji: faces[Math.floor(rnd() * faces.length)],
+          isReal: false
         });
       }
       return out;
     }
 
-    const DEFAULT = {
-      name: 'Aje Butler', cash: 25000, real: 0, energy: MAX_E,
-      lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
-      street: {}, taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-    };
-
-    function load() {
-      try {
-        const raw = localStorage.getItem(KEY);
-        if (!raw) return { ...DEFAULT, lastEnergy: Date.now(), lastSeen: Date.now() };
-        const d = JSON.parse(raw);
-        const st = {
-          ...DEFAULT, ...d,
-          businesses: d.businesses || {}, assets: d.assets || {},
-          travels: d.travels || [], street: d.street || {},
-        };
-        const elapsed = Math.min(Math.max(0, Date.now() - (d.lastSeen || Date.now())), 8 * 3600 * 1000);
-        if (elapsed > 5000) {
-          const perHr = Object.entries(st.businesses).reduce((a, [id, cnt]) => a + cnt * (BIZ_PER_HR[id] || 0), 0);
-          if (perHr > 0) st.cash += (perHr * elapsed) / 3600000;
-        }
-        st.lastEnergy = st.lastEnergy || Date.now();
-        st.energy = Math.min(MAX_E, st.energy ?? MAX_E);
-        st.lastSeen = Date.now();
-        return st;
-      } catch {
-        return { ...DEFAULT, lastEnergy: Date.now(), lastSeen: Date.now() };
+    /* ═══ AUDIO ENGINE ═══ */
+    const AudioEngine = (() => {
+      let ctx = null; let musicGain, sfxGain, musicPlaying = false, musicTimer, step = 0;
+      const STEP_MS = 300;
+      const bassPattern = [65.41, null, 65.41, null, 73.42, null, 87.31, null];
+      function init() {
+        if (ctx) return;
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        let master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination);
+        musicGain = ctx.createGain(); musicGain.gain.value = 0.15; musicGain.connect(master);
+        sfxGain = ctx.createGain(); sfxGain.gain.value = 0.5; sfxGain.connect(master);
       }
-    }
-    function save(s) {
-      try { localStorage.setItem(KEY, JSON.stringify({ ...s, lastSeen: Date.now() })); } catch {}
-    }
+      function tone(f, d, t, dest, w=0, g=0.3) {
+        if (!ctx) return; const start = ctx.currentTime + w;
+        const o = ctx.createOscillator(), gain = ctx.createGain();
+        o.type = t; o.frequency.value = f;
+        gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(g, start+0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start+d);
+        o.connect(gain); gain.connect(dest); o.start(start); o.stop(start+d+0.05);
+      }
+      function kick() { if(!ctx) return; const t=ctx.currentTime; const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(40,t+0.14); g.gain.setValueAtTime(0.8,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2); o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+0.22); }
+      function hat() { if(!ctx) return; const t=ctx.currentTime; const b=ctx.createBuffer(1, ctx.sampleRate*0.04, ctx.sampleRate); const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const s=ctx.createBufferSource(); s.buffer=b; const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=6000; const g=ctx.createGain(); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04); s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); }
+      
+      function tick() {
+        if (!musicPlaying) return;
+        const s = step % 8;
+        if (s===0||s===3||s===4) kick();
+        hat();
+        if (bassPattern[s]) tone(bassPattern[s], 0.3, "sine", musicGain, 0, 0.4);
+        if (s===2||s===6) [329.63,415.3,493.88].forEach(f => tone(f, 0.3, "triangle", musicGain, 0, 0.06));
+        step++;
+      }
+
+      return {
+        startMusic: () => { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); },
+        stopMusic: () => { musicPlaying=false; clearInterval(musicTimer); },
+        coin: () => { init(); tone(1046, 0.08, "square", sfxGain, 0, 0.15); tone(1318, 0.15, "square", sfxGain, 0.07, 0.15); },
+        error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); }
+      };
+    })();
 
     const Card = ({ children, className = '', gold = false }) => (
       <div className={'rounded-2xl ' + (gold ? 'card-gold' : 'card-gradient') + ' ' + className}>{children}</div>
@@ -163,74 +214,188 @@
     );
 
     function App() {
-      const [s, setS] = useState(load);
+      const [s, setS] = useState(getCachedData); 
+      const [uid, setUid] = useState(null);
+      const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
+      const [musicOn, setMusicOn] = useState(false);
+      
+      // Dynamic Leaderboard State
+      const [realUsers, setRealUsers] = useState([]);
+      const [fakeUsers, setFakeUsers] = useState(() => generateDynamicLeaderboard());
 
+      /* Initialize Firebase Auth & Sync */
       useEffect(() => {
         const tg = window?.Telegram?.WebApp;
-        try { tg?.ready(); tg?.expand(); } catch {}
+        if (tg) { tg.ready(); tg.expand(); }
+
+        auth.signInAnonymously().then((cred) => {
+          const userId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : cred.user.uid;
+          setUid(userId);
+          
+          const userRef = db.collection("users").doc(userId);
+          const unsubscribe = userRef.onSnapshot((doc) => {
+            if (doc.exists) {
+              setS(prev => {
+                const dbData = doc.data();
+                const newData = {
+                  ...dbData,
+                  transactions: dbData.transactions || [],
+                };
+                localStorage.setItem("lagos_user_data", JSON.stringify(newData));
+                return newData;
+              });
+            } else {
+              const defaultData = {
+                name: tg?.initDataUnsafe?.user?.first_name || 'Hustler',
+                cash: 25000, real: 0, energy: MAX_E,
+                lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
+                taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+                transactions: []
+              };
+              userRef.set(defaultData);
+              setS(defaultData);
+              localStorage.setItem("lagos_user_data", JSON.stringify(defaultData));
+            }
+          });
+          return unsubscribe;
+        }).catch(e => setAuthError(e.message));
       }, []);
-      useEffect(() => { save(s); }, [s]);
+
+      /* Fetch Real Users for Leaderboard */
+      useEffect(() => {
+        const fetchRealUsers = async () => {
+          try {
+            const snap = await db.collection("users").orderBy("cash", "desc").limit(20).get();
+            const users = [];
+            snap.forEach(doc => {
+              const data = doc.data();
+              const bizValue = Object.entries(data.businesses || {}).reduce((a, [id, c]) => a + c * (BIZ_PRICES[id] || 0), 0);
+              const assetValue = Object.entries(data.assets || {}).reduce((a, [id, c]) => a + c * (ASSET_PRICES[id] || 0), 0);
+              const netWorth = (data.cash || 0) + bizValue + assetValue;
+              users.push({
+                id: doc.id,
+                name: data.name || 'Hustler',
+                nw: Math.floor(netWorth),
+                emoji: '👤',
+                isReal: true,
+                gold: data.goldName
+              });
+            });
+            setRealUsers(users);
+          } catch (e) {
+            console.error("Error fetching real users:", e);
+          }
+        };
+        if (uid) fetchRealUsers();
+      }, [uid]);
+
+      /* Drift Fake Users every 30 seconds */
+      useEffect(() => {
+        const iv = setInterval(() => {
+          setFakeUsers(prev => prev.map(u => ({
+            ...u,
+            nw: Math.floor(u.nw * (1 + (Math.random() * 0.002))) // grow slowly
+          })));
+        }, 30000);
+        return () => clearInterval(iv);
+      }, []);
+
+      /* Start music */
+      useEffect(() => {
+        const unlock = () => { if (!musicOn) { AudioEngine.startMusic(); setMusicOn(true); } };
+        window.addEventListener("pointerdown", unlock, { once: true });
+        return () => window.removeEventListener("pointerdown", unlock);
+      }, [musicOn]);
+
       useEffect(() => {
         if (!toast) return;
         const t = setTimeout(() => setToast(null), 2400);
         return () => clearTimeout(t);
       }, [toast]);
+
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
+      /* Tick: energy + income */
       useEffect(() => {
+        if (!s) return;
         const iv = setInterval(() => {
-          setS((p) => {
-            const nowT = Date.now();
-            let energy = p.energy;
-            let lastEnergy = p.lastEnergy;
-            if (energy < MAX_E) {
-              const gained = Math.floor((nowT - lastEnergy) / ENERGY_MS);
-              if (gained > 0) {
-                energy = Math.min(MAX_E, energy + gained);
-                lastEnergy = energy >= MAX_E ? nowT : lastEnergy + gained * ENERGY_MS;
-              }
+          const now = Date.now();
+          let energy = s.energy;
+          let lastEnergy = s.lastEnergy;
+          if (energy < MAX_E) {
+            const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
+            if (gained > 0) {
+              energy = Math.min(MAX_E, energy + gained);
+              lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
             }
-            const perHr = Object.entries(p.businesses).reduce((a, [id, cnt]) => a + cnt * (BIZ_PER_HR[id] || 0), 0);
-            return { ...p, energy, lastEnergy, cash: p.cash + perHr / 3600 };
-          });
+          }
+          const perHr = Object.entries(s.businesses || {}).reduce((a, [id, cnt]) => a + cnt * (BIZ_PER_HR[id] || 0), 0);
+          const newCash = s.cash + perHr / 3600;
+          
+          if (energy !== s.energy || perHr > 0) {
+            setS(prev => ({ ...prev, energy, lastEnergy, cash: newCash }));
+            if (uid && perHr > 0) {
+              db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600), energy, lastEnergy });
+            }
+          }
         }, 1000);
         return () => clearInterval(iv);
-      }, []);
+      }, [s, uid]);
 
-      const bizValue = useMemo(
-        () => Object.entries(s.businesses).reduce((a, [id, c]) => a + c * (BIZ_PRICES[id] || 0), 0),
-        [s.businesses]
-      );
-      const assetValue = useMemo(
-        () => Object.entries(s.assets).reduce((a, [id, c]) => a + c * (ASSET_PRICES[id] || 0), 0),
-        [s.assets]
-      );
-      const netWorth = Math.floor(s.cash + bizValue + assetValue);
+      if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div></div>;
 
-      const { board, rank } = useMemo(() => {
-        const list = makeLeaderboard();
-        const lowest = list[list.length - 1].nw;
-        let insertAt = list.findIndex((e) => e.nw < netWorth);
-        if (insertAt === -1) insertAt = list.length;
-        let r;
-        if (netWorth >= lowest) r = insertAt + 1;
-        else r = Math.min(TOTAL_USERS, 101 + Math.floor(Math.max(0, 1 - netWorth / lowest) * (TOTAL_USERS - 101)));
-        const me = { name: s.name, nw: netWorth, emoji: '👤', me: true, gold: s.goldName };
-        const full = [...list.slice(0, insertAt), me, ...list.slice(insertAt)];
-        return { board: full, rank: r };
-      }, [netWorth, s.name, s.goldName]);
+      /* Derived & Leaderboard Merge */
+      const bizValue = Object.entries(s.businesses || {}).reduce((a, [id, c]) => a + c * (BIZ_PRICES[id] || 0), 0);
+      const assetValue = Object.entries(s.assets || {}).reduce((a, [id, c]) => a + c * (ASSET_PRICES[id] || 0), 0);
+      const netWorth = Math.floor((s.cash || 0) + bizValue + assetValue);
 
-      const withdraw = () => {
-        if (s.cash < MIN_WITHDRAW) return notify('You need ₦10B fake to withdraw', 'bad');
+      // Merge real users + me + fake users
+      const allUsers = [
+        ...realUsers.filter(u => u.id !== uid), // Exclude me from real list so I can insert myself
+        { id: uid, name: s.name, nw: netWorth, emoji: '👤', isReal: true, isMe: true, gold: s.goldName },
+        ...fakeUsers
+      ];
+
+      // Sort by Net Worth descending
+      allUsers.sort((a, b) => b.nw - a.nw);
+
+      // Find my rank
+      const myIndex = allUsers.findIndex(u => u.isMe);
+      const rank = myIndex >= 0 ? myIndex + 1 : TOTAL_USERS;
+
+      // Take top 100
+      const board = allUsers.slice(0, 100);
+
+      const withdraw = async () => {
+        if (s.cash < MIN_WITHDRAW) { AudioEngine.error(); return notify('You need ₦6.66T fake to withdraw', 'bad'); }
+        if (s.real < 0) return; 
+
+        // Process withdrawal
         setS((p) => ({ ...p, cash: p.cash - MIN_WITHDRAW, real: p.real + REAL_PER_WITHDRAW }));
-        notify('Withdrawn! +' + fmtReal(REAL_PER_WITHDRAW) + ' real 💰');
+        AudioEngine.coin();
+        notify('Withdrawn! +₦1,000.00 real 💰');
         try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('heavy'); } catch {}
+
+        if (uid) {
+          await db.collection("users").doc(uid).update({
+            cash: firebase.firestore.FieldValue.increment(-MIN_WITHDRAW),
+            real: firebase.firestore.FieldValue.increment(REAL_PER_WITHDRAW),
+            lastSeen: Date.now()
+          });
+        }
       };
 
-      const topUpDemo = () => {
+      const topUpDemo = async () => {
         setS((p) => ({ ...p, real: p.real + 1000 }));
         notify('Demo top-up: +₦1,000.00 real');
+        AudioEngine.coin();
+        if (uid) {
+          await db.collection("users").doc(uid).update({
+            real: firebase.firestore.FieldValue.increment(1000),
+            lastSeen: Date.now()
+          });
+        }
       };
 
       const NAV = [
@@ -250,6 +415,11 @@
       return (
         <div className="min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black">
           <div className="mx-auto max-w-md min-h-screen flex flex-col pb-24 relative">
+            
+            <button onClick={() => { const on = AudioEngine.toggle(); setMusicOn(on); }} className="music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition backdrop-blur">
+              <span className="text-base">{musicOn ? "🔊" : "🔇"}</span>
+            </button>
+
             <header className="sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]">
               <div className="px-4 py-2.5 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
@@ -278,6 +448,7 @@
                     <div className="flex items-center gap-1.5">
                       <input value={s.name}
                              onChange={(e) => setS((p) => ({ ...p, name: e.target.value.slice(0, 18) }))}
+                             onBlur={() => { if (uid) db.collection("users").doc(uid).update({ name: s.name }); }}
                              className="bg-transparent text-[15px] font-black outline-none border-b border-transparent focus:border-[#FFD60A]/50 w-full min-w-0 font-display" />
                       {s.goldName && <span className="text-[#FFD60A] text-base shrink-0">⭐</span>}
                     </div>
@@ -300,8 +471,8 @@
               <SectionTitle>Withdraw to Real</SectionTitle>
               <Card className="p-4">
                 <div className="text-[11px] text-white/55 leading-relaxed">
-                  Rate: <span className="text-[#FFD60A] font-bold">₦1B fake = ₦100 real</span><br />
-                  Minimum: <span className="text-[#FFD60A] font-bold">₦10B fake = ₦1,000 real</span>
+                  Rate: <span className="text-[#FFD60A] font-bold">₦1T fake = ₦150 real</span><br />
+                  Minimum: <span className="text-[#FFD60A] font-bold">₦6.66T fake = ₦1,000 real</span>
                 </div>
                 <div className="mt-3 h-2.5 rounded-full bg-white/10 overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-[#22C55E] via-[#FFD60A] to-[#FFB800] rounded-full transition-all" style={{ width: Math.min(100, (s.cash / MIN_WITHDRAW) * 100) + '%' }} />
@@ -324,18 +495,18 @@
                 Ranking
               </SectionTitle>
               <Card className="divide-y divide-white/[0.05] overflow-hidden">
-                {board.slice(0, 100).map((u, i) => (
-                  <div key={i} className={'px-3 py-2.5 flex items-center gap-2.5 ' + (u.me ? 'bg-[#FFD60A]/10' : '')}>
+                {board.map((u, i) => (
+                  <div key={i} className={'px-3 py-2.5 flex items-center gap-2.5 ' + (u.isMe ? 'bg-[#FFD60A]/10' : '')}>
                     <div className={'w-7 text-center text-[11px] font-black tabular-nums shrink-0 font-display ' +
                       (i === 0 ? 'text-[#FFD60A] text-[13px]' : i === 1 ? 'text-white/80' : i === 2 ? 'text-[#CD7F32]' : 'text-white/30')}>
                       {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
                     </div>
-                    <div className={'w-9 h-9 rounded-lg grid place-items-center text-base shrink-0 ' + (u.me ? 'bg-[#FFD60A]/20' : 'bg-white/[0.06]')}>
+                    <div className={'w-9 h-9 rounded-lg grid place-items-center text-base shrink-0 ' + (u.isMe ? 'bg-[#FFD60A]/20' : 'bg-white/[0.06]')}>
                       {u.emoji}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className={'text-[12px] font-extrabold truncate font-display ' + (u.me ? 'text-[#FFD60A]' : '')}>
-                        {u.name} {u.me && <span className="text-[9px] opacity-70">(you)</span>}
+                      <div className={'text-[12px] font-extrabold truncate font-display ' + (u.isMe ? 'text-[#FFD60A]' : '')}>
+                        {u.name} {u.isMe && <span className="text-[9px] opacity-70">(you)</span>}
                         {u.gold && <span className="ml-1">⭐</span>}
                       </div>
                     </div>
@@ -348,7 +519,7 @@
                 <div className="flex items-start gap-2">
                   <span className="text-base">🏆</span>
                   <p className="text-[10.5px] text-white/50 leading-relaxed">
-                    Every asset, business, and cash dey count toward your Net Worth. Push higher to climb the leaderboard. Withdraw ₦10B fake for ₦1,000 real. 💰
+                    Every asset, business, and cash dey count toward your Net Worth. Push higher to climb the leaderboard. Withdraw ₦6.66T fake for ₦1,000 real. 💰
                   </p>
                 </div>
               </Card>
