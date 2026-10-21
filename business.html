@@ -63,7 +63,7 @@
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
     .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
-    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    .nav-backdrop { background: #08080B; border-top: 1px solid rgba(255,255,255,0.08); }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
     @keyframes badgePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
     .badge-owned { animation: badgePulse 2s ease-in-out infinite; }
@@ -255,12 +255,14 @@
       const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
       const [musicOn, setMusicOn] = useState(false);
-      const [activeTab, setActiveTab] = useState("All");
+      const [activeTab, setActiveTab] = useState("Street");
       const [isMaintenance, setIsMaintenance] = useState(false);
 
       useEffect(() => {
         const tg = window?.Telegram?.WebApp;
-        if (tg) { tg.ready(); tg.expand(); }
+        if (tg) { 
+          try { tg.ready(); tg.expand(); } catch(e) {} 
+        }
 
         const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
           if (doc.exists && doc.data().maintenance === true) setIsMaintenance(true);
@@ -305,7 +307,7 @@
               setS(defaultData);
               localStorage.setItem("lagos_user_data", JSON.stringify(defaultData));
             }
-          });
+          }, (error) => console.error("Snapshot error:", error));
           return unsubscribe;
         }).catch(e => setAuthError(e.message));
 
@@ -439,11 +441,11 @@
         <div className="min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black">
           <div className="mx-auto max-w-md min-h-screen flex flex-col pb-24 relative">
             
-            <button onClick={() => { const on = AudioEngine.toggle(); setMusicOn(on); }} className="music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition backdrop-blur">
+            <button onClick={() => { const on = AudioEngine.toggle(); setMusicOn(on); }} className="music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition">
               <span className="text-base">{musicOn ? "🔊" : "🔇"}</span>
             </button>
 
-            <header className="sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]">
+            <header className="sticky top-0 z-30 bg-[#08080B] border-b border-white/[0.06]">
               <div className="px-4 py-2.5 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display">L</div>
@@ -563,7 +565,7 @@
               </Card>
             </main>
 
-            <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]">
+            <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop">
               <div className="grid grid-cols-6 px-1 pt-1.5 safe-bottom">
                 {NAV.map((n) => {
                   const active = n.id === 'biz';
@@ -580,7 +582,7 @@
             </nav>
 
             <div id="more-sheet" className="hidden fixed inset-0 z-50 flex items-end justify-center">
-              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => document.getElementById('more-sheet')?.classList.add('hidden')} />
+              <div className="absolute inset-0 bg-black/85" onClick={() => document.getElementById('more-sheet')?.classList.add('hidden')} />
               <div className="relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp" onClick={(e) => e.stopPropagation()}>
                 <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-4" />
                 <div className="space-y-2">
