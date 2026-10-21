@@ -85,7 +85,7 @@
   </div>
 
   <script type="text/babel" data-presets="react">
-    const { useState, useEffect, useMemo } = React;
+    const { useState, useEffect, useMemo, useRef } = React;
 
     /* ═══ FIREBASE INITIALIZATION ═══ */
     const firebaseConfig = {
@@ -141,16 +141,8 @@
       { id: 'crypto',  name: 'Crypto Exchange',       emoji: '🪙', price: 10_000_000_000_000, tier: 'Legend', color: 'from-orange-400/20 to-orange-700/10', cat: 'Aje Status', desc: 'Control the blockchain.' },
     ];
 
-    const BIZ_PRICES = {
-      water: 10_000, suya: 250_000, keke: 500_000, phone: 2_000_000,
-      danfo: 5_000_000, wash: 25_000_000, bet9ja: 50_000_000,
-      lounge: 500_000_000, oil: 5_000_000_000,
-    };
-    const BIZ_PER_HR = {
-      water: 2000, suya: 40000, keke: 75000, phone: 350000,
-      danfo: 800000, wash: 4000000, bet9ja: 9000000,
-      lounge: 90000000, oil: 1000000000,
-    };
+    const BIZ_PRICES = { water: 10_000, suya: 250_000, keke: 500_000, phone: 2_000_000, danfo: 5_000_000, wash: 25_000_000, bet9ja: 50_000_000, lounge: 500_000_000, oil: 5_000_000_000 };
+    const BIZ_PER_HR = { water: 2000, suya: 40000, keke: 75000, phone: 350000, danfo: 800000, wash: 4000000, bet9ja: 9000000, lounge: 90000000, oil: 1000000000 };
 
     const getCachedData = () => {
       try {
@@ -188,7 +180,7 @@
         if (ctx) return;
         ctx = new (window.AudioContext || window.webkitAudioContext)();
         let master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination);
-        musicGain = ctx.createGain(); musicGain.gain.value = 0.15; musicGain.connect(master);
+        musicGain = ctx.createGain(); musicGain.gain.value = 0.12; musicGain.connect(master);
         sfxGain = ctx.createGain(); sfxGain.gain.value = 0.5; sfxGain.connect(master);
       }
       function tone(f, d, t, dest, w=0, g=0.3) {
@@ -240,23 +232,38 @@
       const [flexAnim, setFlexAnim] = useState(null);
       const [musicOn, setMusicOn] = useState(false);
       const [activeTab, setActiveTab] = useState("All");
+      const [isMaintenance, setIsMaintenance] = useState(false);
 
-      /* Initialize Firebase Auth & Sync */
       useEffect(() => {
         const tg = window?.Telegram?.WebApp;
-        if (tg) { tg.ready(); tg.expand(); }
+        if (tg) { 
+          try { tg.ready(); tg.expand(); } catch(e) {} 
+        }
+
+        const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
+          if (doc.exists && doc.data().maintenance === true) setIsMaintenance(true);
+          else setIsMaintenance(false);
+        });
+
+        const tgUser = tg?.initDataUnsafe?.user;
 
         auth.signInAnonymously().then((cred) => {
-          const userId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : cred.user.uid;
+          const userId = tgUser?.id ? String(tgUser.id) : cred.user.uid;
           setUid(userId);
           
           const userRef = db.collection("users").doc(userId);
           const unsubscribe = userRef.onSnapshot((doc) => {
             if (doc.exists) {
+              const dbData = doc.data();
+              
+              if (!dbData.telegramId && tgUser?.id) {
+                userRef.update({ telegramId: tgUser.id }).catch(() => {});
+              }
+
               setS(prev => {
-                const dbData = doc.data();
                 const newData = {
                   ...dbData,
+                  telegramId: dbData.telegramId || tgUser?.id, 
                   transactions: dbData.transactions || [],
                 };
                 localStorage.setItem("lagos_user_data", JSON.stringify(newData));
@@ -264,19 +271,22 @@
               });
             } else {
               const defaultData = {
-                name: tg?.initDataUnsafe?.user?.first_name || 'Hustler',
+                name: tgUser?.first_name || 'Hustler',
+                telegramId: tgUser?.id || null, 
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
                 transactions: []
               };
-              userRef.set(defaultData);
+              userRef.set(defaultData).catch(() => {});
               setS(defaultData);
               localStorage.setItem("lagos_user_data", JSON.stringify(defaultData));
             }
-          });
+          }, (error) => console.error("Snapshot error:", error));
           return unsubscribe;
         }).catch(e => setAuthError(e.message));
+
+        return () => unsubSettings();
       }, []);
 
       /* Start music */
@@ -294,34 +304,52 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      /* Tick: energy + income */
+      /* FIXED: Infinite Loop inside useEffect */
       useEffect(() => {
-        if (!s) return;
+        if (!uid) return;
         const iv = setInterval(() => {
-          const now = Date.now();
-          let energy = s.energy;
-          let lastEnergy = s.lastEnergy;
-          if (energy < MAX_E) {
-            const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
-            if (gained > 0) {
-              energy = Math.min(MAX_E, energy + gained);
-              lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
+          setS(prev => {
+            if (!prev) return prev;
+            const now = Date.now();
+            let energy = prev.energy;
+            let lastEnergy = prev.lastEnergy;
+            
+            if (energy < MAX_E) {
+              const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
+              if (gained > 0) {
+                energy = Math.min(MAX_E, energy + gained);
+                lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
+              }
             }
-          }
-          const perHr = Object.entries(s.businesses || {}).reduce((a, [id, cnt]) => a + cnt * (BIZ_PER_HR[id] || 0), 0);
-          const newCash = s.cash + perHr / 3600;
-          
-          if (energy !== s.energy || perHr > 0) {
-            setS(prev => ({ ...prev, energy, lastEnergy, cash: newCash }));
-            if (uid && perHr > 0) {
-              db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600), energy, lastEnergy });
+            
+            const perHr = Object.entries(prev.businesses || {}).reduce((a, [id, cnt]) => a + cnt * (BIZ_PER_HR[id] || 0), 0);
+            const newCash = prev.cash + perHr / 3600;
+            
+            if (energy !== prev.energy || perHr > 0) {
+              if (perHr > 0) {
+                db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600), energy, lastEnergy }).catch(() => {});
+              } else if (energy !== prev.energy) {
+                db.collection("users").doc(uid).update({ energy, lastEnergy }).catch(() => {});
+              }
+              return { ...prev, energy, lastEnergy, cash: newCash };
             }
-          }
+            return prev;
+          });
         }, 1000);
         return () => clearInterval(iv);
-      }, [s, uid]);
+      }, [uid]);
 
       if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div></div>;
+
+      if (isMaintenance) {
+        return (
+          <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center bg-[#08080B]">
+            <div className="text-7xl animate-bounce">🚧</div>
+            <h1 className="text-2xl font-black text-[#FFD60A] font-display mt-4">GAME UNDER MAINTENANCE</h1>
+            <p className="text-white/50 text-sm max-w-xs">We dey upgrade the game for you. Check back in a few minutes!</p>
+          </div>
+        );
+      }
 
       const bizValue = Object.entries(s.businesses || {}).reduce((a, [id, c]) => a + c * (BIZ_PRICES[id] || 0), 0);
       const assetValue = Object.entries(s.assets || {}).reduce((a, [id, c]) => {
@@ -355,7 +383,7 @@
             cash: firebase.firestore.FieldValue.increment(-a.price),
             [`assets.${a.id}`]: firebase.firestore.FieldValue.increment(1),
             lastSeen: Date.now()
-          });
+          }).catch(() => {});
         }
       };
 
