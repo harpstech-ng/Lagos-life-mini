@@ -265,18 +265,27 @@
       useEffect(() => {
         const tg = window?.Telegram?.WebApp;
         if (tg) { tg.ready(); tg.expand(); }
+
+        const tgUser = tg?.initDataUnsafe?.user; // Get Telegram User object
         
         auth.signInAnonymously().then((cred) => {
-          const userId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : cred.user.uid;
+          const userId = tgUser?.id ? String(tgUser.id) : cred.user.uid;
           setUid(userId);
           
           const userRef = db.collection("users").doc(userId);
           const unsubscribe = userRef.onSnapshot((doc) => {
             if (doc.exists) {
+              const dbData = doc.data();
+              
+              // 🔥 CRITICAL FIX: If user is in Telegram but telegramId is missing in DB, save it!
+              if (!dbData.telegramId && tgUser?.id) {
+                userRef.update({ telegramId: tgUser.id });
+              }
+
               setS(prev => {
-                const dbData = doc.data();
                 const newData = {
                   ...dbData,
+                  telegramId: dbData.telegramId || tgUser?.id, // Keep local state updated
                   transactions: dbData.transactions || [], 
                   cash: dbData.cash + pendingTaps.current.cash,
                   energy: dbData.energy + pendingTaps.current.energy,
@@ -286,8 +295,10 @@
                 return newData;
               });
             } else {
+              // 🔥 CRITICAL FIX: Save telegramId for brand new users
               const defaultData = {
-                name: tg?.initDataUnsafe?.user?.first_name || 'Hustler',
+                name: tgUser?.first_name || 'Hustler',
+                telegramId: tgUser?.id || null, 
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -503,7 +514,9 @@
             return notify('User not found on Lagos Life Mini ❌', 'bad'); 
           }
           
+          const recipientData = snap.docs[0].data();
           const recipientRef = snap.docs[0].ref;
+          
           if (recipientRef.id === uid) { 
             AudioEngine.error(); 
             setIsSending(false);
@@ -526,18 +539,20 @@
           });
           
           // ═══ TRIGGER TELEGRAM NOTIFICATION ═══
-          try {
-            fetch('/api/notify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chatId: snap.docs[0].data().telegramId,
-                type: 'transfer',
-                amount: amt,
-                senderName: s.name
-              })
-            });
-          } catch (err) { console.error("Notification failed", err); }
+          if (recipientData.telegramId) {
+            try {
+              fetch('/api/notify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chatId: recipientData.telegramId,
+                  type: 'transfer',
+                  amount: amt,
+                  senderName: s.name
+                })
+              });
+            } catch (err) { console.error("Notification failed", err); }
+          }
           // ═══════════════════════════════════════
 
           AudioEngine.coin();
