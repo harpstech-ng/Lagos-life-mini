@@ -205,7 +205,7 @@
         if (ctx) return;
         ctx = new (window.AudioContext || window.webkitAudioContext)();
         let master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination);
-        musicGain = ctx.createGain(); musicGain.gain.value = 0.15; musicGain.connect(master);
+        musicGain = ctx.createGain(); musicGain.gain.value = 0.12; musicGain.connect(master);
         sfxGain = ctx.createGain(); sfxGain.gain.value = 0.5; sfxGain.connect(master);
       }
       function tone(f, d, t, dest, w=0, g=0.3) {
@@ -256,48 +256,62 @@
       const [toast, setToast] = useState(null);
       const [musicOn, setMusicOn] = useState(false);
       const [activeTab, setActiveTab] = useState("All");
+      const [isMaintenance, setIsMaintenance] = useState(false);
 
-      /* Initialize Firebase Auth & Sync */
       useEffect(() => {
         const tg = window?.Telegram?.WebApp;
         if (tg) { tg.ready(); tg.expand(); }
 
+        const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
+          if (doc.exists && doc.data().maintenance === true) setIsMaintenance(true);
+          else setIsMaintenance(false);
+        });
+
+        const tgUser = tg?.initDataUnsafe?.user;
+        
         auth.signInAnonymously().then((cred) => {
-          const userId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : cred.user.uid;
+          const userId = tgUser?.id ? String(tgUser.id) : cred.user.uid;
           setUid(userId);
           
           const userRef = db.collection("users").doc(userId);
           const unsubscribe = userRef.onSnapshot((doc) => {
             if (doc.exists) {
+              const dbData = doc.data();
+              
+              if (!dbData.telegramId && tgUser?.id) {
+                userRef.update({ telegramId: tgUser.id }).catch(() => {});
+              }
+
               setS(prev => {
-                const dbData = doc.data();
                 const newData = {
                   ...dbData,
+                  telegramId: dbData.telegramId || tgUser?.id, 
                   transactions: dbData.transactions || [],
-                  cash: dbData.cash + (prev.cash - (localStorage.getItem('cached_cash') || prev.cash)), // Keep local pending taps
+                  cash: dbData.cash
                 };
                 localStorage.setItem("lagos_user_data", JSON.stringify(newData));
-                localStorage.setItem("cached_cash", newData.cash);
                 return newData;
               });
             } else {
               const defaultData = {
-                name: tg?.initDataUnsafe?.user?.first_name || 'Hustler',
+                name: tgUser?.first_name || 'Hustler',
+                telegramId: tgUser?.id || null, 
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
                 transactions: []
               };
-              userRef.set(defaultData);
+              userRef.set(defaultData).catch(() => {});
               setS(defaultData);
               localStorage.setItem("lagos_user_data", JSON.stringify(defaultData));
             }
           });
           return unsubscribe;
         }).catch(e => setAuthError(e.message));
+
+        return () => unsubSettings();
       }, []);
 
-      /* Start music */
       useEffect(() => {
         const unlock = () => { if (!musicOn) { AudioEngine.startMusic(); setMusicOn(true); } };
         window.addEventListener("pointerdown", unlock, { once: true });
@@ -312,48 +326,59 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      const updateUser = async (data) => {
-        setS(prev => ({ ...prev, ...data }));
-        if (uid) await db.collection("users").doc(uid).update({ ...data, lastSeen: Date.now() });
-      };
-
-      /* Tick: energy + business income */
+      /* FIXED: Infinite loop bug in business income ticker */
       useEffect(() => {
-        if (!s) return;
+        if (!uid) return;
         const iv = setInterval(() => {
-          const now = Date.now();
-          let energy = s.energy;
-          let lastEnergy = s.lastEnergy;
-          
-          if (energy < MAX_E) {
-            const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
-            if (gained > 0) {
-              energy = Math.min(MAX_E, energy + gained);
-              lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
+          setS(prev => {
+            if (!prev) return prev;
+            const now = Date.now();
+            let energy = prev.energy;
+            let lastEnergy = prev.lastEnergy;
+            
+            if (energy < MAX_E) {
+              const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
+              if (gained > 0) {
+                energy = Math.min(MAX_E, energy + gained);
+                lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
+              }
             }
-          }
-          
-          const perHr = Object.entries(s.businesses || {}).reduce((a, [id, cnt]) => {
-            const biz = BUSINESSES.find((b) => b.id === id);
-            return a + cnt * (biz?.perHr || 0);
-          }, 0);
-          const newCash = s.cash + perHr / 3600;
-          
-          if (energy !== s.energy || perHr > 0) {
-            setS(prev => ({ ...prev, energy, lastEnergy, cash: newCash }));
-            if (uid && perHr > 0) {
-              db.collection("users").doc(uid).update({ 
-                cash: firebase.firestore.FieldValue.increment(perHr / 3600), 
-                energy, 
-                lastEnergy 
-              });
+            
+            const perHr = Object.entries(prev.businesses || {}).reduce((a, [id, cnt]) => {
+              const biz = BUSINESSES.find((b) => b.id === id);
+              return a + cnt * (biz?.perHr || 0);
+            }, 0);
+            const newCash = prev.cash + perHr / 3600;
+            
+            if (energy !== prev.energy || perHr > 0) {
+              if (perHr > 0) {
+                db.collection("users").doc(uid).update({ 
+                  cash: firebase.firestore.FieldValue.increment(perHr / 3600), 
+                  energy, 
+                  lastEnergy 
+                }).catch(() => {});
+              } else if (energy !== prev.energy) {
+                db.collection("users").doc(uid).update({ energy, lastEnergy }).catch(() => {});
+              }
+              return { ...prev, energy, lastEnergy, cash: newCash };
             }
-          }
+            return prev;
+          });
         }, 1000);
         return () => clearInterval(iv);
-      }, [s, uid]);
+      }, [uid]);
 
       if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div></div>;
+
+      if (isMaintenance) {
+        return (
+          <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center bg-[#08080B]">
+            <div className="text-7xl animate-bounce">🚧</div>
+            <h1 className="text-2xl font-black text-[#FFD60A] font-display mt-4">GAME UNDER MAINTENANCE</h1>
+            <p className="text-white/50 text-sm max-w-xs">We dey upgrade the game for you. Check back in a few minutes!</p>
+          </div>
+        );
+      }
 
       const bizValue = Object.entries(s.businesses || {}).reduce((a, [id, c]) => {
         const biz = BUSINESSES.find((b) => b.id === id);
@@ -373,7 +398,6 @@
           return notify('Not enough Lagos Cash 💸', 'bad');
         }
         
-        // Optimistic update
         setS(prev => ({
           ...prev,
           cash: prev.cash - b.price,
@@ -384,13 +408,12 @@
         notify(b.emoji + ' ' + b.name + ' bought! +' + fmt(b.perHr) + '/hr');
         try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium'); } catch {}
 
-        // Firebase update
         if (uid) {
           db.collection("users").doc(uid).update({
             cash: firebase.firestore.FieldValue.increment(-b.price),
             [`businesses.${b.id}`]: firebase.firestore.FieldValue.increment(1),
             lastSeen: Date.now()
-          });
+          }).catch(() => {});
         }
       };
 
