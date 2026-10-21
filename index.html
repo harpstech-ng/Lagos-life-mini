@@ -147,19 +147,14 @@
     const ASSET_PRICES = { chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000, gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000, mansion: 1_000_000_000_000 };
     const DEST_BONUSES = { ikeja: 0, accra: 100, dubai: 500, uk: 1000, canada: 2000, usa: 5000, space: 25000 };
 
-    /* FIXED: Handle old cache data without transactions */
     const getCachedData = () => {
       try {
         const cached = localStorage.getItem("lagos_user_data");
         if (cached) {
           const parsed = JSON.parse(cached);
-          return {
-            ...parsed,
-            transactions: parsed.transactions || [] 
-          };
+          return { ...parsed, transactions: parsed.transactions || [] };
         }
       } catch (e) {}
-      
       const tg = window?.Telegram?.WebApp;
       return {
         name: tg?.initDataUnsafe?.user?.first_name || 'Hustler', 
@@ -487,7 +482,7 @@
         try { if (tg?.openLink) tg.openLink(url); else window.open(url, '_blank'); } catch {}
       };
 
-      /* Send Money with Logging */
+      /* Send Money with Logging & Telegram Notification */
       const sendMoney = async () => {
         const user = sendTo.trim();
         const amt = Math.floor(Number(sendAmt));
@@ -530,6 +525,21 @@
             });
           });
           
+          // ═══ TRIGGER TELEGRAM NOTIFICATION ═══
+          try {
+            fetch('/api/notify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chatId: snap.docs[0].data().telegramId,
+                type: 'transfer',
+                amount: amt,
+                senderName: s.name
+              })
+            });
+          } catch (err) { console.error("Notification failed", err); }
+          // ═══════════════════════════════════════
+
           AudioEngine.coin();
           setSendOpen(false); setSendTo(''); setSendAmt('');
           notify(`Sent ${fmt(amt)} to ${user} ✅`);
@@ -744,7 +754,6 @@
                     {(!s.transactions || s.transactions.length === 0) ? (
                       <div className="text-center text-white/40 text-[11px] py-6">No transactions yet.</div>
                     ) : (
-                      // FIXED: Spread array before sorting to prevent state mutation crash
                       [...s.transactions].sort((a,b) => b.date - a.date).map((tx, i) => (
                         <div key={i} className="flex items-center justify-between bg-white/[0.03] border border-white/[0.05] p-2.5 rounded-xl">
                           <div className="flex items-center gap-2">
