@@ -5,9 +5,8 @@ const PROJECT_ID = "lagos-life-a8706";
 const DATABASE_ID = "(default)";
 const BASE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/${DATABASE_ID}/documents`;
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
+const bot = new Telegraf(.env.BOT_TOKEN);
 
-// 🚨 FUNNY PUSH NOTIFICATIONS POOL 🚨
 const MESSAGES = [
   "🥷 *WAHALA DON HAPPEN!*\n\nArea boys just robbed you for Mushin! They took some of your Lagos Cash. Enter the app make we go find them! 🏃🏾‍♂️💨",
   "🚀 *MARKET ALERT!*\n\nElon Musk just landed in the Lagos Market! Price: ₦50 Trillion. Do you have the money to buy him? Check the Market now! 🤑",
@@ -21,7 +20,6 @@ const MESSAGES = [
   "✈️ *JAPA PLANS!*\n\nUK dey call your name! Your ticket is ready but you need more Lagos Cash. Open the app to hustle and japa! 🇬🇧"
 ];
 
-// Helper to chunk array into batches
 const chunkArray = (arr, size) => {
   const chunked = [];
   let index = 0;
@@ -41,9 +39,8 @@ export default async function handler(req, res) {
     const authData = await authRes.json();
     const token = authData.idToken;
 
-    // 2. Fetch active users (Limit to 150 per run to stay within Vercel timeout limits)
-    // Fetching from highest to lowest so it cycles through top players
-    const usersRes = await fetch(`${BASE_URL}/users?pageSize=150`, {
+    // 2. Fetch 100 users
+    const usersRes = await fetch(`${BASE_URL}/users?pageSize=100`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const usersData = await usersRes.json();
@@ -52,14 +49,26 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: "No users found" });
     }
 
-    // 3. Filter users who have finished onboarding and have a telegramId
+    const now = Date.now();
+    const twoHours = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
+
+    // 3. Filter users who are onboarded, have a tgId, AND haven't been notified in the last 2 hours
     const validUsers = usersData.documents.filter(user => {
       const tgId = user.fields?.telegramId?.integerValue || user.fields?.telegramId?.stringValue;
       const step = user.fields?.onboardingStep?.integerValue;
-      return tgId && step === "5";
+      const lastNotified = Number(user.fields?.lastNotified?.integerValue || 0);
+      
+      // Condition: Has TG ID, Finished onboarding, and last notified > 2 hours ago
+      return tgId && step === "5" && (now - lastNotified > twoHours);
     }).map(user => ({
+      id: user.name.split("/").pop(), // Extract user ID from document name
       tgId: user.fields.telegramId.integerValue || user.fields.telegramId.stringValue
     }));
+
+    // If no valid users need notifying right now, exit early (saves Vercel time)
+    if (validUsers.length === 0) {
+      return res.status(200).json({ success: true, messagesSent: 0, note: "No users due for a notification yet." });
+    }
 
     // 4. Batch and Send using Promise.all
     let sentCount = 0;
@@ -69,15 +78,23 @@ export default async function handler(req, res) {
       const promises = batch.map(u => {
         const randomMsg = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
         return bot.telegram.sendMessage(u.tgId, randomMsg, { parse_mode: "Markdown" })
-          .then(() => { sentCount++; })
-          .catch(err => { console.log(`Failed to send to ${u.tgId}:`, err.message); }); // Catch errors so 1 blocked user doesn't break the batch
+          .then(() => { 
+            sentCount++; 
+            // Update the lastNotified timestamp in Firebase so we don't spam them
+            return fetch(`${BASE_URL}/users/${u.id}?updateMask.fieldPaths=lastNotified`, {
+              method: 'PATCH',
+              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fields: { lastNotified: { integerValue: String(now) } } })
+            });
+          })
+          .catch(err => { console.log(`Failed to send to ${u.tgId}:`, err.message); });
       });
 
-      await Promise.all(promises); // Send the batch
-      await new Promise(r => setTimeout(r, 1100)); // Wait 1.1 seconds before the next batch
+      await Promise.all(promises); // Send the batch and update DB
+      await new Promise(r => setTimeout(r, 1000)); // Wait 1 second before the next batch
     }
 
-    res.status(200).json({ success: true, totalUsersFetched: validUsers.length, messagesSent: sentCount });
+    res.status(200).json({ success: true, totalUsersFetched: usersData.documents.length, dueForNotification: validUsers.length, messagesSent: sentCount });
   } catch (error) {
     console.error("CRON ERROR:", error);
     res.status(500).json({ error: error.message });
