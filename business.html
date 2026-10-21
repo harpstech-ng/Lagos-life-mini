@@ -10,13 +10,11 @@
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  
-  <!-- PINNED BABEL VERSION 7.23.5 -->
-  <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js'"></script>
 
-  <!-- FIREBASE CLIENT SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -67,7 +65,6 @@
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
     @keyframes badgePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
     .badge-owned { animation: badgePulse 2s ease-in-out infinite; }
-    
     .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
   </style>
 </head>
@@ -79,8 +76,27 @@
     </div>
   </div>
 
-  <script type="text/babel" data-presets="react">
+  <script>
+    // Global error surface — so we never get a blank screen again
+    window.addEventListener('error', function (e) {
+      var msg = (e.error && e.error.message) || e.message || 'Unknown error';
+      console.error('Global error:', e.error || e.message);
+      var root = document.getElementById('root');
+      if (root && root.textContent && root.textContent.indexOf('Loading Business') !== -1) {
+        root.innerHTML = '<div style="padding:24px;color:#F87171;font-family:monospace;font-size:12px;text-align:center;line-height:1.5">'
+          + '<div style="font-size:28px;margin-bottom:8px">⚠️</div>'
+          + '<div>Failed to load. Error:</div>'
+          + '<div style="margin-top:8px;opacity:.7;word-break:break-word">' + msg + '</div></div>';
+      }
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+      console.error('Unhandled rejection:', e.reason);
+    });
+  </script>
+
+  <script>
     const { useState, useEffect, useMemo, useRef } = React;
+    const h = React.createElement;
 
     /* ═══ FIREBASE INITIALIZATION ═══ */
     const firebaseConfig = {
@@ -174,9 +190,9 @@
         const cached = localStorage.getItem("lagos_user_data");
         if (cached) return JSON.parse(cached);
       } catch (e) {}
-      const tg = window?.Telegram?.WebApp;
+      const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
-        name: tg?.initDataUnsafe?.user?.first_name || 'Hustler', 
+        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -218,7 +234,7 @@
       }
       function kick() { if(!ctx) return; const t=ctx.currentTime; const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(40,t+0.14); g.gain.setValueAtTime(0.8,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2); o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+0.22); }
       function hat() { if(!ctx) return; const t=ctx.currentTime; const b=ctx.createBuffer(1, ctx.sampleRate*0.04, ctx.sampleRate); const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const s=ctx.createBufferSource(); s.buffer=b; const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=6000; const g=ctx.createGain(); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04); s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); }
-      
+
       function tick() {
         if (!musicPlaying) return;
         const s = step % 8;
@@ -229,28 +245,30 @@
         step++;
       }
 
+      function startMusic() { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); }
+      function stopMusic() { musicPlaying=false; clearInterval(musicTimer); }
+
       return {
-        startMusic: () => { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); },
-        stopMusic: () => { musicPlaying=false; clearInterval(musicTimer); },
-        toggle: () => { musicPlaying ? AudioEngine.stopMusic() : AudioEngine.startMusic(); return musicPlaying; },
+        startMusic: startMusic,
+        stopMusic: stopMusic,
+        toggle: () => { if (musicPlaying) { stopMusic(); } else { startMusic(); } return musicPlaying; },
         coin: () => { init(); tone(1046, 0.08, "square", sfxGain, 0, 0.15); tone(1318, 0.15, "square", sfxGain, 0.07, 0.15); },
         error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
         purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); }
       };
     })();
 
-    const Card = ({ children, className = '', gold = false }) => (
-      <div className={'rounded-2xl ' + (gold ? 'card-gold' : 'card-gradient') + ' ' + className}>{children}</div>
-    );
-    const SectionTitle = ({ children, right }) => (
-      <div className="flex items-end justify-between mb-2.5 mt-6">
-        <h2 className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display">{children}</h2>
-        {right}
-      </div>
-    );
+    const Card = ({ children, className = '', gold = false }) =>
+      h('div', { className: 'rounded-2xl ' + (gold ? 'card-gold' : 'card-gradient') + ' ' + className }, children);
+
+    const SectionTitle = ({ children, right }) =>
+      h('div', { className: 'flex items-end justify-between mb-2.5 mt-6' },
+        h('h2', { className: 'text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display' }, children),
+        right
+      );
 
     function App() {
-      const [s, setS] = useState(getCachedData); 
+      const [s, setS] = useState(getCachedData);
       const [uid, setUid] = useState(null);
       const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
@@ -259,45 +277,44 @@
       const [isMaintenance, setIsMaintenance] = useState(false);
 
       useEffect(() => {
-        const tg = window?.Telegram?.WebApp;
-        if (tg) { 
-          try { tg.ready(); tg.expand(); } catch(e) {} 
+        const tg = window && window.Telegram && window.Telegram.WebApp;
+        if (tg) {
+          try { tg.ready(); tg.expand(); } catch(e) {}
         }
 
         const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
           if (doc.exists && doc.data().maintenance === true) setIsMaintenance(true);
           else setIsMaintenance(false);
-        });
+        }, () => {});
 
-        const tgUser = tg?.initDataUnsafe?.user;
-        
+        const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+
         auth.signInAnonymously().then((cred) => {
-          const userId = tgUser?.id ? String(tgUser.id) : cred.user.uid;
+          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
           setUid(userId);
-          
+
           const userRef = db.collection("users").doc(userId);
           const unsubscribe = userRef.onSnapshot((doc) => {
             if (doc.exists) {
               const dbData = doc.data();
-              
-              if (!dbData.telegramId && tgUser?.id) {
+
+              if (!dbData.telegramId && tgUser && tgUser.id) {
                 userRef.update({ telegramId: tgUser.id }).catch(() => {});
               }
 
               setS(prev => {
-                const newData = {
-                  ...dbData,
-                  telegramId: dbData.telegramId || tgUser?.id, 
+                const newData = Object.assign({}, dbData, {
+                  telegramId: dbData.telegramId || (tgUser && tgUser.id),
                   transactions: dbData.transactions || [],
                   cash: dbData.cash
-                };
-                localStorage.setItem("lagos_user_data", JSON.stringify(newData));
+                });
+                try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
                 return newData;
               });
             } else {
               const defaultData = {
-                name: tgUser?.first_name || 'Hustler',
-                telegramId: tgUser?.id || null, 
+                name: (tgUser && tgUser.first_name) || 'Hustler',
+                telegramId: (tgUser && tgUser.id) || null,
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -305,7 +322,7 @@
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
-              localStorage.setItem("lagos_user_data", JSON.stringify(defaultData));
+              try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
           }, (error) => console.error("Snapshot error:", error));
           return unsubscribe;
@@ -328,7 +345,6 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      /* FIXED: Infinite loop bug in business income ticker */
       useEffect(() => {
         if (!uid) return;
         const iv = setInterval(() => {
@@ -337,7 +353,7 @@
             const now = Date.now();
             let energy = prev.energy;
             let lastEnergy = prev.lastEnergy;
-            
+
             if (energy < MAX_E) {
               const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
               if (gained > 0) {
@@ -345,24 +361,24 @@
                 lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
               }
             }
-            
-            const perHr = Object.entries(prev.businesses || {}).reduce((a, [id, cnt]) => {
-              const biz = BUSINESSES.find((b) => b.id === id);
-              return a + cnt * (biz?.perHr || 0);
+
+            const perHr = Object.entries(prev.businesses || {}).reduce((a, kv) => {
+              const biz = BUSINESSES.find((b) => b.id === kv[0]);
+              return a + kv[1] * (biz ? biz.perHr : 0);
             }, 0);
             const newCash = prev.cash + perHr / 3600;
-            
+
             if (energy !== prev.energy || perHr > 0) {
               if (perHr > 0) {
-                db.collection("users").doc(uid).update({ 
-                  cash: firebase.firestore.FieldValue.increment(perHr / 3600), 
-                  energy, 
-                  lastEnergy 
+                db.collection("users").doc(uid).update({
+                  cash: firebase.firestore.FieldValue.increment(perHr / 3600),
+                  energy,
+                  lastEnergy
                 }).catch(() => {});
               } else if (energy !== prev.energy) {
                 db.collection("users").doc(uid).update({ energy, lastEnergy }).catch(() => {});
               }
-              return { ...prev, energy, lastEnergy, cash: newCash };
+              return Object.assign({}, prev, { energy: energy, lastEnergy: lastEnergy, cash: newCash });
             }
             return prev;
           });
@@ -370,27 +386,29 @@
         return () => clearInterval(iv);
       }, [uid]);
 
-      if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div></div>;
+      if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' },
+        h('div', { className: 'text-4xl' }, '⚠️'),
+        h('div', { className: 'font-bold' }, 'Auth Error'),
+        h('div', { className: 'text-sm' }, authError)
+      );
 
       if (isMaintenance) {
-        return (
-          <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center bg-[#08080B]">
-            <div className="text-7xl animate-bounce">🚧</div>
-            <h1 className="text-2xl font-black text-[#FFD60A] font-display mt-4">GAME UNDER MAINTENANCE</h1>
-            <p className="text-white/50 text-sm max-w-xs">We dey upgrade the game for you. Check back in a few minutes!</p>
-          </div>
+        return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center bg-[#08080B]' },
+          h('div', { className: 'text-7xl animate-bounce' }, '🚧'),
+          h('h1', { className: 'text-2xl font-black text-[#FFD60A] font-display mt-4' }, 'GAME UNDER MAINTENANCE'),
+          h('p', { className: 'text-white/50 text-sm max-w-xs' }, 'We dey upgrade the game for you. Check back in a few minutes!')
         );
       }
 
-      const bizValue = Object.entries(s.businesses || {}).reduce((a, [id, c]) => {
-        const biz = BUSINESSES.find((b) => b.id === id);
-        return a + c * (biz?.price || 0);
+      const bizValue = Object.entries(s.businesses || {}).reduce((a, kv) => {
+        const biz = BUSINESSES.find((b) => b.id === kv[0]);
+        return a + kv[1] * (biz ? biz.price : 0);
       }, 0);
-      const perHr = Object.entries(s.businesses || {}).reduce((a, [id, c]) => {
-        const biz = BUSINESSES.find((b) => b.id === id);
-        return a + c * (biz?.perHr || 0);
+      const perHr = Object.entries(s.businesses || {}).reduce((a, kv) => {
+        const biz = BUSINESSES.find((b) => b.id === kv[0]);
+        return a + kv[1] * (biz ? biz.perHr : 0);
       }, 0);
-      const assetValue = Object.entries(s.assets || {}).reduce((a, [id, c]) => a + c * (ASSET_PRICES[id] || 0), 0);
+      const assetValue = Object.entries(s.assets || {}).reduce((a, kv) => a + kv[1] * (ASSET_PRICES[kv[0]] || 0), 0);
       const netWorth = Math.floor((s.cash || 0) + bizValue + assetValue);
       const ownedCount = Object.values(s.businesses || {}).reduce((a, c) => a + c, 0);
 
@@ -399,28 +417,26 @@
           AudioEngine.error();
           return notify('Not enough Lagos Cash 💸', 'bad');
         }
-        
-        setS(prev => ({
-          ...prev,
-          cash: prev.cash - b.price,
-          businesses: { ...prev.businesses, [b.id]: (prev.businesses[b.id] || 0) + 1 },
-        }));
+
+        setS(prev => {
+          const newBiz = Object.assign({}, prev.businesses);
+          newBiz[b.id] = (newBiz[b.id] || 0) + 1;
+          return Object.assign({}, prev, { cash: prev.cash - b.price, businesses: newBiz });
+        });
 
         AudioEngine.purchase();
         notify(b.emoji + ' ' + b.name + ' bought! +' + fmt(b.perHr) + '/hr');
-        try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium'); } catch {}
+        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('medium'); } catch(e) {}
 
         if (uid) {
-          db.collection("users").doc(uid).update({
-            cash: firebase.firestore.FieldValue.increment(-b.price),
-            [`businesses.${b.id}`]: firebase.firestore.FieldValue.increment(1),
-            lastSeen: Date.now()
-          }).catch(() => {});
+          const updates = { cash: firebase.firestore.FieldValue.increment(-b.price), lastSeen: Date.now() };
+          updates['businesses.' + b.id] = firebase.firestore.FieldValue.increment(1);
+          db.collection("users").doc(uid).update(updates).catch(() => {});
         }
       };
 
-      const filteredBusinesses = activeTab === "All" 
-        ? BUSINESSES 
+      const filteredBusinesses = activeTab === "All"
+        ? BUSINESSES
         : BUSINESSES.filter(b => b.cat === activeTab);
 
       const NAV = [
@@ -437,179 +453,228 @@
         { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
       ];
 
-      return (
-        <div className="min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black">
-          <div className="mx-auto max-w-md min-h-screen flex flex-col pb-24 relative">
-            
-            <button onClick={() => { const on = AudioEngine.toggle(); setMusicOn(on); }} className="music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition">
-              <span className="text-base">{musicOn ? "🔊" : "🔇"}</span>
-            </button>
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
+        h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
 
-            <header className="sticky top-0 z-30 bg-[#08080B] border-b border-white/[0.06]">
-              <div className="px-4 py-2.5 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display">L</div>
-                  <div className="min-w-0">
-                    <div className="text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display">Business</div>
-                    <div className="text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5">{s.name || 'Hustler'} · {fmt(s.cash)}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <div className="px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums">⚡ {s.energy}</div>
-                  <div className="px-2 py-1 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] text-[10px] font-extrabold tabular-nums">{fmtReal(s.real)}</div>
-                </div>
-              </div>
-            </header>
+          h('button', {
+            onClick: () => { const on = AudioEngine.toggle(); setMusicOn(on); },
+            className: 'music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition'
+          }, h('span', { className: 'text-base' }, musicOn ? '🔊' : '🔇')),
 
-            <main className="flex-1 px-4 pb-4 animate-slideDown">
-              <Card className="p-4 mt-3" gold>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Business Value</div>
-                    <div className="text-xl font-black tabular-nums font-display mt-1 text-gradient-gold">{fmt(bizValue)}</div>
-                  </div>
-                  <div>
-                    <div className="text-[9px] uppercase tracking-widest text-white/40 font-bold">Per Hour</div>
-                    <div className="text-xl font-black text-[#22C55E] tabular-nums font-display mt-1">+{fmt(perHr)}</div>
-                  </div>
-                </div>
-                <div className="mt-3 pt-3 border-t border-white/[0.08] flex items-center justify-between">
-                  <div className="text-[10px] text-white/45 font-bold">
-                    <span className="text-[#FFD60A] font-black">{ownedCount}</span> business{ownedCount !== 1 ? 'es' : ''} owned
-                  </div>
-                  <div className="text-[10px] text-white/45 font-bold tabular-nums">
-                    Net Worth: <span className="text-[#FFD60A] font-black">{fmt(netWorth)}</span>
-                  </div>
-                </div>
-              </Card>
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B] border-b border-white/[0.06]' },
+            h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
+              h('div', { className: 'flex items-center gap-2 min-w-0' },
+                h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display' }, 'L'),
+                h('div', { className: 'min-w-0' },
+                  h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display' }, 'Business'),
+                  h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + fmt(s.cash))
+                )
+              ),
+              h('div', { className: 'flex items-center gap-1.5 shrink-0' },
+                h('div', { className: 'px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums' }, '⚡ ' + s.energy),
+                h('div', { className: 'px-2 py-1 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] text-[10px] font-extrabold tabular-nums' }, fmtReal(s.real))
+              )
+            )
+          ),
 
-              {/* TABS */}
-              <div className="mt-4 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-                {CATEGORIES.map(cat => (
-                  <button key={cat} onClick={() => setActiveTab(cat)}
-                          className={'whitespace-nowrap px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all ' + 
-                            (activeTab === cat ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.5)]' : 'bg-white/[0.06] text-white/50 border border-white/10')}>
-                    {cat}
-                  </button>
-                ))}
-              </div>
+          h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
+            h(Card, { className: 'p-4 mt-3', gold: true },
+              h('div', { className: 'grid grid-cols-2 gap-3' },
+                h('div', null,
+                  h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Business Value'),
+                  h('div', { className: 'text-xl font-black tabular-nums font-display mt-1 text-gradient-gold' }, fmt(bizValue))
+                ),
+                h('div', null,
+                  h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Per Hour'),
+                  h('div', { className: 'text-xl font-black text-[#22C55E] tabular-nums font-display mt-1' }, '+' + fmt(perHr))
+                )
+              ),
+              h('div', { className: 'mt-3 pt-3 border-t border-white/[0.08] flex items-center justify-between' },
+                h('div', { className: 'text-[10px] text-white/45 font-bold' },
+                  h('span', { className: 'text-[#FFD60A] font-black' }, String(ownedCount)),
+                  ' business' + (ownedCount !== 1 ? 'es' : '') + ' owned'
+                ),
+                h('div', { className: 'text-[10px] text-white/45 font-bold tabular-nums' },
+                  'Net Worth: ',
+                  h('span', { className: 'text-[#FFD60A] font-black' }, fmt(netWorth))
+                )
+              )
+            ),
 
-              {ownedCount > 0 && activeTab === 'All' && (
-                <>
-                  <SectionTitle right={<span className="text-[10px] font-bold text-[#22C55E] flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse glow-dot" />LIVE INCOME</span>}>
-                    Your Businesses
-                  </SectionTitle>
-                  <Card className="divide-y divide-white/[0.05] overflow-hidden">
-                    {BUSINESSES.filter((b) => (s.businesses[b.id] || 0) > 0).map((b) => {
-                      const owned = s.businesses[b.id];
-                      return (
-                        <div key={b.id} className="px-3.5 py-2.5 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-white/[0.06] grid place-items-center text-base shrink-0">{b.emoji}</div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[12px] font-extrabold truncate font-display">{b.name}</div>
-                            <div className="text-[10px] text-white/40 font-bold tabular-nums">×{owned} · {fmt(b.perHr * owned)}/hr</div>
-                          </div>
-                          <div className="text-[11px] font-black text-[#FFD60A] tabular-nums shrink-0">{fmt(b.price * owned)}</div>
-                        </div>
-                      );
-                    })}
-                  </Card>
-                </>
-              )}
+            h('div', { className: 'mt-4 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar' },
+              CATEGORIES.map(cat =>
+                h('button', {
+                  key: cat,
+                  onClick: () => setActiveTab(cat),
+                  className: 'whitespace-nowrap px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all ' +
+                    (activeTab === cat
+                      ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.5)]'
+                      : 'bg-white/[0.06] text-white/50 border border-white/10')
+                }, cat)
+              )
+            ),
 
-              <SectionTitle right={<span className="text-[10px] font-bold text-white/30">{filteredBusinesses.length} options</span>}>
-                {activeTab === "All" ? "All Businesses" : activeTab + " Businesses"}
-              </SectionTitle>
-
-              <div className="space-y-2">
-                {filteredBusinesses.map((b) => {
-                  const owned = s.businesses[b.id] || 0;
-                  const canAfford = s.cash >= b.price;
-                  const roiHours = (b.price / b.perHr).toFixed(1);
-                  return (
-                    <Card key={b.id} className={'p-3 flex items-center gap-3 ' + (owned > 0 ? 'border-[#FFD60A]/25' : '')}>
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-2xl shrink-0 relative">
-                        {b.emoji}
-                        {owned > 0 && (
-                          <span className="badge-owned absolute -top-1.5 -right-1.5 bg-gradient-to-br from-[#FFE566] to-[#FFB800] text-black text-[9px] font-black rounded-full w-5 h-5 grid place-items-center shadow-lg">
-                            {owned}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[13px] font-extrabold truncate font-display">{b.name}</div>
-                        <div className="text-[9px] text-white/40 truncate mb-1">{b.desc}</div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black text-[#22C55E] tabular-nums">+{fmt(b.perHr)}/hr</span>
-                          <span className="text-[9px] text-white/30 font-bold">· ROI {roiHours}h</span>
-                        </div>
-                      </div>
-                      <button onClick={() => buyBusiness(b)} disabled={!canAfford}
-                              className={'shrink-0 rounded-lg text-[11px] font-black px-3 py-2 active:scale-95 transition-all tabular-nums ' + (canAfford
-                                ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.5)]'
-                                : 'bg-white/[0.07] text-white/30')}>
-                        {fmt(b.price)}
-                      </button>
-                    </Card>
+            ownedCount > 0 && activeTab === 'All' && h(React.Fragment, null,
+              h(SectionTitle, {
+                right: h('span', { className: 'text-[10px] font-bold text-[#22C55E] flex items-center gap-1.5' },
+                  h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse glow-dot' }),
+                  'LIVE INCOME'
+                )
+              }, 'Your Businesses'),
+              h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden' },
+                BUSINESSES.filter((b) => (s.businesses[b.id] || 0) > 0).map((b) => {
+                  const owned = s.businesses[b.id];
+                  return h('div', { key: b.id, className: 'px-3.5 py-2.5 flex items-center gap-3' },
+                    h('div', { className: 'w-8 h-8 rounded-lg bg-white/[0.06] grid place-items-center text-base shrink-0' }, b.emoji),
+                    h('div', { className: 'flex-1 min-w-0' },
+                      h('div', { className: 'text-[12px] font-extrabold truncate font-display' }, b.name),
+                      h('div', { className: 'text-[10px] text-white/40 font-bold tabular-nums' }, '×' + owned + ' · ' + fmt(b.perHr * owned) + '/hr')
+                    ),
+                    h('div', { className: 'text-[11px] font-black text-[#FFD60A] tabular-nums shrink-0' }, fmt(b.price * owned))
                   );
-                })}
-              </div>
+                })
+              )
+            ),
 
-              <Card className="p-3.5 mt-4">
-                <div className="flex items-start gap-2">
-                  <span className="text-base">💡</span>
-                  <p className="text-[10.5px] text-white/50 leading-relaxed">
-                    Business income dey land for your cash <span className="text-[#FFD60A] font-bold">every second</span> — even when you close the app. Buy more copies to multiply the hourly rate. Every business you buy go add to your <span className="text-[#FFD60A] font-bold">Net Worth</span>.
-                  </p>
-                </div>
-              </Card>
-            </main>
+            h(SectionTitle, {
+              right: h('span', { className: 'text-[10px] font-bold text-white/30' }, filteredBusinesses.length + ' options')
+            }, activeTab === "All" ? "All Businesses" : activeTab + " Businesses"),
 
-            <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop">
-              <div className="grid grid-cols-6 px-1 pt-1.5 safe-bottom">
-                {NAV.map((n) => {
-                  const active = n.id === 'biz';
-                  return (
-                    <a key={n.id} href={n.href}
-                       onClick={(e) => { if (n.id === 'more') { e.preventDefault(); document.getElementById('more-sheet')?.classList.remove('hidden'); } }}
-                       className={'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')}>
-                      <span className={'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '')}>{n.icon}</span>
-                      <span className="text-[8.5px] font-extrabold tracking-wide font-display">{n.label}</span>
-                    </a>
-                  );
-                })}
-              </div>
-            </nav>
+            h('div', { className: 'space-y-2' },
+              filteredBusinesses.map((b) => {
+                const owned = s.businesses[b.id] || 0;
+                const canAfford = s.cash >= b.price;
+                const roiHours = (b.price / b.perHr).toFixed(1);
+                return h(Card, {
+                  key: b.id,
+                  className: 'p-3 flex items-center gap-3 ' + (owned > 0 ? 'border-[#FFD60A]/25' : '')
+                },
+                  h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-2xl shrink-0 relative' },
+                    b.emoji,
+                    owned > 0 && h('span', { className: 'badge-owned absolute -top-1.5 -right-1.5 bg-gradient-to-br from-[#FFE566] to-[#FFB800] text-black text-[9px] font-black rounded-full w-5 h-5 grid place-items-center shadow-lg' }, String(owned))
+                  ),
+                  h('div', { className: 'flex-1 min-w-0' },
+                    h('div', { className: 'text-[13px] font-extrabold truncate font-display' }, b.name),
+                    h('div', { className: 'text-[9px] text-white/40 truncate mb-1' }, b.desc),
+                    h('div', { className: 'flex items-center gap-2' },
+                      h('span', { className: 'text-[10px] font-black text-[#22C55E] tabular-nums' }, '+' + fmt(b.perHr) + '/hr'),
+                      h('span', { className: 'text-[9px] text-white/30 font-bold' }, '· ROI ' + roiHours + 'h')
+                    )
+                  ),
+                  h('button', {
+                    onClick: () => buyBusiness(b),
+                    disabled: !canAfford,
+                    className: 'shrink-0 rounded-lg text-[11px] font-black px-3 py-2 active:scale-95 transition-all tabular-nums ' +
+                      (canAfford
+                        ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.5)]'
+                        : 'bg-white/[0.07] text-white/30')
+                  }, fmt(b.price))
+                );
+              })
+            ),
 
-            <div id="more-sheet" className="hidden fixed inset-0 z-50 flex items-end justify-center">
-              <div className="absolute inset-0 bg-black/85" onClick={() => document.getElementById('more-sheet')?.classList.add('hidden')} />
-              <div className="relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp" onClick={(e) => e.stopPropagation()}>
-                <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-4" />
-                <div className="space-y-2">
-                  {MORE_PAGES.map((m) => (
-                    <a key={m.id} href={m.href} className="w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left">
-                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0">{m.icon}</div>
-                      <div className="min-w-0">
-                        <div className="text-[13px] font-extrabold font-display">{m.label}</div>
-                        <div className="text-[10px] text-white/40 font-bold mt-0.5">{m.desc}</div>
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            </div>
+            h(Card, { className: 'p-3.5 mt-4' },
+              h('div', { className: 'flex items-start gap-2' },
+                h('span', { className: 'text-base' }, '💡'),
+                h('p', { className: 'text-[10.5px] text-white/50 leading-relaxed' },
+                  'Business income dey land for your cash ',
+                  h('span', { className: 'text-[#FFD60A] font-bold' }, 'every second'),
+                  ' — even when you close the app. Buy more copies to multiply the hourly rate. Every business you buy go add to your ',
+                  h('span', { className: 'text-[#FFD60A] font-bold' }, 'Net Worth'),
+                  '.'
+                )
+              )
+            )
+          ),
 
-            {toast && (
-              <div className={'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' + (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')}>
-                {toast.msg}
-              </div>
-            )}
-          </div>
-        </div>
+          h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop' },
+            h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
+              NAV.map((n) => {
+                const active = n.id === 'biz';
+                return h('a', {
+                  key: n.id,
+                  href: n.href,
+                  onClick: (e) => {
+                    if (n.id === 'more') {
+                      e.preventDefault();
+                      const el = document.getElementById('more-sheet');
+                      if (el) el.classList.remove('hidden');
+                    }
+                  },
+                  className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')
+                },
+                  h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
+                  h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
+                );
+              })
+            )
+          ),
+
+          h('div', { id: 'more-sheet', className: 'hidden fixed inset-0 z-50 flex items-end justify-center' },
+            h('div', {
+              className: 'absolute inset-0 bg-black/85',
+              onClick: () => {
+                const el = document.getElementById('more-sheet');
+                if (el) el.classList.add('hidden');
+              }
+            }),
+            h('div', {
+              className: 'relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp',
+              onClick: (e) => e.stopPropagation()
+            },
+              h('div', { className: 'w-10 h-1 rounded-full bg-white/15 mx-auto mb-4' }),
+              h('div', { className: 'space-y-2' },
+                MORE_PAGES.map((m) =>
+                  h('a', {
+                    key: m.id,
+                    href: m.href,
+                    className: 'w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left'
+                  },
+                    h('div', { className: 'w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0' }, m.icon),
+                    h('div', { className: 'min-w-0' },
+                      h('div', { className: 'text-[13px] font-extrabold font-display' }, m.label),
+                      h('div', { className: 'text-[10px] text-white/40 font-bold mt-0.5' }, m.desc)
+                    )
+                  )
+                )
+              )
+            )
+          ),
+
+          toast && h('div', {
+            className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
+              (toast.kind === 'bad'
+                ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white'
+                : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')
+          }, toast.msg)
+        )
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    /* Error boundary so a runtime error never leaves a blank screen */
+    class ErrorBoundary extends React.Component {
+      constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+      static getDerivedStateFromError(error) { return { hasError: true, error: error }; }
+      componentDidCatch(error, info) { console.error('ErrorBoundary caught:', error, info); }
+      render() {
+        if (this.state.hasError) {
+          return h('div', { style: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', padding: '24px', textAlign: 'center', background: '#08080B', color: '#F87171', fontFamily: 'monospace', fontSize: '12px' } },
+            h('div', { style: { fontSize: '32px' } }, '⚠️'),
+            h('div', { style: { fontWeight: 'bold' } }, 'Something went wrong'),
+            h('div', { style: { opacity: 0.6, wordBreak: 'break-word' } }, String((this.state.error && this.state.error.message) || 'Unknown error')),
+            h('button', {
+              style: { marginTop: '12px', padding: '8px 16px', background: '#FFD60A', color: '#000', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' },
+              onClick: () => window.location.reload()
+            }, 'Reload')
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(
+      h(ErrorBoundary, null, h(App))
+    );
   </script>
 </body>
 </html>
