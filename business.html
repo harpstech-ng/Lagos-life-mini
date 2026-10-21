@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#08080B" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Lagos Life — Business</title>
+  <title>Lagos Life Mini — Business</title>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -54,18 +54,18 @@
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
     .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
     .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); }
-    .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); box-shadow: 0 8px 30px -10px rgba(255,214,10,0.3); }
     .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
-    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.18) 0%, rgba(255,214,10,0.06) 100%); border: 1px solid rgba(255,214,10,0.3); box-shadow: 0 0 20px rgba(255,214,10,0.2); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
-    @keyframes badgePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+    @keyframes badgePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
     .badge-owned { animation: badgePulse 2s ease-in-out infinite; }
     
     .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
@@ -99,22 +99,89 @@
     const MAX_E = 100;
     const ENERGY_MS = 5 * 60 * 1000;
 
+    const CATEGORIES = ["All", "Street", "Small", "Mid", "High", "Cartel"];
+
     const BUSINESSES = [
-      { id: 'water',  name: 'Pure Water Stand', emoji: '💧', price: 10_000,          perHr: 2_000 },
-      { id: 'suya',   name: 'Suya Spot',        emoji: '🍢', price: 250_000,         perHr: 40_000 },
-      { id: 'keke',   name: 'Keke Napep',       emoji: '🛺', price: 500_000,         perHr: 75_000 },
-      { id: 'phone',  name: 'Phone Accessories',emoji: '📱', price: 2_000_000,       perHr: 350_000 },
-      { id: 'danfo',  name: 'Danfo Bus',        emoji: '🚌', price: 5_000_000,       perHr: 800_000 },
-      { id: 'wash',   name: 'Car Wash',         emoji: '🧼', price: 25_000_000,      perHr: 4_000_000 },
-      { id: 'bet9ja', name: 'Bet9ja Shop',      emoji: '🎰', price: 50_000_000,      perHr: 9_000_000 },
-      { id: 'lounge', name: 'Lekki Lounge',     emoji: '🍾', price: 500_000_000,     perHr: 90_000_000 },
-      { id: 'oil',    name: 'Oil & Gas Bloc',   emoji: '🛢️', price: 5_000_000_000,   perHr: 1_000_000_000 },
+      // STREET (10)
+      { id: 'water',  name: 'Pure Water Stand', emoji: '💧', price: 10_000, perHr: 2_000, cat: 'Street', desc: 'Cold pure water for the whole street.' },
+      { id: 'mai_shai', name: 'Mai Shai', emoji: '☕', price: 50_000, perHr: 8_000, cat: 'Street', desc: 'Tea and bread for the early morning hustlers.' },
+      { id: 'corn',   name: 'Roasted Corn', emoji: '🌽', price: 100_000, perHr: 15_000, cat: 'Street', desc: 'With coconut and pear. Sweet!' },
+      { id: 'shoe',   name: 'Shoe Shiner', emoji: '👞', price: 25_000, perHr: 4_000, cat: 'Street', desc: 'Make your shoes shine like new.' },
+      { id: 'akara',  name: 'Akara Seller', emoji: '🥟', price: 40_000, perHr: 7_000, cat: 'Street', desc: 'Hot akara and pap for breakfast.' },
+      { id: 'phone_chg', name: 'Phone Charging', emoji: '🔌', price: 15_000, perHr: 3_000, cat: 'Street', desc: 'NEPA took light? Come and charge.' },
+      { id: 'suya',   name: 'Suya Spot', emoji: '🍢', price: 250_000, perHr: 40_000, cat: 'Street', desc: 'Spicy suya with plenty onions.' },
+      { id: 'keke',   name: 'Keke Napep', emoji: '🛺', price: 500_000, perHr: 75_000, cat: 'Street', desc: 'The king of short distances.' },
+      { id: 'okada',  name: 'Okada Rider', emoji: '🏍️', price: 300_000, perHr: 50_000, cat: 'Street', desc: 'Beat the traffic sharp sharp.' },
+      { id: 'umbrella', name: 'Umbrella Seller', emoji: '☂️', price: 20_000, perHr: 5_000, cat: 'Street', desc: 'Rain or shine, money must be made.' },
+
+      // SMALL (10)
+      { id: 'phone_acc', name: 'Phone Accessories', emoji: '📱', price: 2_000_000, perHr: 350_000, cat: 'Small', desc: 'Chargers, cases and screen protectors.' },
+      { id: 'barber', name: 'Barber Shop', emoji: '💈', price: 1_500_000, perHr: 250_000, cat: 'Small', desc: 'Sharp haircuts for the guys.' },
+      { id: 'salon',  name: 'Hair Salon', emoji: '💇🏾‍♀️', price: 3_000_000, perHr: 500_000, cat: 'Small', desc: 'Braids, weaves and styling for the ladies.' },
+      { id: 'tailor', name: 'Tailor Shop', emoji: '🪡', price: 2_500_000, perHr: 400_000, cat: 'Small', desc: 'Owambe clothes dey here.' },
+      { id: 'vulcan', name: 'Vulcanizer', emoji: '🛠️', price: 800_000, perHr: 120_000, cat: 'Small', desc: 'Fix tyre, patch tube.' },
+      { id: 'provision', name: 'Provision Store', emoji: '🏪', price: 1_200_000, perHr: 200_000, cat: 'Small', desc: 'Milk, sugar, indomie and detergent.' },
+      { id: 'danfo',  name: 'Danfo Bus', emoji: '🚌', price: 5_000_000, perHr: 800_000, cat: 'Small', desc: 'Oshodi to CMS. Enter with your change!' },
+      { id: 'wash',   name: 'Car Wash', emoji: '🧼', price: 8_000_000, perHr: 1_500_000, cat: 'Small', desc: 'Make your car clean for the road.' },
+      { id: 'pos',    name: 'POS Stand', emoji: '💳', price: 4_000_000, perHr: 700_000, cat: 'Small', desc: 'Withdraw money, transfer money.' },
+      { id: 'eggs',   name: 'Egg Seller', emoji: '🥚', price: 600_000, perHr: 100_000, cat: 'Small', desc: 'Crates of eggs for the neighborhood.' },
+
+      // MID (10)
+      { id: 'bet9ja', name: 'Bet9ja Shop', emoji: '🎰', price: 50_000_000, perHr: 9_000_000, cat: 'Mid', desc: 'Where people come to lose money.' },
+      { id: 'cyber',  name: 'Cyber Cafe', emoji: '💻', price: 15_000_000, perHr: 2_500_000, cat: 'Mid', desc: 'Printing, typing and jamb forms.' },
+      { id: 'fastfood', name: 'Fast Food Joint', emoji: '🍔', price: 30_000_000, perHr: 5_000_000, cat: 'Mid', desc: 'Chicken and chips for the workers.' },
+      { id: 'laundry', name: 'Laundry Service', emoji: '👕', price: 20_000_000, perHr: 3_500_000, cat: 'Mid', desc: 'Wash, dry and iron your clothes.' },
+      { id: 'pharmacy', name: 'Pharmacy', emoji: '💊', price: 25_000_000, perHr: 4_500_000, cat: 'Mid', desc: 'Panadol and malaria drugs.' },
+      { id: 'gym',    name: 'Gym', emoji: '🏋️', price: 40_000_000, perHr: 7_000_000, cat: 'Mid', desc: 'For the fit fam in Lekki.' },
+      { id: 'restaurant', name: 'Restaurant', emoji: '🍲', price: 80_000_000, perHr: 14_000_000, cat: 'Mid', desc: 'Local delicacies for the big men.' },
+      { id: 'event',  name: 'Event Center', emoji: '🎪', price: 150_000_000, perHr: 25_000_000, cat: 'Mid', desc: 'Weddings, birthdays and conferences.' },
+      { id: 'hotel',  name: 'Small Hotel', emoji: '🏨', price: 300_000_000, perHr: 50_000_000, cat: 'Mid', desc: 'Short time, long time.' },
+      { id: 'blocks', name: 'Block Industry', emoji: '🧱', price: 200_000_000, perHr: 35_000_000, cat: 'Mid', desc: 'Blocks for the builders.' },
+
+      // HIGH (10)
+      { id: 'lounge', name: 'Lekki Lounge', emoji: '🍾', price: 500_000_000, perHr: 90_000_000, cat: 'High', desc: 'Shisha and champagne for the big boys.' },
+      { id: 'club',   name: 'Night Club', emoji: '🎧', price: 1_000_000_000, perHr: 180_000_000, cat: 'High', desc: 'DJ, dancers and plenty dollars.' },
+      { id: 'car_deal', name: 'Car Dealership', emoji: '🚘', price: 2_500_000_000, perHr: 450_000_000, cat: 'High', desc: 'Brand new and tokunbo cars.' },
+      { id: 'real_estate', name: 'Real Estate', emoji: '🏘️', price: 5_000_000_000, perHr: 900_000_000, cat: 'High', desc: 'Selling lands and houses.' },
+      { id: 'logistics', name: 'Logistics Company', emoji: '🚚', price: 3_000_000_000, perHr: 550_000_000, cat: 'High', desc: 'Moving goods across the country.' },
+      { id: 'school', name: 'Private School', emoji: '🏫', price: 1_500_000_000, perHr: 280_000_000, cat: 'High', desc: 'Expensive school fees.' },
+      { id: 'hospital', name: 'Private Hospital', emoji: '🏥', price: 4_000_000_000, perHr: 700_000_000, cat: 'High', desc: 'Treating the rich and famous.' },
+      { id: 'supermarket', name: 'Supermarket', emoji: '🛒', price: 1_200_000_000, perHr: 220_000_000, cat: 'High', desc: 'Where the elites shop.' },
+      { id: 'printing', name: 'Printing Press', emoji: '🖨️', price: 800_000_000, perHr: 150_000_000, cat: 'High', desc: 'Printing millions for companies.' },
+      { id: 'tech',   name: 'Tech Startup', emoji: '🚀', price: 8_000_000_000, perHr: 1_500_000_000, cat: 'High', desc: 'Pitch to investors and raise funds.' },
+
+      // CARTEL (10)
+      { id: 'oil',    name: 'Oil & Gas Bloc', emoji: '🛢️', price: 50_000_000_000, perHr: 10_000_000_000, cat: 'Cartel', desc: 'Crude oil money. The real deal.' },
+      { id: 'jet',    name: 'Private Jet Charter', emoji: '✈️', price: 150_000_000_000, perHr: 30_000_000_000, cat: 'Cartel', desc: 'Fly the politicians around.' },
+      { id: 'yacht',  name: 'Yacht Club', emoji: '🛥️', price: 80_000_000_000, perHr: 15_000_000_000, cat: 'Cartel', desc: 'Party on the water.' },
+      { id: 'import', name: 'Import Cartel', emoji: '📦', price: 200_000_000_000, perHr: 40_000_000_000, cat: 'Cartel', desc: 'Control the port and the goods.' },
+      { id: 'diamond', name: 'Diamond Mine', emoji: '💎', price: 500_000_000_000, perHr: 100_000_000_000, cat: 'Cartel', desc: 'Diamonds are forever.' },
+      { id: 'gold',   name: 'Gold Refinery', emoji: '🏅', price: 1_000_000_000_000, perHr: 200_000_000_000, cat: 'Cartel', desc: 'Refine raw gold into pure bars.' },
+      { id: 'telecom', name: 'Telecom Company', emoji: '📡', price: 2_000_000_000_000, perHr: 400_000_000_000, cat: 'Cartel', desc: 'Control the network coverage.' },
+      { id: 'security', name: 'Private Security', emoji: '🛡️', price: 300_000_000_000, perHr: 60_000_000_000, cat: 'Cartel', desc: 'Guard the billionaires.' },
+      { id: 'construction', name: 'Construction Giant', emoji: '🏗️', price: 800_000_000_000, perHr: 150_000_000_000, cat: 'Cartel', desc: 'Build roads and bridges.' },
+      { id: 'political', name: 'Political Party', emoji: '🎩', price: 5_000_000_000_000, perHr: 1_000_000_000_000, cat: 'Cartel', desc: 'The ultimate cartel. (No violence o)' },
     ];
 
     const ASSET_PRICES = {
       chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000,
       gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000,
       mansion: 1_000_000_000_000,
+    };
+
+    const getCachedData = () => {
+      try {
+        const cached = localStorage.getItem("lagos_user_data");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+      const tg = window?.Telegram?.WebApp;
+      return {
+        name: tg?.initDataUnsafe?.user?.first_name || 'Hustler', 
+        cash: 25000, real: 0, energy: MAX_E,
+        lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
+        taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+        transactions: []
+      };
     };
 
     const fmt = (n) => {
@@ -183,26 +250,17 @@
     );
 
     function App() {
-      const [s, setS] = useState(null);
+      const [s, setS] = useState(getCachedData); 
       const [uid, setUid] = useState(null);
       const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
       const [musicOn, setMusicOn] = useState(false);
+      const [activeTab, setActiveTab] = useState("All");
 
       /* Initialize Firebase Auth & Sync */
       useEffect(() => {
         const tg = window?.Telegram?.WebApp;
         if (tg) { tg.ready(); tg.expand(); }
-
-        // Timeout fallback: If Firebase takes > 2 seconds, show default state
-        const timer = setTimeout(() => {
-          setS(prev => prev || {
-            name: tg?.initDataUnsafe?.user?.first_name || 'Aje Butler',
-            cash: 25000, real: 0, energy: MAX_E,
-            lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
-            taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-          });
-        }, 2000);
 
         auth.signInAnonymously().then((cred) => {
           const userId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : cred.user.uid;
@@ -210,29 +268,36 @@
           
           const userRef = db.collection("users").doc(userId);
           const unsubscribe = userRef.onSnapshot((doc) => {
-            clearTimeout(timer);
             if (doc.exists) {
-              setS(doc.data());
+              setS(prev => {
+                const dbData = doc.data();
+                const newData = {
+                  ...dbData,
+                  transactions: dbData.transactions || [],
+                  cash: dbData.cash + (prev.cash - (localStorage.getItem('cached_cash') || prev.cash)), // Keep local pending taps
+                };
+                localStorage.setItem("lagos_user_data", JSON.stringify(newData));
+                localStorage.setItem("cached_cash", newData.cash);
+                return newData;
+              });
             } else {
               const defaultData = {
-                name: tg?.initDataUnsafe?.user?.first_name || 'Aje Butler',
+                name: tg?.initDataUnsafe?.user?.first_name || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+                transactions: []
               };
               userRef.set(defaultData);
               setS(defaultData);
+              localStorage.setItem("lagos_user_data", JSON.stringify(defaultData));
             }
           });
           return unsubscribe;
-        }).catch(e => {
-          clearTimeout(timer);
-          console.error("Firebase Auth Error:", e);
-          setAuthError(e.message);
-        });
+        }).catch(e => setAuthError(e.message));
       }, []);
 
-      /* Start music on first user gesture */
+      /* Start music */
       useEffect(() => {
         const unlock = () => { if (!musicOn) { AudioEngine.startMusic(); setMusicOn(true); } };
         window.addEventListener("pointerdown", unlock, { once: true });
@@ -259,6 +324,7 @@
           const now = Date.now();
           let energy = s.energy;
           let lastEnergy = s.lastEnergy;
+          
           if (energy < MAX_E) {
             const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
             if (gained > 0) {
@@ -266,6 +332,7 @@
               lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
             }
           }
+          
           const perHr = Object.entries(s.businesses || {}).reduce((a, [id, cnt]) => {
             const biz = BUSINESSES.find((b) => b.id === id);
             return a + cnt * (biz?.perHr || 0);
@@ -275,15 +342,18 @@
           if (energy !== s.energy || perHr > 0) {
             setS(prev => ({ ...prev, energy, lastEnergy, cash: newCash }));
             if (uid && perHr > 0) {
-              db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600), energy, lastEnergy });
+              db.collection("users").doc(uid).update({ 
+                cash: firebase.firestore.FieldValue.increment(perHr / 3600), 
+                energy, 
+                lastEnergy 
+              });
             }
           }
         }, 1000);
         return () => clearInterval(iv);
       }, [s, uid]);
 
-      if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div><div className="text-xs text-white/50 mt-2">Go to Firebase Console → Authentication → Sign-in method → Enable Anonymous.</div></div>;
-      if (!s) return <div className="min-h-screen flex items-center justify-center flex-col gap-3"><div className="text-5xl">🇳🇬</div><div className="text-[12px] font-bold text-[#FFD60A] font-display">Loading...</div></div>;
+      if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div></div>;
 
       const bizValue = Object.entries(s.businesses || {}).reduce((a, [id, c]) => {
         const biz = BUSINESSES.find((b) => b.id === id);
@@ -302,14 +372,31 @@
           AudioEngine.error();
           return notify('Not enough Lagos Cash 💸', 'bad');
         }
-        updateUser({
-          cash: s.cash - b.price,
-          businesses: { ...s.businesses, [b.id]: (s.businesses[b.id] || 0) + 1 },
-        });
+        
+        // Optimistic update
+        setS(prev => ({
+          ...prev,
+          cash: prev.cash - b.price,
+          businesses: { ...prev.businesses, [b.id]: (prev.businesses[b.id] || 0) + 1 },
+        }));
+
         AudioEngine.purchase();
         notify(b.emoji + ' ' + b.name + ' bought! +' + fmt(b.perHr) + '/hr');
         try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium'); } catch {}
+
+        // Firebase update
+        if (uid) {
+          db.collection("users").doc(uid).update({
+            cash: firebase.firestore.FieldValue.increment(-b.price),
+            [`businesses.${b.id}`]: firebase.firestore.FieldValue.increment(1),
+            lastSeen: Date.now()
+          });
+        }
       };
+
+      const filteredBusinesses = activeTab === "All" 
+        ? BUSINESSES 
+        : BUSINESSES.filter(b => b.cat === activeTab);
 
       const NAV = [
         { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
@@ -339,7 +426,7 @@
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display">L</div>
                   <div className="min-w-0">
                     <div className="text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display">Business</div>
-                    <div className="text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5">{fmt(s.cash)}</div>
+                    <div className="text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5">{s.name || 'Hustler'} · {fmt(s.cash)}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -371,7 +458,18 @@
                 </div>
               </Card>
 
-              {ownedCount > 0 && (
+              {/* TABS */}
+              <div className="mt-4 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                {CATEGORIES.map(cat => (
+                  <button key={cat} onClick={() => setActiveTab(cat)}
+                          className={'whitespace-nowrap px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all ' + 
+                            (activeTab === cat ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.5)]' : 'bg-white/[0.06] text-white/50 border border-white/10')}>
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              {ownedCount > 0 && activeTab === 'All' && (
                 <>
                   <SectionTitle right={<span className="text-[10px] font-bold text-[#22C55E] flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse glow-dot" />LIVE INCOME</span>}>
                     Your Businesses
@@ -394,12 +492,12 @@
                 </>
               )}
 
-              <SectionTitle right={<span className="text-[10px] font-bold text-white/30">{BUSINESSES.length} options</span>}>
-                Buy Businesses
+              <SectionTitle right={<span className="text-[10px] font-bold text-white/30">{filteredBusinesses.length} options</span>}>
+                {activeTab === "All" ? "All Businesses" : activeTab + " Businesses"}
               </SectionTitle>
 
               <div className="space-y-2">
-                {BUSINESSES.map((b) => {
+                {filteredBusinesses.map((b) => {
                   const owned = s.businesses[b.id] || 0;
                   const canAfford = s.cash >= b.price;
                   const roiHours = (b.price / b.perHr).toFixed(1);
@@ -415,7 +513,8 @@
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[13px] font-extrabold truncate font-display">{b.name}</div>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <div className="text-[9px] text-white/40 truncate mb-1">{b.desc}</div>
+                        <div className="flex items-center gap-2">
                           <span className="text-[10px] font-black text-[#22C55E] tabular-nums">+{fmt(b.perHr)}/hr</span>
                           <span className="text-[9px] text-white/30 font-bold">· ROI {roiHours}h</span>
                         </div>
