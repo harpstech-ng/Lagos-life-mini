@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Lagos Life Mini — Babe Wahala</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B', pink: '#EC4899' },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+      }},
+    };
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html, body {
+      margin: 0; padding: 0;
+      background: #08080B; color: #fff;
+      overflow-x: hidden; overscroll-behavior-y: none;
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(236,72,153,0.08), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,214,10,0.05), transparent);
+    }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+    .text-gradient-pink { background: linear-gradient(135deg, #F472B6 0%, #EC4899 40%, #BE185D 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    .card-pink { background: linear-gradient(135deg, rgba(236,72,153,0.12) 0%, rgba(190,24,93,0.04) 100%); border: 1px solid rgba(236,72,153,0.25); box-shadow: 0 8px 30px -10px rgba(236,72,153,0.3); }
+    .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+    .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(236,72,153,0.2) 0%, rgba(236,72,153,0.05) 100%); border: 1px solid rgba(236,72,153,0.35); box-shadow: 0 0 25px rgba(236,72,153,0.25); }
+    .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    @keyframes floatHeart { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-100px) scale(1.5); opacity: 0; } }
+    .heart-float { animation: floatHeart 1.5s ease-out forwards; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { console.error('Unhandled rejection:', e.reason); });
+  </script>
+
+  <script>
+    const { useState, useEffect, useRef } = React;
+    const h = React.createElement;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const BABE_NAMES = ['Tolu', 'Amaka', 'Cynthia', 'Zainab', 'Blessing', 'Chioma', 'Bella', 'Shalewa', 'Nneka', 'Simi'];
+    
+    const BILLS = [
+      { item: 'Hair', amount: 20000, msg: 'Babe say she wan make hair. "My hair don spoil, I need 20k 🥺"' },
+      { item: 'Nails', amount: 50000, msg: 'Babe say she wan do nails. "All my friends don do their own, I need 50k 💅"' },
+      { item: 'Clubbing', amount: 100000, msg: 'Babe say she wan go club with the girls. "We dey go Quilox tonight, send 100k 💃"' },
+      { item: 'iPhone', amount: 500000, msg: 'Babe say her phone fell. "Babe please, I need 500k for iPhone 15, my old one don spoil 📱"' },
+      { item: 'Shopping', amount: 150000, msg: 'Babe say she wan shop for Balogun. "Babe I need new clothes, send 150k 🛍️"' },
+      { item: 'Data', amount: 10000, msg: 'Babe say her data don finish. "Babe abeg send 10k for data, I wan video call you 📶"' }
+    ];
+
+    const getCachedData = () => {
+      try {
+        const cached = localStorage.getItem("lagos_user_data");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return Object.assign({}, parsed, { babe: parsed.babe || { status: 'single' } });
+        }
+      } catch (e) {}
+      const tg = window && window.Telegram && window.Telegram.WebApp;
+      return {
+        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        cash: 25000, real: 0, energy: 100,
+        lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
+        taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+        transactions: [], babe: { status: 'single' }
+      };
+    };
+
+    const fmt = (n) => {
+      n = Math.floor(n || 0);
+      const s = n < 0 ? '-' : '';
+      n = Math.abs(n);
+      if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
+      if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return s + '₦' + (n / 1e3).toFixed(1) + 'K';
+      return s + '₦' + n.toLocaleString();
+    };
+
+    /* ═══ AUDIO ENGINE ═══ */
+    const AudioEngine = (() => {
+      let ctx = null;
+      function init() { if (ctx) return; ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      function tone(f, d, t, w=0, g=0.3) {
+        if (!ctx) return; const start = ctx.currentTime + w;
+        const o = ctx.createOscillator(), gain = ctx.createGain();
+        o.type = t; o.frequency.value = f;
+        gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(g, start+0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start+d);
+        o.connect(gain); gain.connect(ctx.destination); o.start(start); o.stop(start+d+0.05);
+      }
+      return {
+        tap: () => { init(); tone(880, 0.09, "triangle", 0, 0.28); },
+        coin: () => { init(); tone(1046, 0.08, "square", 0, 0.15); tone(1318, 0.15, "square", 0.07, 0.15); },
+        error: () => { init(); tone(220, 0.15, "sawtooth", 0, 0.25); tone(165, 0.25, "sawtooth", 0.1, 0.25); },
+        love: () => { init(); tone(440, 0.2, "sine", 0, 0.2); tone(554, 0.2, "sine", 0.15, 0.2); tone(659, 0.3, "sine", 0.3, 0.2); },
+        breakup: () => { init(); tone(300, 0.3, "sawtooth", 0, 0.3); tone(200, 0.4, "sawtooth", 0.2, 0.3); }
+      };
+    })();
+
+    const Card = ({ children, className = '', pink = false }) =>
+      h('div', { className: 'rounded-2xl ' + (pink ? 'card-pink' : 'card-gradient') + ' ' + className }, children);
+
+    const SectionTitle = ({ children, right }) =>
+      h('div', { className: 'flex items-end justify-between mb-2.5 mt-6' },
+        h('h2', { className: 'text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display' }, children),
+        right
+      );
+
+    function App() {
+      const [s, setS] = useState(getCachedData);
+      const [uid, setUid] = useState(null);
+      const [authError, setAuthError] = useState(null);
+      const [toast, setToast] = useState(null);
+      const [feed, setFeed] = useState([]); // Live feed history
+      
+      // Babe state
+      const [currentRequest, setCurrentRequest] = useState(null);
+      const [timeLeft, setTimeLeft] = useState(0); // countdown for next bill
+      const [isPregnant, setIsPregnant] = useState(false);
+      const [pregnancyMsg, setPregnancyMsg] = useState('');
+      
+      const timerRef = useRef(null);
+
+      // Firebase Sync
+      useEffect(() => {
+        const tg = window && window.Telegram && window.Telegram.WebApp;
+        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+
+        auth.signInAnonymously().then((cred) => {
+          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+          setUid(userId);
+          
+          const userRef = db.collection("users").doc(userId);
+          const unsubscribe = userRef.onSnapshot((doc) => {
+            if (doc.exists) {
+              setS(prev => {
+                const dbData = doc.data();
+                const newData = Object.assign({}, prev, dbData, {
+                  babe: dbData.babe || prev.babe || { status: 'single' },
+                  transactions: dbData.transactions || []
+                });
+                try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
+                return newData;
+              });
+            } else {
+              const defaultData = {
+                name: (tgUser && tgUser.first_name) || 'Hustler',
+                cash: 25000, real: 0, energy: 100,
+                lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
+                taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+                transactions: [], babe: { status: 'single' }
+              };
+              userRef.set(defaultData).catch(() => {});
+              setS(defaultData);
+              try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
+            }
+          }, (error) => console.error("Snapshot error:", error));
+          return unsubscribe;
+        }).catch(e => setAuthError(e.message));
+      }, []);
+
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2400);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+      const addFeed = (msg) => setFeed(prev => [{ id: Date.now(), msg }, ...prev].slice(0, 10));
+
+      const updateUser = async (data) => {
+        setS(prev => Object.assign({}, prev, data));
+        if (uid) {
+          await db.collection("users").doc(uid).update(Object.assign({}, data, { lastSeen: Date.now() })).catch(() => {});
+        }
+      };
+
+      // --- BABE LOGIC ---
+      useEffect(() => {
+        if (s.babe.status !== 'dating') {
+          if (timerRef.current) clearInterval(timerRef.current);
+          return;
+        }
+
+        // If dating, start the billing timer
+        const tick = () => {
+          const now = Date.now();
+          const lastBill = s.babe.lastBillAt || now;
+          const nextBill = lastBill + 60000; // 60 seconds cooldown
+          
+          if (now >= nextBill && !currentRequest && !isPregnant) {
+            // Generate a new bill
+            const randomBill = BILLS[Math.floor(Math.random() * BILLS.length)];
+            setCurrentRequest(randomBill);
+            AudioEngine.tap();
+            setTimeLeft(0);
+          } else if (!currentRequest && !isPregnant) {
+            setTimeLeft(Math.max(0, Math.ceil((nextBill - now) / 1000)));
+          }
+        };
+
+        timerRef.current = setInterval(tick, 1000);
+        return () => clearInterval(timerRef.current);
+      }, [s.babe.status, s.babe.lastBillAt, currentRequest, isPregnant]);
+
+      const findBabe = async () => {
+        if (s.cash < 50000) { AudioEngine.error(); return notify('You need ₦50k to take a babe out 💸', 'bad'); }
+        
+        const name = BABE_NAMES[Math.floor(Math.random() * BABE_NAMES.length)];
+        const newBabe = { name, status: 'dating', lastBillAt: Date.now() };
+        
+        updateUser({ cash: s.cash - 50000, babe: newBabe });
+        AudioEngine.love();
+        notify('You are now dating ' + name + ' ❤️');
+        setIsPregnant(false);
+        setCurrentRequest(null);
+      };
+
+      const payBill = async () => {
+        if (!currentRequest) return;
+        if (s.cash < currentRequest.amount) { AudioEngine.error(); return notify('You no get money for this one 💸', 'bad'); }
+
+        const newClout = (s.clout || 0) + 200;
+        const newBabe = Object.assign({}, s.babe, { lastBillAt: Date.now() });
+        
+        updateUser({ cash: s.cash - currentRequest.amount, clout: newClout, babe: newBabe });
+        AudioEngine.coin();
+        notify('You paid for ' + currentRequest.item + '! +200 Clout 🔥');
+        addFeed('❤️ ' + s.babe.name + ' posted: "My Odogwu paid for my ' + currentRequest.item + '!"');
+        setCurrentRequest(null);
+      };
+
+      const ignoreBill = async () => {
+        if (!currentRequest) return;
+        
+        const babeName = s.babe.name;
+        updateUser({ babe: { status: 'single' } });
+        AudioEngine.breakup();
+        notify(babeName + ' don break up with you 💔', 'bad');
+        addFeed('💔 ' + babeName + ' don leave ' + (s.name || 'you') + ', e no get money to pay for ' + currentRequest.item + '!');
+        setCurrentRequest(null);
+        setIsPregnant(false);
+      };
+
+      const triggerPregnancy = () => {
+        if (s.babe.status !== 'dating') return notify('You need a babe first', 'bad');
+        if (isPregnant) return notify('She is already pregnant', 'bad');
+        
+        const isFake = Math.random() < 0.7; // 70% chance it's a scam
+        setIsPregnant(true);
+        if (isFake) {
+          setPregnancyMsg(s.babe.name + ' just called you: "Babe I am pregnant o! 😭"');
+        } else {
+          setPregnancyMsg(s.babe.name + ' just called you: "Babe I am pregnant o! 😭"');
+        }
+        // Save pregnancy state to Firebase so it persists
+        updateUser({ babe: Object.assign({}, s.babe, { isPregnant: true, isFakePregnancy: isFake }) });
+      };
+
+      const resolvePregnancy = async (action) => {
+        if (action === 'abortion') {
+          if (s.cash < 500000) return notify('You need ₦500k for abortion', 'bad');
+          updateUser({ cash: s.cash - 500000, babe: Object.assign({}, s.babe, { isPregnant: false }) });
+          setIsPregnant(false);
+          if (s.babe.isFakePregnancy) {
+            AudioEngine.error();
+            addFeed('😭 ' + s.babe.name + ' used fake pregnancy scam you of ₦500k and japa with another guy!');
+            updateUser({ babe: { status: 'single' } });
+            notify('Scam! She faked the pregnancy and ran away 💔', 'bad');
+          } else {
+            AudioEngine.coin();
+            notify('Abortion successful. You lost ₦500k but dodged a bullet.');
+            updateUser({ babe: Object.assign({}, s.babe, { lastBillAt: Date.now() }) });
+          }
+        } else if (action === 'naming') {
+          if (s.cash < 2000000) return notify('You need ₦2M for naming', 'bad');
+          updateUser({ cash: s.cash - 2000000, babe: Object.assign({}, s.babe, { isPregnant: false }) });
+          setIsPregnant(false);
+          if (s.babe.isFakePregnancy) {
+            AudioEngine.error();
+            addFeed('😭 ' + s.babe.name + ' used fake pregnancy scam you of ₦2M and japa with another guy!');
+            updateUser({ babe: { status: 'single' } });
+            notify('Scam! She faked the pregnancy and ran away 💔', 'bad');
+          } else {
+            AudioEngine.love();
+            notify('You paid ₦2M for naming. You are now a father!');
+            updateUser({ babe: Object.assign({}, s.babe, { lastBillAt: Date.now() }) });
+          }
+        } else if (action === 'dna') {
+          if (s.cash < 1000000) return notify('You need ₦1M for DNA test', 'bad');
+          updateUser({ cash: s.cash - 1000000 });
+          
+          setTimeout(() => {
+            if (s.babe.isFakePregnancy) {
+              AudioEngine.error();
+              updateUser({ cash: s.cash - 5000000, babe: { status: 'single' } }); // -5M child support
+              addFeed('😭 ' + (s.name || 'You') + ' DNA fail! No be him pikin, him pay ₦5M child support!');
+              notify('DNA FAIL! You paid ₦5M child support and she left 💔', 'bad');
+            } else {
+              AudioEngine.love();
+              updateUser({ clout: (s.clout || 0) + 1000, babe: Object.assign({}, s.babe, { isPregnant: false }) });
+              addFeed('🔥 ' + (s.name || 'You') + ' DNA passed! Na him pikin, him gain +1000 Clout!');
+              notify('DNA PASS! Na your pikin! +1000 Clout 👑');
+            }
+            setIsPregnant(false);
+          }, 1500);
+        }
+      };
+
+      if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
+
+      const NAV = [
+        { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
+        { id: 'hustle', label: 'Hustle', icon: '👊', href: 'hustle.html' },
+        { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
+        { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
+        { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: '#' },
+      ];
+      const MORE_PAGES = [
+        { id: 'bet', label: 'Bet Center', icon: '🎰', desc: 'Aviator, Bet9ja, Whot', href: 'bet.html' },
+        { id: 'babe', label: 'Babe Wahala', icon: '👩🏾‍❤️‍👨🏾', desc: 'Billing, DNA Test, Breakup', href: 'babe.html' },
+        { id: 'vip', label: 'Big Boys Lounge', icon: '👑', desc: 'VIP, Geh Geh, Gold Name', href: 'vip.html' },
+        { id: 'politics', label: 'Politics & BBN', icon: '🎩', desc: 'Elections, Big Brother', href: 'politics.html' },
+        { id: 'madness', label: 'Madness & Ritual', icon: '🍃', desc: 'Smoke Loud, Ritual, Kidnap', href: 'madness.html' },
+        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
+        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
+        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
+      ];
+
+      const babeStatus = s.babe.status || 'single';
+      const babeName = s.babe.name || 'Babe';
+
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#EC4899] selection:text-black' },
+        h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
+          
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+            h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
+              h('div', { className: 'flex items-center gap-2 min-w-0' },
+                h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-pink-400 to-pink-600 grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(236,72,153,0.7)] font-display' }, 'L'),
+                h('div', { className: 'min-w-0' },
+                  h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-pink-400/80 leading-none font-display' }, 'Babe Wahala'),
+                  h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + fmt(s.cash))
+                )
+              ),
+              h('div', { className: 'flex items-center gap-1.5 shrink-0' },
+                h('div', { className: 'px-2 py-1 rounded-lg bg-pink-500/15 border border-pink-500/30 text-pink-400 text-[10px] font-extrabold tabular-nums' }, '🔥 ' + (s.clout || 0) + ' Clout')
+              )
+            )
+          ),
+
+          h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
+            
+            // STATUS CARD
+            h(Card, { className: 'relative overflow-hidden p-5 mt-3', pink: true },
+              h('div', { className: 'absolute -top-16 -right-12 w-48 h-48 rounded-full bg-pink-500/20 blur-3xl pointer-events-none' }),
+              h('div', { className: 'relative flex flex-col items-center text-center' },
+                h('div', { className: 'text-6xl mb-3' }, babeStatus === 'dating' ? '👩🏾‍❤️‍👨🏾' : '💔'),
+                h('div', { className: 'text-[11px] uppercase tracking-widest text-pink-400/80 font-bold mb-1' }, babeStatus === 'dating' ? 'Current Babe' : 'Relationship Status'),
+                h('div', { className: 'text-2xl font-black text-white font-display' }, babeStatus === 'dating' ? babeName : 'Single & Searching'),
+                babeStatus === 'dating' && h('div', { className: 'mt-2 px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-[10px] font-bold' }, '❤️ Loving the vibe'),
+                babeStatus === 'single' && h('button', { onClick: findBabe, className: 'mt-4 px-6 py-2.5 rounded-xl bg-gradient-to-b from-pink-400 to-pink-600 text-white font-black text-[12px] shadow-[0_8px_24px_-8px_rgba(236,72,153,0.7)] active:scale-95 transition' }, 'Take a Babe Out (₦50K)')
+              )
+            ),
+
+            // BILLING REQUEST
+            babeStatus === 'dating' && h('div', { className: 'mt-4' },
+              currentRequest 
+                ? h(Card, { className: 'p-4 border border-pink-500/30 relative overflow-hidden' },
+                    h('div', { className: 'absolute top-0 left-0 w-1 h-full bg-pink-500' }),
+                    h('div', { className: 'flex items-start gap-3' },
+                      h('div', { className: 'text-3xl' }, '💬'),
+                      h('div', { className: 'flex-1' },
+                        h('div', { className: 'text-[12px] font-black text-pink-400 mb-1' }, babeName + ' needs you!'),
+                        h('p', { className: 'text-[12px] text-white/80 leading-relaxed mb-3' }, currentRequest.msg),
+                        h('div', { className: 'text-[18px] font-black text-white tabular-nums mb-3' }, fmt(currentRequest.amount)),
+                        h('div', { className: 'flex gap-2' },
+                          h('button', { onClick: payBill, className: 'flex-1 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] py-2.5 text-[11px] font-black text-black active:scale-95 transition' }, 'Pay ' + fmt(currentRequest.amount)),
+                          h('button', { onClick: ignoreBill, className: 'flex-1 rounded-xl bg-white/[0.06] border border-white/10 py-2.5 text-[11px] font-black text-red-400 active:scale-95 transition' }, 'Ignore (Breakup)')
+                        )
+                      )
+                    )
+                  )
+                : h(Card, { className: 'p-5 text-center' },
+                    h('div', { className: 'text-4xl mb-2' }, '💅🏾'),
+                    h('div', { className: 'text-[11px] font-bold text-white/50' }, 'Babe is chilling...'),
+                    h('div', { className: 'text-[14px] font-black text-pink-400 mt-1' }, 'Next bill in ' + timeLeft + 's')
+                  )
+            ),
+
+            // PREGNANCY & DNA
+            babeStatus === 'dating' && h('div', { className: 'mt-4' },
+              isPregnant 
+                ? h(Card, { className: 'p-4 border border-red-500/30' },
+                    h('div', { className: 'text-center' },
+                      h('div', { className: 'text-4xl mb-2 animate-pulse' }, '🤰🏾'),
+                      h('div', { className: 'text-[13px] font-black text-red-400 mb-2' }, 'PREGNANCY SCARE!'),
+                      h('p', { className: 'text-[12px] text-white/80 mb-4' }, pregnancyMsg),
+                      h('div', { className: 'space-y-2' },
+                        h('button', { onClick: () => resolvePregnancy('abortion'), className: 'w-full py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-[11px] font-bold text-white/70 active:scale-95 transition' }, 'Pay ₦500K for Abortion'),
+                        h('button', { onClick: () => resolvePregnancy('naming'), className: 'w-full py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-[11px] font-bold text-white/70 active:scale-95 transition' }, 'Pay ₦2M for Naming'),
+                        h('button', { onClick: () => resolvePregnancy('dna'), className: 'w-full py-2.5 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black text-[11px] font-black active:scale-95 transition' }, 'Force DNA Test (₦1M)')
+                      )
+                    )
+                  )
+                : h(Card, { className: 'p-4 text-center' },
+                    h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2' }, 'Suspicious Activity'),
+                    h('button', { onClick: triggerPregnancy, className: 'px-4 py-2 rounded-xl bg-white/[0.06] border border-white/10 text-[11px] font-bold text-white/70 active:scale-95 transition' }, 'Ask if she is pregnant 🤔')
+                  )
+            ),
+
+            // LIVE FEED
+            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-pink-400 flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse glow-dot' }), 'LIVE') }, 'Relationship Feed'),
+            h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden min-h-[100px]' },
+              feed.length === 0 
+                ? h('div', { className: 'px-4 py-6 text-center text-[11px] text-white/30' }, 'No relationship drama yet. Go find a babe!')
+                : feed.map(f => h('div', { key: f.id, className: 'px-4 py-3 text-[11px] text-white/70 animate-slideDown' }, f.msg))
+            )
+
+          ),
+
+          h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
+            h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
+              NAV.map((n) => {
+                const active = n.id === 'more';
+                return h('a', {
+                  key: n.id, href: n.href,
+                  onClick: (e) => { if (n.id === 'more') { e.preventDefault(); const el = document.getElementById('more-sheet'); if (el) el.classList.remove('hidden'); } },
+                  className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-pink-400 nav-active-pill' : 'text-white/35')
+                },
+                  h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
+                  h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
+                );
+              })
+            )
+          ),
+
+          h('div', { id: 'more-sheet', className: 'hidden fixed inset-0 z-50 flex items-end justify-center' },
+            h('div', { className: 'absolute inset-0 bg-black/70 backdrop-blur-sm', onClick: () => { const el = document.getElementById('more-sheet'); if (el) el.classList.add('hidden'); } }),
+            h('div', { className: 'relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp', onClick: (e) => e.stopPropagation() },
+              h('div', { className: 'w-10 h-1 rounded-full bg-white/15 mx-auto mb-4' }),
+              h('div', { className: 'space-y-2 max-h-[70vh] overflow-y-auto' },
+                MORE_PAGES.map((m) =>
+                  h('a', { key: m.id, href: m.href, className: 'w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left' },
+                    h('div', { className: 'w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0' }, m.icon),
+                    h('div', { className: 'min-w-0' },
+                      h('div', { className: 'text-[13px] font-extrabold font-display' }, m.label),
+                      h('div', { className: 'text-[10px] text-white/40 font-bold mt-0.5' }, m.desc)
+                    )
+                  )
+                )
+              )
+            )
+          ),
+
+          toast && h('div', {
+            className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
+              (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-pink-400 to-pink-600 text-white')
+          }, toast.msg)
+        )
+      );
+    }
+
+    class ErrorBoundary extends React.Component {
+      constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+      static getDerivedStateFromError(error) { return { hasError: true, error: error }; }
+      componentDidCatch(error, info) { console.error('ErrorBoundary caught:', error, info); }
+      render() {
+        if (this.state.hasError) {
+          return h('div', { style: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', padding: '24px', textAlign: 'center', background: '#08080B', color: '#F87171', fontFamily: 'monospace', fontSize: '12px' } },
+            h('div', { style: { fontSize: '32px' } }, '⚠️'),
+            h('div', { style: { fontWeight: 'bold' } }, 'Something went wrong'),
+            h('div', { style: { opacity: 0.6, wordBreak: 'break-word' } }, String((this.state.error && this.state.error.message) || 'Unknown error')),
+            h('button', { style: { marginTop: '12px', padding: '8px 16px', background: '#FFD60A', color: '#000', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }, onClick: () => window.location.reload() }, 'Reload')
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(ErrorBoundary, null, h(App)));
+  </script>
+</body>
+</html>
