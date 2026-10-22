@@ -10,12 +10,11 @@
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  
-  <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js'"></script>
 
-  <!-- FIREBASE CLIENT SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -45,6 +44,7 @@
     .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
     .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); box-shadow: 0 8px 30px -10px rgba(255,214,10,0.3); }
+    .card-sapa { background: linear-gradient(135deg, rgba(239,68,68,0.1) 0%, rgba(185,28,28,0.02) 100%); border: 1px solid rgba(239,68,68,0.2); box-shadow: 0 8px 30px -10px rgba(239,68,68,0.2); }
     .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
     .tap-btn { position: relative; border-radius: 9999px; background: radial-gradient(circle at 30% 20%, #FFED4E 0%, #FFD60A 35%, #E6A800 70%, #B88600 100%); box-shadow: 0 0 0 1px rgba(255,255,255,0.2) inset, 0 -8px 0 rgba(0,0,0,0.25) inset, 0 12px 0 rgba(139,100,0,0.55), 0 20px 50px -10px rgba(255,214,10,0.8); transition: transform 100ms ease, box-shadow 100ms ease; user-select: none; touch-action: manipulation; }
     .tap-btn:active:not(:disabled) { transform: translateY(6px) scale(0.97); box-shadow: 0 0 0 1px rgba(255,255,255,0.2) inset, 0 -4px 0 rgba(0,0,0,0.25) inset, 0 4px 0 rgba(139,100,0,0.55), 0 10px 30px -10px rgba(255,214,10,0.9); }
@@ -63,13 +63,22 @@
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    
+    .sapa-btn { background: radial-gradient(circle at 30% 20%, #6b7280 0%, #4b5563 35%, #374151 70%, #1f2937 100%); box-shadow: 0 0 0 1px rgba(255,255,255,0.1) inset, 0 -8px 0 rgba(0,0,0,0.25) inset, 0 12px 0 rgba(0,0,0,0.55), 0 20px 50px -10px rgba(0,0,0,0.8); }
+    .sapa-btn::after { background: radial-gradient(circle, rgba(107,114,128,0.3), transparent 70%); }
   </style>
 </head>
 <body>
   <div id="root"></div>
 
-  <script type="text/babel" data-presets="react">
-    const { useState, useEffect, useMemo, useRef } = React;
+  <script>
+    window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { console.error('Unhandled rejection:', e.reason); });
+  </script>
+
+  <script>
+    const { useState, useEffect, useRef } = React;
+    const h = React.createElement;
 
     const firebaseConfig = {
       apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
@@ -88,22 +97,32 @@
     const ENERGY_MS = 5 * 60 * 1000;
     const REFILL_COST = 25000;
     const BASE_TAP = 500;
-    const EVENT_CHANCE = 0.055;
+    const EVENT_CHANCE = 0.055; // 5.5% chance per tap
 
+    // ⚠️ THE MISSING CONSTANTS ARE NOW ADDED HERE ⚠️
     const BIZ_PER_HR = { water: 2_000, suya: 40_000, keke: 75_000, phone: 350_000, danfo: 800_000, wash: 4_000_000, bet9ja: 9_000_000, lounge: 90_000_000, oil: 1_000_000_000 };
     const DEST_BONUSES = { ikeja: 0, accra: 100, dubai: 500, uk: 1000, canada: 2000, usa: 5000, space: 25000 };
+
+    const STREET_RANKS = [
+      { min: 0, name: 'Olodo', color: 'text-gray-400' },
+      { min: 100, name: 'Area Boy', color: 'text-slate-300' },
+      { min: 500, name: 'Omo Oloja', color: 'text-amber-500' },
+      { min: 2000, name: 'Odogwu', color: 'text-cyan-400' },
+      { min: 5000, name: 'Chairman', color: 'text-[#FFD60A]' },
+      { min: 10000, name: 'Aje Butler', color: 'text-purple-400' }
+    ];
 
     const getCachedData = () => {
       try {
         const cached = localStorage.getItem("lagos_user_data");
         if (cached) {
           const parsed = JSON.parse(cached);
-          return { ...parsed, transactions: parsed.transactions || [], referrals: parsed.referrals || 0 };
+          return Object.assign({}, parsed, { transactions: parsed.transactions || [], referrals: parsed.referrals || 0 });
         }
       } catch (e) {}
-      const tg = window?.Telegram?.WebApp;
+      const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
-        name: tg?.initDataUnsafe?.user?.first_name || 'Hustler', 
+        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -173,6 +192,14 @@
       { title: 'JOLLOF RICE', emoji: '🍚', color: 'green', text: 'Party don finish, but plenty jollof rice dey remain.', options: [
         { label: 'Pack am', delta: { cash: 5000, energy: 10 }, msg: 'You packed plenty jollof. +₦5,000 & +10 energy' },
         { label: 'Leave am', delta: {}, msg: 'You left am. Your belle go thank you.' }
+      ]},
+      { title: 'VILLAGE PEOPLE', emoji: '🧙🏾‍♂️', color: 'red', text: 'Your village people are working overtime. Dem wan block your hustle!', options: [
+        { label: 'Do deliverance', delta: { cash: -20000, clout: 50 }, msg: 'Pastor prayed for you. -₦20,000 but +50 clout.' },
+        { label: 'Ignore them', delta: { energy: -30 }, msg: 'Dem hold your leg. You lost 30 energy 😭' }
+      ]},
+      { title: 'JAPA VISA', emoji: '🛂', color: 'green', text: 'You got a Canada visa! But you need money for flight.', options: [
+        { label: 'Borrow money for ticket', delta: { cash: -50000, clout: 100 }, msg: 'You borrowed money but you are travelling! +100 clout ✈️' },
+        { label: 'Tear the visa', delta: { cash: 0 }, msg: 'You tore it. Na your choice.' }
       ]}
     ];
 
@@ -235,18 +262,17 @@
       };
     })();
 
-    const Card = ({ children, className = '', gold = false }) => (
-      <div className={'rounded-2xl ' + (gold ? 'card-gold' : 'card-gradient') + ' ' + className}>{children}</div>
-    );
-    const SectionTitle = ({ children, right }) => (
-      <div className="flex items-end justify-between mb-2.5 mt-6">
-        <h2 className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display">{children}</h2>
-        {right}
-      </div>
-    );
+    const Card = ({ children, className = '', gold = false, sapa = false }) =>
+      h('div', { className: 'rounded-2xl ' + (gold ? 'card-gold' : sapa ? 'card-sapa' : 'card-gradient') + ' ' + className }, children);
+
+    const SectionTitle = ({ children, right }) =>
+      h('div', { className: 'flex items-end justify-between mb-2.5 mt-6' },
+        h('h2', { className: 'text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display' }, children),
+        right
+      );
 
     function App() {
-      const [s, setS] = useState(getCachedData); 
+      const [s, setS] = useState(getCachedData);
       const [uid, setUid] = useState(null);
       const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
@@ -258,29 +284,27 @@
       const [adTimer, setAdTimer] = useState(5);
       const [hasJoinedWA, setHasJoinedWA] = useState(localStorage.getItem('joined_wa') === 'true');
       
-      // MAINTENANCE MODE STATE
       const [isMaintenance, setIsMaintenance] = useState(false);
+
+      // NEW: Sapa Scam State
+      const [sapaScamOpen, setSapaScamOpen] = useState(false);
 
       const tapCounter = useRef(0);
       const lastEventAt = useRef(0);
       const pendingTaps = useRef({ cash: 0, energy: 0, taps: 0 });
 
-      /* Initialize Firebase Auth & Sync */
       useEffect(() => {
-        const tg = window?.Telegram?.WebApp;
-        if (tg) { tg.ready(); tg.expand(); }
+        const tg = window && window.Telegram && window.Telegram.WebApp;
+        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
 
-        // Listen to Maintenance Mode
         const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
-          if (doc.exists && doc.data().maintenance === true) {
-            setIsMaintenance(true);
-          } else {
-            setIsMaintenance(false);
-          }
-        });
+          if (doc.exists && doc.data().maintenance === true) setIsMaintenance(true);
+          else setIsMaintenance(false);
+        }, () => {});
         
         auth.signInAnonymously().then((cred) => {
-          const userId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : cred.user.uid;
+          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
           setUid(userId);
           
           const userRef = db.collection("users").doc(userId);
@@ -288,41 +312,42 @@
             if (doc.exists) {
               setS(prev => {
                 const dbData = doc.data();
-                const newData = {
-                  ...dbData,
+                const newData = Object.assign({}, prev, dbData, {
+                  businesses: dbData.businesses || prev.businesses || {},
+                  assets: dbData.assets || prev.assets || {},
+                  travels: dbData.travels || prev.travels || [],
                   transactions: dbData.transactions || [],
                   referrals: dbData.referrals || 0,
-                  cash: dbData.cash + pendingTaps.current.cash,
-                  energy: dbData.energy + pendingTaps.current.energy,
-                  taps: dbData.taps + pendingTaps.current.taps
-                };
-                localStorage.setItem("lagos_user_data", JSON.stringify(newData));
+                  cash: (dbData.cash || 0) + pendingTaps.current.cash,
+                  energy: (dbData.energy || 0) + pendingTaps.current.energy,
+                  taps: (dbData.taps || 0) + pendingTaps.current.taps
+                });
+                try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
                 return newData;
               });
             } else {
               const defaultData = {
-                name: tg?.initDataUnsafe?.user?.first_name || 'Hustler',
+                name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
                 transactions: [], referrals: 0
               };
-              userRef.set(defaultData);
+              userRef.set(defaultData).catch(() => {});
               setS(defaultData);
-              localStorage.setItem("lagos_user_data", JSON.stringify(defaultData));
+              try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
-          });
+          }, (err) => console.error(err));
           return unsubscribe;
         }).catch(e => setAuthError(e.message));
         
         return () => unsubSettings();
       }, []);
 
-      /* Background Firebase Sync */
       useEffect(() => {
         if (!uid) return;
         const syncInterval = setInterval(async () => {
-          const toSync = { ...pendingTaps.current };
+          const toSync = Object.assign({}, pendingTaps.current);
           if (toSync.cash === 0 && toSync.energy === 0 && toSync.taps === 0) return;
           
           pendingTaps.current = { cash: 0, energy: 0, taps: 0 };
@@ -339,7 +364,6 @@
         return () => clearInterval(syncInterval);
       }, [uid]);
 
-      /* Start music */
       useEffect(() => {
         const unlock = () => { AudioEngine.startMusic(); };
         window.addEventListener("pointerdown", unlock, { once: true });
@@ -355,22 +379,21 @@
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
       const updateUser = async (data) => {
-        setS(prev => ({ ...prev, ...data }));
+        setS(prev => Object.assign({}, prev, data));
         if (uid) {
-          const toSync = { ...pendingTaps.current };
+          const toSync = Object.assign({}, pendingTaps.current);
           if (toSync.cash !== 0 || toSync.energy !== 0 || toSync.taps !== 0) {
              await db.collection("users").doc(uid).update({
               cash: firebase.firestore.FieldValue.increment(toSync.cash),
               energy: firebase.firestore.FieldValue.increment(toSync.energy),
               taps: firebase.firestore.FieldValue.increment(toSync.taps),
-            });
+            }).catch(() => {});
             pendingTaps.current = { cash: 0, energy: 0, taps: 0 };
           }
-          await db.collection("users").doc(uid).update({ ...data, lastSeen: Date.now() });
+          await db.collection("users").doc(uid).update(Object.assign({}, data, { lastSeen: Date.now() })).catch(() => {});
         }
       };
 
-      /* Tick: energy + income */
       useEffect(() => {
         if (!uid) return;
         const iv = setInterval(() => {
@@ -385,28 +408,25 @@
                 lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
               }
             }
-            const perHr = Object.entries(prev.businesses || {}).reduce((a, [id, cnt]) => a + cnt * (BIZ_PER_HR[id] || 0), 0);
-            const newCash = prev.cash + perHr / 3600;
+            const perHr = Object.entries(prev.businesses || {}).reduce((a, kv) => a + kv[1] * (BIZ_PER_HR[kv[0]] || 0), 0);
+            const newCash = (prev.cash || 0) + perHr / 3600;
             
             if (perHr > 0) {
-              db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600) });
+              db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600) }).catch(() => {});
             }
-            return { ...prev, energy, lastEnergy, cash: newCash };
+            return Object.assign({}, prev, { energy: energy, lastEnergy: lastEnergy, cash: newCash });
           });
         }, 1000);
         return () => clearInterval(iv);
       }, [uid]);
 
-      if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div></div>;
+      if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
 
-      /* MAINTENANCE SCREEN */
       if (isMaintenance) {
-        return (
-          <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center bg-[#08080B]">
-            <div className="text-7xl animate-bounce">🚧</div>
-            <h1 className="text-2xl font-black text-[#FFD60A] font-display mt-4">GAME UNDER MAINTENANCE</h1>
-            <p className="text-white/50 text-sm max-w-xs">We dey upgrade the game for you. Check back in a few minutes!</p>
-          </div>
+        return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center bg-[#08080B]' },
+          h('div', { className: 'text-7xl animate-bounce' }, '🚧'),
+          h('h1', { className: 'text-2xl font-black text-[#FFD60A] font-display mt-4' }, 'GAME UNDER MAINTENANCE'),
+          h('p', { className: 'text-white/50 text-sm max-w-xs' }, 'We dey upgrade the game for you. Check back in a few minutes!')
         );
       }
 
@@ -414,13 +434,16 @@
       const tapBonus = (s.travels || []).reduce((a, id) => a + (DEST_BONUSES[id] || 0), 0);
       const TAP_VALUE = BASE_TAP + tapBonus;
 
+      // Calculate Street Rank
+      const currentRank = [...STREET_RANKS].reverse().find(r => (s.taps || 0) >= r.min) || STREET_RANKS[0];
+
       const doTap = () => {
         if (s.energy < 1) { AudioEngine.error(); return notify('No energy! Refill or wait ⚡', 'bad'); }
         AudioEngine.tap();
-        try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light'); } catch {}
+        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('light'); } catch(e) {}
         
         const newEnergy = Math.max(0, s.energy - 1);
-        setS(prev => ({ ...prev, cash: prev.cash + TAP_VALUE, energy: newEnergy, taps: prev.taps + 1 }));
+        setS(prev => (Object.assign({}, prev, { cash: prev.cash + TAP_VALUE, energy: newEnergy, taps: prev.taps + 1 })));
         
         pendingTaps.current.cash += TAP_VALUE;
         pendingTaps.current.energy -= 1;
@@ -431,12 +454,19 @@
         setTimeout(() => setTapFloats((f) => f.filter((x) => x.id !== id)), 950);
 
         const now = Date.now();
-        if (Math.random() < EVENT_CHANCE && !event && now - lastEventAt.current > 8000) {
+        
+        // 1. Random Event Check
+        if (Math.random() < EVENT_CHANCE && !event && !sapaScamOpen && now - lastEventAt.current > 8000) {
           lastEventAt.current = now;
           setTimeout(() => {
             setEvent(EVENTS[Math.floor(Math.random() * EVENTS.length)]);
-            try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium'); } catch {}
+            try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('medium'); } catch(e) {}
           }, 300);
+        }
+        
+        // 2. Sapa Scam Check (2% chance)
+        else if (Math.random() < 0.02 && !event && !sapaScamOpen) {
+          setSapaScamOpen(true);
         }
       };
 
@@ -445,9 +475,9 @@
         updateUser({
           cash: Math.max(0, s.cash + (d.cash || 0)),
           energy: Math.max(0, Math.min(MAX_E, s.energy + (d.energy || 0))),
-          clout: s.clout + (d.clout || 0),
+          clout: (s.clout || 0) + (d.clout || 0),
         });
-        setEventHistory((h) => [{ id: Date.now(), msg: opt.msg }, ...h].slice(0, 8));
+        setEventHistory((h) => [{ id: Date.now(), msg: opt.msg }].concat(h).slice(0, 8));
         notify(opt.msg, (d.cash || 0) >= 0 ? 'good' : 'bad');
         if ((d.cash || 0) < 0) AudioEngine.error(); else AudioEngine.coin();
         setEvent(null);
@@ -467,7 +497,6 @@
         setEvent(EVENTS[Math.floor(Math.random() * EVENTS.length)]);
       };
 
-      /* WATCH AD LOGIC */
       const watchAd = () => {
         if (isWatchingAd) return;
         setIsWatchingAd(true);
@@ -481,47 +510,53 @@
           if (timer <= 0) {
             clearInterval(iv);
             setIsWatchingAd(false);
-            updateUser({ cash: s.cash + 30000 });
+            updateUser({ cash: s.cash + 300000 });
             AudioEngine.coin();
-            notify('Ad watched! +₦30,000 💰');
-            try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('heavy'); } catch {}
+            notify('Ad watched! +₦300,000 💰');
+            try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
           }
         }, 1000);
       };
 
-      /* JOIN WHATSAPP LOGIC */
       const joinWA = () => {
         if (hasJoinedWA) return notify('You already claimed this bonus!', 'bad');
-        const tg = window?.Telegram?.WebApp;
-        if (tg?.openLink) tg.openLink('https://whatsapp.com/channel/0029VbBlJUeFy72KIFuQoP38');
+        const tg = window && window.Telegram && window.Telegram.WebApp;
+        if (tg && tg.openLink) tg.openLink('https://whatsapp.com/channel/0029VbBlJUeFy72KIFuQoP38');
         else window.open('https://whatsapp.com/channel/0029VbBlJUeFy72KIFuQoP38', '_blank');
         notify('Verifying join...', 'good');
         setTimeout(() => {
-          updateUser({ cash: s.cash + 10000 });
+          updateUser({ cash: s.cash + 100000 });
           localStorage.setItem('joined_wa', 'true');
           setHasJoinedWA(true);
           AudioEngine.purchase();
-          notify('Thanks for joining! +₦10,000 💬');
+          notify('Thanks for joining! +₦100,000 💬');
         }, 2000);
       };
 
-      /* SHARE REFERRAL LOGIC */
       const shareReferral = () => {
-        // Replace 'LagosLifeMiniBot' with your actual bot username if different
         const botUsername = "LagosLifeMiniBot"; 
-        const refLink = `https://t.me/${botUsername}?start=REF_${uid}`;
-        const text = `Join me on Lagos Life Mini and let's hustle together! 🇳🇬🔥 Tap the link to play and we both get ₦10,000 bonus: ${refLink}`;
+        const refLink = 'https://t.me/' + botUsername + '?start=REF_' + uid;
+        const text = 'Join me on Lagos Life Mini and let\'s hustle together! 🇳🇬🔥 Tap the link to play and we both get ₦50,000 bonus: ' + refLink;
         
         if (navigator.share) {
-          navigator.share({
-            title: 'Lagos Life Mini',
-            text: text,
-            url: refLink,
-          }).catch(() => {});
-        } else {
+          navigator.share({ title: 'Lagos Life Mini', text: text, url: refLink }).catch(() => {});
+        } else if (navigator.clipboard) {
           navigator.clipboard.writeText(text);
           notify('Referral link copied! Share with friends 🚀');
         }
+      };
+
+      // Handle Scam Click
+      const handleScamClaim = () => {
+        if (s.cash < 5000) {
+          AudioEngine.error();
+          setSapaScamOpen(false);
+          return notify('You no get ₦5k for processing fee. Sapa don catch you! 😭', 'bad');
+        }
+        updateUser({ cash: s.cash - 5000 });
+        setSapaScamOpen(false);
+        AudioEngine.error();
+        notify('Scam! You just paid processing fee for fake alert 😭', 'bad');
       };
 
       const NAV = [
@@ -530,216 +565,205 @@
         { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
         { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
         { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
-        { id: 'more', label: 'More', icon: '⋯', href: '#' },
-      ];
-      const MORE_PAGES = [
-        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
-        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
-        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
 
       const eventColorClass = (c) => c === 'red' ? 'from-[#F87171] to-[#EF4444]' : 'from-[#34D976] to-[#22C55E]';
 
-      return (
-        <div className="min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black">
-          <div className="mx-auto max-w-md min-h-screen flex flex-col pb-24 relative">
-            <header className="sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]">
-              <div className="px-4 py-2.5 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display">L</div>
-                  <div className="min-w-0">
-                    <div className="text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display">Hustle</div>
-                    <div className="text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5">{s.name || 'Hustler'} · {fmt(s.cash)}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <div className="px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums">⚡ {s.energy}</div>
-                  <div className="px-2 py-1 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] text-[10px] font-extrabold tabular-nums">{fmtReal(s.real)}</div>
-                </div>
-              </div>
-            </header>
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
+        h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+            h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
+              h('div', { className: 'flex items-center gap-2 min-w-0' },
+                h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display' }, 'L'),
+                h('div', { className: 'min-w-0' },
+                  h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display' }, 'Hustle'),
+                  h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + fmt(s.cash))
+                )
+              ),
+              h('div', { className: 'flex items-center gap-1.5 shrink-0' },
+                h('div', { className: 'px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums' }, '⚡ ' + (s.energy || 0)),
+                h('div', { className: 'px-2 py-1 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] text-[10px] font-extrabold tabular-nums' }, fmtReal(s.real || 0))
+              )
+            )
+          ),
 
-            <main className="flex-1 px-4 pb-4 animate-slideDown">
-              <Card className="p-4 mt-3">
-                <div className="flex items-center justify-between text-[11px] font-bold text-white/60 mb-2">
-                  <span>⚡ {s.energy} / {MAX_E}</span>
-                  <span className="tabular-nums">{s.energy >= MAX_E ? 'FULL' : '+1 in ' + mmss(energyNextIn)}</span>
-                </div>
-                <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[#FFD60A] to-[#FF8A00] rounded-full transition-all" style={{ width: (s.energy / MAX_E * 100) + '%' }} />
-                </div>
-                <button onClick={refillEnergy} disabled={s.energy >= MAX_E}
-                        className="w-full mt-3 rounded-xl bg-white/[0.06] border border-white/10 py-3 text-[12px] font-extrabold text-white/85 active:scale-[0.97] transition disabled:opacity-40 font-display">
-                  ⚡ Refill Full Energy — ₦25,000
-                </button>
-              </Card>
+          h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
+            
+            // STREET RANK
+            h('div', { className: 'mt-3 flex items-center justify-between px-1' },
+              h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Current Title'),
+              h('div', { className: 'text-[12px] font-black font-display ' + currentRank.color }, currentRank.name + ' 🏅')
+            ),
 
-              <div className="mt-6 flex flex-col items-center">
-                <div className="relative">
-                  <button onClick={doTap} className="tap-btn w-64 h-64 grid place-items-center text-black">
-                    <div className="text-center relative z-10">
-                      <div className="text-6xl drop-shadow-md">👊🏾</div>
-                      <div className="text-2xl font-black tracking-tighter mt-1 font-display">HUSTLE</div>
-                      <div className="text-[11px] font-extrabold opacity-70 font-display">+{fmt(TAP_VALUE)}</div>
-                    </div>
-                  </button>
-                  {tapFloats.map((f) => (
-                    <span key={f.id} className="tap-float" style={{ left: f.x + '%' }}>+{fmt(f.amt)}</span>
-                  ))}
-                </div>
-              </div>
+            // ENERGY BAR
+            h(Card, { className: 'p-4 mt-2' },
+              h('div', { className: 'flex items-center justify-between text-[11px] font-bold text-white/60 mb-2' },
+                h('span', null, '⚡ ' + (s.energy || 0) + ' / ' + MAX_E),
+                h('span', { className: 'tabular-nums' }, (s.energy || 0) >= MAX_E ? 'FULL' : '+1 in ' + mmss(energyNextIn))
+              ),
+              h('div', { className: 'h-2.5 rounded-full bg-white/10 overflow-hidden' },
+                h('div', { className: 'h-full bg-gradient-to-r from-[#FFD60A] to-[#FF8A00] rounded-full transition-all', style: { width: ((s.energy || 0) / MAX_E * 100) + '%' } })
+              ),
+              h('button', { onClick: refillEnergy, disabled: (s.energy || 0) >= MAX_E,
+                className: 'w-full mt-3 rounded-xl bg-white/[0.06] border border-white/10 py-3 text-[12px] font-extrabold text-white/85 active:scale-[0.97] transition disabled:opacity-40 font-display' },
+                '⚡ Refill Full Energy — ₦25,000'
+              )
+            ),
 
-              <div className="mt-6 grid grid-cols-4 gap-2 text-center">
-                {[['Taps', s.taps.toLocaleString()], ['Cash', fmt(s.cash)], ['Clout', s.clout.toLocaleString()], ['Referrals', s.referrals || 0]].map(([k, v]) => (
-                  <Card key={k} className="py-2.5">
-                    <div className="text-[9px] uppercase tracking-widest text-white/35 font-bold">{k}</div>
-                    <div className="text-[13px] font-black tabular-nums mt-0.5">{v}</div>
-                  </Card>
-                ))}
-              </div>
+            // MAIN TAP BUTTON
+            h('div', { className: 'mt-6 flex flex-col items-center' },
+              h('div', { className: 'relative' },
+                h('button', { 
+                  onClick: doTap, 
+                  className: 'tap-btn w-64 h-64 grid place-items-center text-black ' + (s.cash < 10000 ? 'sapa-btn' : '') 
+                },
+                  h('div', { className: 'text-center relative z-10' },
+                    h('div', { className: 'text-6xl drop-shadow-md' }, s.cash < 10000 ? '😭' : '👊🏾'),
+                    h('div', { className: 'text-2xl font-black tracking-tighter mt-1 font-display' }, s.cash < 10000 ? 'SAPA' : 'HUSTLE'),
+                    h('div', { className: 'text-[11px] font-extrabold opacity-70 font-display' }, '+' + fmt(TAP_VALUE))
+                  )
+                ),
+                tapFloats.map((f) => h('span', { key: f.id, className: 'tap-float', style: { left: f.x + '%' } }, '+' + fmt(f.amt)))
+              )
+            ),
 
-              {/* BONUS SECTION */}
-              <SectionTitle right={<span className="text-[10px] font-bold text-[#FFD60A]">Free Money</span>}>
-                Bonuses
-              </SectionTitle>
-              <div className="grid grid-cols-3 gap-2">
-                <Card className="p-2.5 flex flex-col items-center text-center">
-                  <div className="text-2xl mb-1">📺</div>
-                  <div className="text-[11px] font-black font-display">Watch Ad</div>
-                  <div className="text-[9px] text-[#22C55E] font-bold mb-2">+₦30K</div>
-                  <button onClick={watchAd} disabled={isWatchingAd}
-                          className={'w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition-all tabular-nums ' + 
-                          (!isWatchingAd 
-                            ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.6)]' 
-                            : 'bg-white/[0.06] text-white/50 border border-white/[0.06]')}>
-                    {isWatchingAd ? `${adTimer}s` : 'Watch'}
-                  </button>
-                </Card>
+            // STATS
+            h('div', { className: 'mt-6 grid grid-cols-4 gap-2 text-center' },
+              [['Taps', (s.taps || 0).toLocaleString()], ['Cash', fmt(s.cash)], ['Clout', (s.clout || 0).toLocaleString()], ['Referrals', s.referrals || 0]].map((kv) =>
+                h(Card, { key: kv[0], className: 'py-2.5' },
+                  h('div', { className: 'text-[9px] uppercase tracking-widest text-white/35 font-bold' }, kv[0]),
+                  h('div', { className: 'text-[13px] font-black tabular-nums mt-0.5' }, kv[1])
+                )
+              )
+            ),
 
-                <Card className="p-2.5 flex flex-col items-center text-center">
-                  <div className="text-2xl mb-1">🟢</div>
-                  <div className="text-[11px] font-black font-display">WhatsApp</div>
-                  <div className="text-[9px] text-[#22C55E] font-bold mb-2">+₦10K</div>
-                  <button onClick={joinWA} disabled={hasJoinedWA}
-                          className={'w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition-all tabular-nums ' + 
-                          (!hasJoinedWA 
-                            ? 'bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black shadow-[0_4px_12px_-4px_rgba(34,197,94,0.6)]' 
-                            : 'bg-white/[0.06] text-white/50 border border-white/[0.06]')}>
-                    {hasJoinedWA ? '✅' : 'Join'}
-                  </button>
-                </Card>
+            // BONUSES
+            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A]' }, 'Free Money') }, 'Bonuses'),
+            h('div', { className: 'grid grid-cols-3 gap-2' },
+              h(Card, { className: 'p-2.5 flex flex-col items-center text-center' },
+                h('div', { className: 'text-2xl mb-1' }, '📺'),
+                h('div', { className: 'text-[11px] font-black font-display' }, 'Watch Ad'),
+                h('div', { className: 'text-[9px] text-[#22C55E] font-bold mb-2' }, '+₦300K'),
+                h('button', { onClick: watchAd, disabled: isWatchingAd,
+                  className: 'w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition-all tabular-nums ' + 
+                  (!isWatchingAd ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.6)]' : 'bg-white/[0.06] text-white/50 border border-white/[0.06]') },
+                  isWatchingAd ? adTimer + 's' : 'Watch'
+                )
+              ),
+              h(Card, { className: 'p-2.5 flex flex-col items-center text-center' },
+                h('div', { className: 'text-2xl mb-1' }, '🟢'),
+                h('div', { className: 'text-[11px] font-black font-display' }, 'WhatsApp'),
+                h('div', { className: 'text-[9px] text-[#22C55E] font-bold mb-2' }, '+₦100K'),
+                h('button', { onClick: joinWA, disabled: hasJoinedWA,
+                  className: 'w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition-all tabular-nums ' + 
+                  (!hasJoinedWA ? 'bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black shadow-[0_4px_12px_-4px_rgba(34,197,94,0.6)]' : 'bg-white/[0.06] text-white/50 border border-white/[0.06]') },
+                  hasJoinedWA ? '✅' : 'Join'
+                )
+              ),
+              h(Card, { className: 'p-2.5 flex flex-col items-center text-center' },
+                h('div', { className: 'text-2xl mb-1' }, '🤝'),
+                h('div', { className: 'text-[11px] font-black font-display' }, 'Refer'),
+                h('div', { className: 'text-[9px] text-[#22C55E] font-bold mb-2' }, '+₦50K'),
+                h('button', { onClick: shareReferral, className: 'w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition-all tabular-nums bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.6)]' }, 'Invite')
+              )
+            ),
 
-                <Card className="p-2.5 flex flex-col items-center text-center">
-                  <div className="text-2xl mb-1">🤝</div>
-                  <div className="text-[11px] font-black font-display">Refer</div>
-                  <div className="text-[9px] text-[#22C55E] font-bold mb-2">+₦10K</div>
-                  <button onClick={shareReferral} 
-                          className="w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition-all tabular-nums bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.6)]">
-                    Invite
-                  </button>
-                </Card>
-              </div>
+            // STREET EVENTS
+            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A]' }, '~5.5% per tap') }, 'Street Events'),
+            h(Card, { className: 'p-4' },
+              h('p', { className: 'text-[11px] text-white/55 leading-relaxed' }, 'LASTMA, Agbero, Police Checkpoint, Bet9ja win and plenty other wahala dey wait for you. Keep tapping — events pop up randomly. Choose wisely.'),
+              h('button', { onClick: forceEvent, disabled: !!event,
+                className: 'w-full mt-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] py-3 text-[12px] font-black text-black active:scale-[0.97] transition disabled:opacity-40 font-display shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)]' },
+                '🎲 Trigger Random Event'
+              )
+            ),
 
-              <SectionTitle right={<span className="text-[10px] font-bold text-[#FFD60A]">~5.5% per tap</span>}>
-                Street Events
-              </SectionTitle>
-              <Card className="p-4">
-                <p className="text-[11px] text-white/55 leading-relaxed">
-                  LASTMA, Agbero, Police Checkpoint, Bet9ja win and plenty other wahala dey wait for you.
-                  Keep tapping — events pop up randomly. Choose wisely.
-                </p>
-                <button onClick={forceEvent} disabled={!!event}
-                        className="w-full mt-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] py-3 text-[12px] font-black text-black active:scale-[0.97] transition disabled:opacity-40 font-display shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)]">
-                  🎲 Trigger Random Event
-                </button>
-              </Card>
+            eventHistory.length > 0 && h(React.Fragment, null,
+              h(SectionTitle, null, 'Event Log'),
+              h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden' },
+                eventHistory.map((eh) => h('div', { key: eh.id, className: 'px-3.5 py-2.5 text-[11px] text-white/65' }, eh.msg))
+              )
+            )
+          ),
 
-              {eventHistory.length > 0 && (
-                <>
-                  <SectionTitle>Event Log</SectionTitle>
-                  <Card className="divide-y divide-white/[0.05] overflow-hidden">
-                    {eventHistory.map((h) => (
-                      <div key={h.id} className="px-3.5 py-2.5 text-[11px] text-white/65">{h.msg}</div>
-                    ))}
-                  </Card>
-                </>
-              )}
-            </main>
+          // NAVIGATION
+          h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
+            h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
+              NAV.map((n) => {
+                const active = n.id === 'hustle';
+                return h('a', {
+                  key: n.id, href: n.href,
+                  className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')
+                },
+                  h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
+                  h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
+                );
+              })
+            )
+          ),
 
-            <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]">
-              <div className="grid grid-cols-6 px-1 pt-1.5 safe-bottom">
-                {NAV.map((n) => {
-                  const active = n.id === 'hustle';
-                  return (
-                    <a key={n.id} href={n.href}
-                       onClick={(e) => { if (n.id === 'more') { e.preventDefault(); document.getElementById('more-sheet')?.classList.remove('hidden'); } }}
-                       className={'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')}>
-                      <span className={'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '')}>{n.icon}</span>
-                      <span className="text-[8.5px] font-extrabold tracking-wide font-display">{n.label}</span>
-                    </a>
+          // EVENT MODAL
+          event && h('div', { className: 'fixed inset-0 z-50 grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/85 backdrop-blur-sm' }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn' },
+              h('div', { className: 'mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br ' + eventColorClass(event.color) + ' grid place-items-center text-3xl shadow-lg' }, event.emoji),
+              h('div', { className: 'text-center mt-3 text-[13px] font-black tracking-widest text-[#FFD60A] font-display' }, event.title),
+              h('p', { className: 'text-center text-[12px] text-white/60 mt-2 leading-relaxed' }, event.text),
+              h('div', { className: 'mt-5 space-y-2' },
+                event.options.map((o, i) => {
+                  const cashDelta = (o.delta && o.delta.cash) || 0;
+                  return h('button', { key: i, onClick: () => resolveEvent(o),
+                    className: 'w-full rounded-xl bg-white/[0.06] border border-white/10 py-3 px-4 text-[12px] font-extrabold active:scale-[0.97] transition hover:bg-white/[0.1] font-display flex items-center justify-between gap-2' },
+                    h('span', { className: 'text-left' }, o.label),
+                    cashDelta !== 0 && h('span', { className: 'text-[11px] font-black tabular-nums shrink-0 ' + (cashDelta > 0 ? 'text-[#22C55E]' : 'text-[#EF4444]') }, (cashDelta > 0 ? '+' : '') + fmt(cashDelta))
                   );
-                })}
-              </div>
-            </nav>
+                })
+              )
+            )
+          ),
 
-            <div id="more-sheet" className="hidden fixed inset-0 z-50 flex items-end justify-center">
-              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => document.getElementById('more-sheet')?.classList.add('hidden')} />
-              <div className="relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp" onClick={(e) => e.stopPropagation()}>
-                <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-4" />
-                <div className="space-y-2">
-                  {MORE_PAGES.map((m) => (
-                    <a key={m.id} href={m.href} className="w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left">
-                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0">{m.icon}</div>
-                      <div className="min-w-0">
-                        <div className="text-[13px] font-extrabold font-display">{m.label}</div>
-                        <div className="text-[10px] text-white/40 font-bold mt-0.5">{m.desc}</div>
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            </div>
+          // SAPA SCAM MODAL
+          sapaScamOpen && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md' }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-green-500/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(34,197,94,0.4)] animate-popIn text-center' },
+              h('div', { className: 'text-6xl mb-2 animate-bounce' }, '🎁'),
+              h('div', { className: 'text-[15px] font-black text-green-400 font-display mb-2' }, 'CONGRATULATIONS!'),
+              h('p', { className: 'text-[12px] text-white/70 mb-4' }, 'You just won ₦1,000,000 in the Lagos Life Mini daily draw! Click below to claim your prize.'),
+              
+              h('div', { className: 'space-y-2' },
+                h('button', { onClick: handleScamClaim, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-green-400 to-green-600 text-black font-black text-[13px] active:scale-95 transition' }, 'Claim ₦1,000,000 (Pay ₦5k fee)'),
+                h('button', { onClick: () => setSapaScamOpen(false), className: 'w-full py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/50 font-bold text-[11px]' }, 'I no fall for am (Close)')
+              )
+            )
+          ),
 
-            {event && (
-              <div className="fixed inset-0 z-50 grid place-items-center p-6">
-                <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
-                <div className="relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn">
-                  <div className={'mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br ' + eventColorClass(event.color) + ' grid place-items-center text-3xl shadow-lg'}>
-                    {event.emoji}
-                  </div>
-                  <div className="text-center mt-3 text-[13px] font-black tracking-widest text-[#FFD60A] font-display">{event.title}</div>
-                  <p className="text-center text-[12px] text-white/60 mt-2 leading-relaxed">{event.text}</p>
-                  <div className="mt-5 space-y-2">
-                    {event.options.map((o, i) => {
-                      const cashDelta = o.delta?.cash || 0;
-                      return (
-                        <button key={i} onClick={() => resolveEvent(o)}
-                                className="w-full rounded-xl bg-white/[0.06] border border-white/10 py-3 px-4 text-[12px] font-extrabold active:scale-[0.97] transition hover:bg-white/[0.1] font-display flex items-center justify-between gap-2">
-                          <span className="text-left">{o.label}</span>
-                          {cashDelta !== 0 && (
-                            <span className={'text-[11px] font-black tabular-nums shrink-0 ' + (cashDelta > 0 ? 'text-[#22C55E]' : 'text-[#EF4444]')}>
-                              {cashDelta > 0 ? '+' : ''}{fmt(cashDelta)}
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {toast && (
-              <div className={'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' + (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')}>
-                {toast.msg}
-              </div>
-            )}
-          </div>
-        </div>
+          toast && h('div', {
+            className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
+              (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')
+          }, toast.msg)
+        )
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    class ErrorBoundary extends React.Component {
+      constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+      static getDerivedStateFromError(error) { return { hasError: true, error: error }; }
+      componentDidCatch(error, info) { console.error('ErrorBoundary caught:', error, info); }
+      render() {
+        if (this.state.hasError) {
+          return h('div', { style: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', padding: '24px', textAlign: 'center', background: '#08080B', color: '#F87171', fontFamily: 'monospace', fontSize: '12px' } },
+            h('div', { style: { fontSize: '32px' } }, '⚠️'),
+            h('div', { style: { fontWeight: 'bold' } }, 'Something went wrong'),
+            h('div', { style: { opacity: 0.6, wordBreak: 'break-word' } }, String((this.state.error && this.state.error.message) || 'Unknown error')),
+            h('button', { style: { marginTop: '12px', padding: '8px 16px', background: '#FFD60A', color: '#000', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }, onClick: () => window.location.reload() }, 'Reload')
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(ErrorBoundary, null, h(App)));
   </script>
 </body>
 </html>
