@@ -36,18 +36,8 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-    html, body {
-      margin: 0; padding: 0;
-      background: #08080B; color: #fff;
-      overflow-x: hidden; overscroll-behavior-y: none;
-      font-family: 'Inter', system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
-    body {
-      background-image:
-        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent),
-        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent);
-    }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent); }
     ::-webkit-scrollbar { width: 0; height: 0; }
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
     .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
@@ -71,32 +61,24 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
+    .marquee { animation: marquee 15s linear infinite; white-space: nowrap; }
+    @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+    
     .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
   </style>
 </head>
 <body>
-  <div id="root">
-    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;">
-      <div style="font-size:48px;">🇳🇬</div>
-      <div style="font-family:Sora;font-weight:800;font-size:14px;color:#FFD60A;">Loading Market...</div>
-    </div>
-  </div>
+  <div id="root"></div>
 
   <script>
-    window.addEventListener('error', function (e) {
-      var msg = (e.error && e.error.message) || e.message || 'Unknown error';
-      console.error('Global error:', e.error || e.message);
-    });
-    window.addEventListener('unhandledrejection', function (e) {
-      console.error('Unhandled rejection:', e.reason);
-    });
+    window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { console.error('Unhandled rejection:', e.reason); });
   </script>
 
   <script>
-    const { useState, useEffect, useMemo, useRef } = React;
+    const { useState, useEffect, useRef } = React;
     const h = React.createElement;
 
-    /* ═══ FIREBASE INITIALIZATION ═══ */
     const firebaseConfig = {
       apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
       authDomain: "lagos-life-a8706.firebaseapp.com",
@@ -115,43 +97,52 @@
 
     const CATEGORIES = ["All", "Street Flex", "Rides", "Real Estate", "Aje Status"];
 
+    // UPDATED DESCRIPTIONS FOR MAXIMUM FUNNY
     const ASSETS = [
-      // STREET FLEX (6)
-      { id: 'af1',     name: 'Air Force 1',           emoji: '👟', price: 150_000,        tier: 'Starter', color: 'from-gray-400/20 to-gray-700/10', cat: 'Street Flex', desc: 'White on white. Clean.' },
-      { id: 'shades',  name: 'Designer Shades',       emoji: '🕶️', price: 500_000,        tier: 'Baller',  color: 'from-black/40 to-gray-800/20', cat: 'Street Flex', desc: 'To hide your eyes from haters.' },
-      { id: 'chain',   name: 'Gold Chain',            emoji: '📿', price: 5_000_000,      tier: 'Starter', color: 'from-yellow-500/20 to-yellow-700/10', cat: 'Street Flex', desc: 'Heavy neck, heavy pockets.' },
-      { id: 'iphone',  name: 'iPhone 15 Pro Max',     emoji: '📱', price: 2_500_000,      tier: 'Sharp',   color: 'from-blue-400/20 to-blue-700/10', cat: 'Street Flex', desc: 'Titanium finish. Sharp.' },
-      { id: 'grillz',  name: 'Gold Grillz',           emoji: '🦷', price: 10_000_000,     tier: 'Baller',  color: 'from-amber-400/20 to-amber-700/10', cat: 'Street Flex', desc: 'Smile and blind them.' },
-      { id: 'rolex',   name: 'Rolex',                 emoji: '⌚', price: 50_000_000,     tier: 'Baller',  color: 'from-amber-400/25 to-amber-700/10', cat: 'Street Flex', desc: 'Time is money.' },
+      { id: 'af1', name: 'Air Force 1', emoji: '👟', price: 150_000, tier: 'Starter', color: 'from-gray-400/20 to-gray-700/10', cat: 'Street Flex', desc: 'White on white. Clean. But if you step on my shoe, e go be fight!' },
+      { id: 'shades', name: 'Designer Shades', emoji: '🕶️', price: 500_000, tier: 'Baller', color: 'from-black/40 to-gray-800/20', cat: 'Street Flex', desc: 'To hide your eyes from haters and police.' },
+      { id: 'chain', name: 'Gold Chain', emoji: '📿', price: 5_000_000, tier: 'Starter', color: 'from-yellow-500/20 to-yellow-700/10', cat: 'Street Flex', desc: 'Heavy neck, heavy pockets. Make area boys no pursue you.' },
+      { id: 'iphone', name: 'iPhone 15 Pro Max', emoji: '📱', price: 2_500_000, tier: 'Sharp', color: 'from-blue-400/20 to-blue-700/10', cat: 'Street Flex', desc: 'Titanium finish. Sharp. But if you drop am, your heart go break.' },
+      { id: 'grillz', name: 'Gold Grillz', emoji: '🦷', price: 10_000_000, tier: 'Baller', color: 'from-amber-400/20 to-amber-700/10', cat: 'Street Flex', desc: 'Smile and blind them. Just no try bite meat with am.' },
+      { id: 'rolex', name: 'Rolex', emoji: '⌚', price: 50_000_000, tier: 'Baller', color: 'from-amber-400/25 to-amber-700/10', cat: 'Street Flex', desc: 'Time is money. But make e no be fake from Computer Village.' },
 
-      // RIDES (6)
-      { id: 'honda',   name: 'Honda Accord',          emoji: '🚗', price: 15_000_000,     tier: 'Sharp',   color: 'from-slate-400/20 to-slate-700/10', cat: 'Rides', desc: 'End of discussion.' },
-      { id: 'camry',   name: 'Toyota Camry',          emoji: '🚘', price: 25_000_000,     tier: 'Sharp',   color: 'from-gray-400/20 to-gray-700/10', cat: 'Rides', desc: 'Muscle car for the big boys.' },
-      { id: 'tesla',   name: 'Tesla',                 emoji: '⚡', price: 500_000_000,    tier: 'Sharp',   color: 'from-red-500/20 to-red-700/10', cat: 'Rides', desc: 'Electric. Zero noise.' },
-      { id: 'gwag',    name: 'G-Wagon',               emoji: '🚙', price: 5_000_000_000,  tier: 'Big Boy', color: 'from-slate-400/20 to-slate-700/10', cat: 'Rides', desc: 'Boxy but expensive.' },
-      { id: 'rr',      name: 'Range Rover',           emoji: '🚐', price: 15_000_000_000, tier: 'Odogwu',  color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Rides', desc: 'The official car of the rich.' },
-      { id: 'lambo',   name: 'Lamborghini',           emoji: '🏎️', price: 50_000_000_000, tier: 'Aje',     color: 'from-yellow-400/20 to-yellow-700/10', cat: 'Rides', desc: 'Scissor doors. Pure flex.' },
+      { id: 'honda', name: 'Honda Accord', emoji: '🚗', price: 15_000_000, tier: 'Sharp', color: 'from-slate-400/20 to-slate-700/10', cat: 'Rides', desc: 'End of discussion. E dey spoil but e go still carry you go church.' },
+      { id: 'camry', name: 'Toyota Camry', emoji: '🚘', price: 25_000_000, tier: 'Sharp', color: 'from-gray-400/20 to-gray-700/10', cat: 'Rides', desc: 'Muscle car for the big boys. Very reliable.' },
+      { id: 'tesla', name: 'Tesla', emoji: '⚡', price: 500_000_000, tier: 'Sharp', color: 'from-red-500/20 to-red-700/10', cat: 'Rides', desc: 'Electric. Zero noise. But where you wan see charging station for Lagos?' },
+      { id: 'gwag', name: 'G-Wagon', emoji: '🚙', price: 5_000_000_000, tier: 'Big Boy', color: 'from-slate-400/20 to-slate-700/10', cat: 'Rides', desc: 'Boxy but expensive. Fuel alone go finish your money.' },
+      { id: 'rr', name: 'Range Rover', emoji: '🚐', price: 15_000_000_000, tier: 'Odogwu', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Rides', desc: 'The official car of the rich. E dey leak oil but na flex.' },
+      { id: 'lambo', name: 'Lamborghini', emoji: '🏎️', price: 50_000_000_000, tier: 'Aje', color: 'from-yellow-400/20 to-yellow-700/10', cat: 'Rides', desc: 'Scissor doors. Pure flex. You no fit speed am for Third Mainland.' },
 
-      // REAL ESTATE (5)
-      { id: 'lekki_flat', name: 'Lekki 2-Bedroom',    emoji: '🏢', price: 100_000_000,     tier: 'Baller',  color: 'from-amber-400/20 to-amber-700/10', cat: 'Real Estate', desc: 'Where the tech bros live.' },
-      { id: 'ikeja_duplex', name: 'Ikeja Duplex',     emoji: '🏡', price: 300_000_000,     tier: 'Big Boy', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Real Estate', desc: 'Close to the airport.' },
-      { id: 'ikoyi_penthouse', name: 'Ikoyi Penthouse', emoji: '🏙️', price: 1_500_000_000, tier: 'Odogwu',  color: 'from-cyan-400/20 to-cyan-700/10', cat: 'Real Estate', desc: 'High above the noise.' },
-      { id: 'yacht',   name: 'Private Yacht',         emoji: '🛥️', price: 20_000_000_000,  tier: 'Odogwu',  color: 'from-cyan-400/20 to-blue-700/10', cat: 'Real Estate', desc: 'Party on the water.' },
-      { id: 'mansion', name: 'Banana Island Mansion', emoji: '🏰', price: 1_000_000_000_000, tier: 'Legend', color: 'from-pink-400/20 to-pink-700/10', cat: 'Real Estate', desc: 'The ultimate Lagos dream.' },
+      { id: 'lekki_flat', name: 'Lekki 2-Bedroom', emoji: '🏢', price: 100_000_000, tier: 'Baller', color: 'from-amber-400/20 to-amber-700/10', cat: 'Real Estate', desc: 'Where the tech bros live. Rent go finish your salary.' },
+      { id: 'ikeja_duplex', name: 'Ikeja Duplex', emoji: '🏡', price: 300_000_000, tier: 'Big Boy', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Real Estate', desc: 'Close to the airport. Every time you hear plane, you think say you don travel.' },
+      { id: 'ikoyi_penthouse', name: 'Ikoyi Penthouse', emoji: '🏙️', price: 1_500_000_000, tier: 'Odogwu', color: 'from-cyan-400/20 to-cyan-700/10', cat: 'Real Estate', desc: 'High above the noise. Only politicians and yahoo boys dey here.' },
+      { id: 'yacht', name: 'Private Yacht', emoji: '🛥️', price: 20_000_000_000, tier: 'Odogwu', color: 'from-cyan-400/20 to-blue-700/10', cat: 'Real Estate', desc: 'Party on the water. But make water no enter your engine.' },
+      { id: 'mansion', name: 'Banana Island Mansion', emoji: '🏰', price: 1_000_000_000_000, tier: 'Legend', color: 'from-pink-400/20 to-pink-700/10', cat: 'Real Estate', desc: 'The ultimate Lagos dream. You buy am, your village people go start to work overtime.' },
 
-      // AJE STATUS (8)
-      { id: 'bodyguard', name: 'Personal Bodyguard',  emoji: '💪🏾', price: 150_000_000,    tier: 'Big Boy', color: 'from-red-400/20 to-red-700/10', cat: 'Aje Status', desc: 'Keep the area boys away.' },
-      { id: 'chef',    name: 'Private Chef',          emoji: '👨🏾‍🍳', price: 50_000_000,    tier: 'Baller',  color: 'from-white/20 to-gray-700/10', cat: 'Aje Status', desc: 'Breakfast, lunch and dinner.' },
-      { id: 'plate',   name: 'Custom Plate Number',   emoji: '🔠', price: 200_000_000,    tier: 'Sharp',   color: 'from-blue-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'E.g. "BIG-BOY-1".' },
-      { id: 'jet',     name: 'Private Jet',           emoji: '✈️', price: 100_000_000_000, tier: 'Aje',    color: 'from-purple-400/20 to-purple-700/10', cat: 'Aje Status', desc: 'Fly above the traffic.' },
-      { id: 'helicopter', name: 'Helicopter',         emoji: '🚁', price: 300_000_000_000, tier: 'Aje',    color: 'from-indigo-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'Beat the traffic.' },
-      { id: 'island',  name: 'Private Island',        emoji: '🏝️', price: 2_000_000_000_000, tier: 'Legend', color: 'from-teal-400/20 to-teal-700/10', cat: 'Aje Status', desc: 'For when Lagos is too loud.' },
-      { id: 'football', name: 'Football Club',        emoji: '⚽', price: 5_000_000_000_000, tier: 'Legend', color: 'from-lime-400/20 to-lime-700/10', cat: 'Aje Status', desc: 'Buy a whole team.' },
-      { id: 'crypto',  name: 'Crypto Exchange',       emoji: '🪙', price: 10_000_000_000_000, tier: 'Legend', color: 'from-orange-400/20 to-orange-700/10', cat: 'Aje Status', desc: 'Control the blockchain.' },
+      { id: 'bodyguard', name: 'Personal Bodyguard', emoji: '💪🏾', price: 150_000_000, tier: 'Big Boy', color: 'from-red-400/20 to-red-700/10', cat: 'Aje Status', desc: 'Keep the area boys away. But if you offend politician, he no go fit save you.' },
+      { id: 'chef', name: 'Private Chef', emoji: '👨🏾‍🍳', price: 50_000_000, tier: 'Baller', color: 'from-white/20 to-gray-700/10', cat: 'Aje Status', desc: 'Breakfast, lunch and dinner. You go still dey buy street suya.' },
+      { id: 'plate', name: 'Custom Plate Number', emoji: '🔠', price: 200_000_000, tier: 'Sharp', color: 'from-blue-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'E.g. "BIG-BOY-1". Police go still stop you for check point.' },
+      { id: 'jet', name: 'Private Jet', emoji: '✈️', price: 100_000_000_000, tier: 'Aje', color: 'from-purple-400/20 to-purple-700/10', cat: 'Aje Status', desc: 'Fly above the traffic. No more LASTMA to disturb you.' },
+      { id: 'helicopter', name: 'Helicopter', emoji: '🚁', price: 300_000_000_000, tier: 'Aje', color: 'from-indigo-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'Beat the traffic. But where you wan land am for Mushin?' },
+      { id: 'island', name: 'Private Island', emoji: '🏝️', price: 2_000_000_000_000, tier: 'Legend', color: 'from-teal-400/20 to-teal-700/10', cat: 'Aje Status', desc: 'For when Lagos is too loud. You fit build your own country here.' },
+      { id: 'football', name: 'Football Club', emoji: '⚽', price: 5_000_000_000_000, tier: 'Legend', color: 'from-lime-400/20 to-lime-700/10', cat: 'Aje Status', desc: 'Buy a whole team. Make sure say dem no go lose every match.' },
+      { id: 'crypto', name: 'Crypto Exchange', emoji: '🪙', price: 10_000_000_000_000, tier: 'Legend', color: 'from-orange-400/20 to-orange-700/10', cat: 'Aje Status', desc: 'Control the blockchain. But Binance fit still hack you.' },
     ];
 
     const BIZ_PRICES = { water: 10_000, suya: 250_000, keke: 500_000, phone: 2_000_000, danfo: 5_000_000, wash: 25_000_000, bet9ja: 50_000_000, lounge: 500_000_000, oil: 5_000_000_000 };
     const BIZ_PER_HR = { water: 2000, suya: 40000, keke: 75000, phone: 350000, danfo: 800000, wash: 4000000, bet9ja: 9000000, lounge: 90000000, oil: 1000000000 };
+    const ASSET_PRICES = { chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000, gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000, mansion: 1_000_000_000_000 };
+
+    const MARKET_FEED = [
+      "Someone just bought a Lamborghini in Lekki, e dey find where to drive am 🏎️",
+      "G-Wagon just buy am, but no money for fuel ⛽",
+      "Air Force 1 clear for market today, everybody dey wear am 👟",
+      "Person just buy Banana Island Mansion, aunty Bisi don beg am for money 🏰",
+      "Fake Rolex seller just catch one customer for Computer Village ⌚",
+      "Yacht just buy am but e no sabi swim 🛥️",
+      "Private Jet just land for Murtala Muhammed, traffic hold everywhere ✈️",
+      "Custom plate number 'BIG-BOY-1' just sell out 🔠"
+    ];
 
     const getCachedData = () => {
       try {
@@ -180,7 +171,6 @@
     };
     const fmtReal = (n) => '₦' + (n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    /* ═══ AUDIO ENGINE ═══ */
     const AudioEngine = (() => {
       let ctx = null; let musicGain, sfxGain, musicPlaying = false, musicTimer, step = 0;
       const STEP_MS = 300;
@@ -213,12 +203,9 @@
         step++;
       }
 
-      function startMusic() { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); }
-      function stopMusic() { musicPlaying=false; clearInterval(musicTimer); }
-
       return {
-        startMusic: startMusic,
-        stopMusic: stopMusic,
+        startMusic: () => { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); },
+        stopMusic: () => { musicPlaying=false; clearInterval(musicTimer); },
         toggle: () => { if (musicPlaying) { stopMusic(); } else { startMusic(); } return musicPlaying; },
         coin: () => { init(); tone(1046, 0.08, "square", sfxGain, 0, 0.15); tone(1318, 0.15, "square", sfxGain, 0.07, 0.15); },
         error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
@@ -244,12 +231,11 @@
       const [musicOn, setMusicOn] = useState(false);
       const [activeTab, setActiveTab] = useState("All");
       const [isMaintenance, setIsMaintenance] = useState(false);
+      const [feedMsg, setFeedMsg] = useState(MARKET_FEED[0]);
 
       useEffect(() => {
         const tg = window && window.Telegram && window.Telegram.WebApp;
-        if (tg) {
-          try { tg.ready(); tg.expand(); } catch(e) {}
-        }
+        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
 
         const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
           if (doc.exists && doc.data().maintenance === true) setIsMaintenance(true);
@@ -266,13 +252,9 @@
           const unsubscribe = userRef.onSnapshot((doc) => {
             if (doc.exists) {
               const dbData = doc.data();
-
-              if (!dbData.telegramId && tgUser && tgUser.id) {
-                userRef.update({ telegramId: tgUser.id }).catch(() => {});
-              }
+              if (!dbData.telegramId && tgUser && tgUser.id) userRef.update({ telegramId: tgUser.id }).catch(() => {});
 
               setS(prev => {
-                // THE SAFETY NET: Ensure businesses, assets, and travels are never undefined
                 const newData = Object.assign({}, prev, dbData, {
                   businesses: dbData.businesses || prev.businesses || {},
                   assets: dbData.assets || prev.assets || {},
@@ -315,6 +297,14 @@
         const t = setTimeout(() => setToast(null), 2400);
         return () => clearTimeout(t);
       }, [toast]);
+
+      // Live Market Feed Ticker
+      useEffect(() => {
+        const iv = setInterval(() => {
+          setFeedMsg(MARKET_FEED[Math.floor(Math.random() * MARKET_FEED.length)]);
+        }, 6000);
+        return () => clearInterval(iv);
+      }, []);
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
@@ -367,7 +357,6 @@
         );
       }
 
-      // Safe fallbacks for rendering
       const safeBusinesses = s.businesses || {};
       const safeAssets = s.assets || {};
 
@@ -379,10 +368,16 @@
       const netWorth = Math.floor((s.cash || 0) + bizValue + assetValue);
       const ownedCount = Object.values(safeAssets).reduce((a, c) => a + c, 0);
 
+      let flexTitle = "Broke Guy";
+      if (netWorth > 1_000_000) flexTitle = "Starter Flexer";
+      if (netWorth > 100_000_000) flexTitle = "Sharp Guy";
+      if (netWorth > 1_000_000_000) flexTitle = "Odogwu Flexer";
+      if (netWorth > 100_000_000_000) flexTitle = "Aje Butler";
+
       const buyAsset = async (a) => {
         if (s.cash < a.price) {
           AudioEngine.error();
-          return notify('Not enough Lagos Cash 💸', 'bad');
+          return notify('Not enough Lagos Cash 💸. Go and hustle!', 'bad');
         }
 
         setS((p) => {
@@ -396,7 +391,16 @@
         setTimeout(() => setFlexAnim(null), 1500);
 
         AudioEngine.purchase();
-        notify(a.emoji + ' ' + a.name + ' added to Net Worth 🔥');
+        
+        // FUNNY PURCHASE TOASTS
+        let toastMsg = a.emoji + ' ' + a.name + ' acquired!';
+        if (a.id === 'gwag') toastMsg = 'G-Wagon acquired! Now you need ₦50k for fuel 😂';
+        else if (a.id === 'mansion') toastMsg = 'Banana Island Mansion! Your village people are already on the way 🧙🏾‍♂️';
+        else if (a.id === 'af1') toastMsg = 'Air Force 1. Clean! Don\'t enter mud.';
+        else if (a.id === 'rolex') toastMsg = 'Rolex! Hope e no be fake from Computer Village? 👀';
+        
+        notify(toastMsg);
+
         try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
 
         if (uid) {
@@ -419,12 +423,7 @@
         { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
         { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
         { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
-        { id: 'more', label: 'More', icon: '⋯', href: '#' },
-      ];
-      const MORE_PAGES = [
-        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
-        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
-        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
 
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
@@ -452,6 +451,14 @@
           ),
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
+            
+            // SAPA ALERT
+            s.cash < 10000 && h('div', { className: 'mt-3 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center gap-2' },
+              h('span', { className: 'text-lg animate-bounce' }, '😭'),
+              h('div', { className: 'text-[10px] font-bold text-red-400' }, 'Sapa dey worry you! Go to Hustle page make money before you buy flex.')
+            ),
+
+            // HERO CARD
             h(Card, { className: 'relative overflow-hidden p-4 mt-3 hero-grid', gold: true },
               h('div', { className: 'absolute -top-16 -right-12 w-48 h-48 rounded-full bg-[#FFD60A]/25 blur-3xl pointer-events-none' }),
               h('div', { className: 'relative' },
@@ -470,10 +477,20 @@
                     'Net Worth: ',
                     h('span', { className: 'text-[#FFD60A] font-black tabular-nums' }, fmt(netWorth))
                   )
-                )
+                ),
+                h('div', { className: 'mt-2 text-[10px] font-bold text-white/50' }, 'Status: ' + flexTitle)
               )
             ),
 
+            // LIVE FEED
+            h('div', { className: 'mt-4 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center gap-2 overflow-hidden' },
+              h('span', { className: 'text-sm shrink-0 animate-pulse' }, '📡'),
+              h('div', { className: 'flex-1 overflow-hidden relative h-5' },
+                h('div', { className: 'absolute text-[10.5px] font-bold text-white/60 whitespace-nowrap marquee', key: feedMsg }, feedMsg)
+              )
+            ),
+
+            // TABS
             h('div', { className: 'mt-4 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar' },
               CATEGORIES.map(cat =>
                 h('button', {
@@ -555,7 +572,7 @@
                       (canAfford
                         ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_14px_-4px_rgba(255,214,10,0.7)]'
                         : 'bg-white/[0.06] text-white/25 border border-white/[0.06]')
-                  }, canAfford ? 'BUY' : 'LOCKED')
+                  }, canAfford ? 'FLEX' : 'LOCKED')
                 );
               })
             ),
@@ -574,57 +591,19 @@
             )
           ),
 
+          // BOTTOM NAV
           h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
               NAV.map((n) => {
                 const active = n.id === 'market';
                 return h('a', {
-                  key: n.id,
-                  href: n.href,
-                  onClick: (e) => {
-                    if (n.id === 'more') {
-                      e.preventDefault();
-                      const el = document.getElementById('more-sheet');
-                      if (el) el.classList.remove('hidden');
-                    }
-                  },
+                  key: n.id, href: n.href,
                   className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')
                 },
                   h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
                   h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
                 );
               })
-            )
-          ),
-
-          h('div', { id: 'more-sheet', className: 'hidden fixed inset-0 z-50 flex items-end justify-center' },
-            h('div', {
-              className: 'absolute inset-0 bg-black/70 backdrop-blur-sm',
-              onClick: () => {
-                const el = document.getElementById('more-sheet');
-                if (el) el.classList.add('hidden');
-              }
-            }),
-            h('div', {
-              className: 'relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp',
-              onClick: (e) => e.stopPropagation()
-            },
-              h('div', { className: 'w-10 h-1 rounded-full bg-white/15 mx-auto mb-4' }),
-              h('div', { className: 'space-y-2' },
-                MORE_PAGES.map((m) =>
-                  h('a', {
-                    key: m.id,
-                    href: m.href,
-                    className: 'w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left'
-                  },
-                    h('div', { className: 'w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0' }, m.icon),
-                    h('div', { className: 'min-w-0' },
-                      h('div', { className: 'text-[13px] font-extrabold font-display' }, m.label),
-                      h('div', { className: 'text-[10px] text-white/40 font-bold mt-0.5' }, m.desc)
-                    )
-                  )
-                )
-              )
             )
           ),
 
