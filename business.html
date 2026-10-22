@@ -55,6 +55,7 @@
     .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
     .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); box-shadow: 0 8px 30px -10px rgba(255,214,10,0.3); }
     .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+    
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
@@ -63,8 +64,21 @@
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: #08080B; border-top: 1px solid rgba(255,255,255,0.08); }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    
     @keyframes badgePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
     .badge-owned { animation: badgePulse 2s ease-in-out infinite; }
+    
+    @keyframes collectPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,214,10,0.7); }
+      50% { box-shadow: 0 0 0 15px rgba(255,214,10,0); }
+    }
+    .collect-btn {
+      animation: collectPulse 2s infinite;
+    }
+    
+    .marquee { animation: marquee 15s linear infinite; white-space: nowrap; }
+    @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+    
     .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
   </style>
 </head>
@@ -80,6 +94,13 @@
     window.addEventListener('error', function (e) {
       var msg = (e.error && e.error.message) || e.message || 'Unknown error';
       console.error('Global error:', e.error || e.message);
+      var root = document.getElementById('root');
+      if (root && root.textContent && root.textContent.indexOf('Loading Business') !== -1) {
+        root.innerHTML = '<div style="padding:24px;color:#F87171;font-family:monospace;font-size:12px;text-align:center;line-height:1.5">'
+          + '<div style="font-size:28px;margin-bottom:8px">⚠️</div>'
+          + '<div>Failed to load. Error:</div>'
+          + '<div style="margin-top:8px;opacity:.7;word-break:break-word">' + msg + '</div></div>';
+      }
     });
     window.addEventListener('unhandledrejection', function (e) {
       console.error('Unhandled rejection:', e.reason);
@@ -87,10 +108,9 @@
   </script>
 
   <script>
-    const { useState, useEffect, useMemo, useRef } = React;
+    const { useState, useEffect, useRef } = React;
     const h = React.createElement;
 
-    /* ═══ FIREBASE INITIALIZATION ═══ */
     const firebaseConfig = {
       apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
       authDomain: "lagos-life-a8706.firebaseapp.com",
@@ -110,7 +130,6 @@
     const CATEGORIES = ["All", "Street", "Small", "Mid", "High", "Cartel"];
 
     const BUSINESSES = [
-      // STREET (10)
       { id: 'water',  name: 'Pure Water Stand', emoji: '💧', price: 10_000, perHr: 2_000, cat: 'Street', desc: 'Cold pure water for the whole street.' },
       { id: 'mai_shai', name: 'Mai Shai', emoji: '☕', price: 50_000, perHr: 8_000, cat: 'Street', desc: 'Tea and bread for the early morning hustlers.' },
       { id: 'corn',   name: 'Roasted Corn', emoji: '🌽', price: 100_000, perHr: 15_000, cat: 'Street', desc: 'With coconut and pear. Sweet!' },
@@ -121,8 +140,6 @@
       { id: 'keke',   name: 'Keke Napep', emoji: '🛺', price: 500_000, perHr: 75_000, cat: 'Street', desc: 'The king of short distances.' },
       { id: 'okada',  name: 'Okada Rider', emoji: '🏍️', price: 300_000, perHr: 50_000, cat: 'Street', desc: 'Beat the traffic sharp sharp.' },
       { id: 'umbrella', name: 'Umbrella Seller', emoji: '☂️', price: 20_000, perHr: 5_000, cat: 'Street', desc: 'Rain or shine, money must be made.' },
-
-      // SMALL (10)
       { id: 'phone_acc', name: 'Phone Accessories', emoji: '📱', price: 2_000_000, perHr: 350_000, cat: 'Small', desc: 'Chargers, cases and screen protectors.' },
       { id: 'barber', name: 'Barber Shop', emoji: '💈', price: 1_500_000, perHr: 250_000, cat: 'Small', desc: 'Sharp haircuts for the guys.' },
       { id: 'salon',  name: 'Hair Salon', emoji: '💇🏾‍♀️', price: 3_000_000, perHr: 500_000, cat: 'Small', desc: 'Braids, weaves and styling for the ladies.' },
@@ -133,8 +150,6 @@
       { id: 'wash',   name: 'Car Wash', emoji: '🧼', price: 8_000_000, perHr: 1_500_000, cat: 'Small', desc: 'Make your car clean for the road.' },
       { id: 'pos',    name: 'POS Stand', emoji: '💳', price: 4_000_000, perHr: 700_000, cat: 'Small', desc: 'Withdraw money, transfer money.' },
       { id: 'eggs',   name: 'Egg Seller', emoji: '🥚', price: 600_000, perHr: 100_000, cat: 'Small', desc: 'Crates of eggs for the neighborhood.' },
-
-      // MID (10)
       { id: 'bet9ja', name: 'Bet9ja Shop', emoji: '🎰', price: 50_000_000, perHr: 9_000_000, cat: 'Mid', desc: 'Where people come to lose money.' },
       { id: 'cyber',  name: 'Cyber Cafe', emoji: '💻', price: 15_000_000, perHr: 2_500_000, cat: 'Mid', desc: 'Printing, typing and jamb forms.' },
       { id: 'fastfood', name: 'Fast Food Joint', emoji: '🍔', price: 30_000_000, perHr: 5_000_000, cat: 'Mid', desc: 'Chicken and chips for the workers.' },
@@ -145,8 +160,6 @@
       { id: 'event',  name: 'Event Center', emoji: '🎪', price: 150_000_000, perHr: 25_000_000, cat: 'Mid', desc: 'Weddings, birthdays and conferences.' },
       { id: 'hotel',  name: 'Small Hotel', emoji: '🏨', price: 300_000_000, perHr: 50_000_000, cat: 'Mid', desc: 'Short time, long time.' },
       { id: 'blocks', name: 'Block Industry', emoji: '🧱', price: 200_000_000, perHr: 35_000_000, cat: 'Mid', desc: 'Blocks for the builders.' },
-
-      // HIGH (10)
       { id: 'lounge', name: 'Lekki Lounge', emoji: '🍾', price: 500_000_000, perHr: 90_000_000, cat: 'High', desc: 'Shisha and champagne for the big boys.' },
       { id: 'club',   name: 'Night Club', emoji: '🎧', price: 1_000_000_000, perHr: 180_000_000, cat: 'High', desc: 'DJ, dancers and plenty dollars.' },
       { id: 'car_deal', name: 'Car Dealership', emoji: '🚘', price: 2_500_000_000, perHr: 450_000_000, cat: 'High', desc: 'Brand new and tokunbo cars.' },
@@ -157,8 +170,6 @@
       { id: 'supermarket', name: 'Supermarket', emoji: '🛒', price: 1_200_000_000, perHr: 220_000_000, cat: 'High', desc: 'Where the elites shop.' },
       { id: 'printing', name: 'Printing Press', emoji: '🖨️', price: 800_000_000, perHr: 150_000_000, cat: 'High', desc: 'Printing millions for companies.' },
       { id: 'tech',   name: 'Tech Startup', emoji: '🚀', price: 8_000_000_000, perHr: 1_500_000_000, cat: 'High', desc: 'Pitch to investors and raise funds.' },
-
-      // CARTEL (10)
       { id: 'oil',    name: 'Oil & Gas Bloc', emoji: '🛢️', price: 50_000_000_000, perHr: 10_000_000_000, cat: 'Cartel', desc: 'Crude oil money. The real deal.' },
       { id: 'jet',    name: 'Private Jet Charter', emoji: '✈️', price: 150_000_000_000, perHr: 30_000_000_000, cat: 'Cartel', desc: 'Fly the politicians around.' },
       { id: 'yacht',  name: 'Yacht Club', emoji: '🛥️', price: 80_000_000_000, perHr: 15_000_000_000, cat: 'Cartel', desc: 'Party on the water.' },
@@ -171,11 +182,20 @@
       { id: 'political', name: 'Political Party', emoji: '🎩', price: 5_000_000_000_000, perHr: 1_000_000_000_000, cat: 'Cartel', desc: 'The ultimate cartel. (No violence o)' },
     ];
 
-    const ASSET_PRICES = {
-      chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000,
-      gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000,
-      mansion: 1_000_000_000_000,
-    };
+    const ASSET_PRICES = { chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000, gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000, mansion: 1_000_000_000_000 };
+
+    const BUSINESS_FEED = [
+      "Your Suya Spot just sold 200 sticks to a drunk guy 🍢",
+      "Your Danfo bus is stuck in traffic, but money dey enter 🚌",
+      "Pure water stand don sell out for this heat ☀️",
+      "Your Mai Shai just served 50 cups of tea to early hustlers ☕",
+      "A big man just bought 10 crates of eggs for his mansion 🥚",
+      "Your POS stand is making money while NEPA is off 💳",
+      "Bet9ja shop just opened, people dey troop in 🎰",
+      "Your Night Club is packed tonight, DJ is playing your favorite song 🎧",
+      "Your Real Estate agent just closed a ₦1B deal 🏘️",
+      "Your Oil Bloc just shipped 1 million barrels 🛢️"
+    ];
 
     const getCachedData = () => {
       try {
@@ -204,7 +224,6 @@
     };
     const fmtReal = (n) => '₦' + (n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    /* ═══ AUDIO ENGINE ═══ */
     const AudioEngine = (() => {
       let ctx = null; let musicGain, sfxGain, musicPlaying = false, musicTimer, step = 0;
       const STEP_MS = 300;
@@ -237,16 +256,14 @@
         step++;
       }
 
-      function startMusic() { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); }
-      function stopMusic() { musicPlaying=false; clearInterval(musicTimer); }
-
       return {
-        startMusic: startMusic,
-        stopMusic: stopMusic,
+        startMusic: () => { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); },
+        stopMusic: () => { musicPlaying=false; clearInterval(musicTimer); },
         toggle: () => { if (musicPlaying) { stopMusic(); } else { startMusic(); } return musicPlaying; },
         coin: () => { init(); tone(1046, 0.08, "square", sfxGain, 0, 0.15); tone(1318, 0.15, "square", sfxGain, 0.07, 0.15); },
         error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
-        purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); }
+        purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); },
+        collect: () => { init(); tone(1318, 0.1, "sine", sfxGain, 0, 0.2); tone(1567, 0.1, "sine", sfxGain, 0.08, 0.2); tone(2093, 0.2, "sine", sfxGain, 0.16, 0.2); }
       };
     })();
 
@@ -267,6 +284,11 @@
       const [musicOn, setMusicOn] = useState(false);
       const [activeTab, setActiveTab] = useState("Street");
       const [isMaintenance, setIsMaintenance] = useState(false);
+
+      // LIVE FEATURES
+      const [vault, setVault] = useState(0); 
+      const [feedMsg, setFeedMsg] = useState("Welcome to your business empire! Buy a business to start making passive income.");
+      const [isCollecting, setIsCollecting] = useState(false);
 
       useEffect(() => {
         const tg = window && window.Telegram && window.Telegram.WebApp;
@@ -289,17 +311,12 @@
           const unsubscribe = userRef.onSnapshot((doc) => {
             if (doc.exists) {
               const dbData = doc.data();
-
-              if (!dbData.telegramId && tgUser && tgUser.id) {
-                userRef.update({ telegramId: tgUser.id }).catch(() => {});
-              }
+              if (!dbData.telegramId && tgUser && tgUser.id) userRef.update({ telegramId: tgUser.id }).catch(() => {});
 
               setS(prev => {
-                // THE SAFETY NET: Ensure businesses, assets, and travels are never undefined
                 const newData = Object.assign({}, prev, dbData, {
                   businesses: dbData.businesses || prev.businesses || {},
                   assets: dbData.assets || prev.assets || {},
-                  travels: dbData.travels || prev.travels || [],
                   telegramId: dbData.telegramId || (tgUser && tgUser.id),
                   transactions: dbData.transactions || [],
                   cash: dbData.cash !== undefined ? dbData.cash : prev.cash
@@ -341,47 +358,58 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
+      // Live Feed Ticker
+      useEffect(() => {
+        const iv = setInterval(() => {
+          setFeedMsg(BUSINESS_FEED[Math.floor(Math.random() * BUSINESS_FEED.length)]);
+        }, 6000);
+        return () => clearInterval(iv);
+      }, []);
+
+      // Vault Accumulator (Replaces direct cash injection)
       useEffect(() => {
         if (!uid) return;
         const iv = setInterval(() => {
           setS(prev => {
             if (!prev) return prev;
-            const now = Date.now();
-            let energy = prev.energy;
-            let lastEnergy = prev.lastEnergy;
-
-            if (energy < MAX_E) {
-              const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
-              if (gained > 0) {
-                energy = Math.min(MAX_E, energy + gained);
-                lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
-              }
-            }
-
-            const safeBiz = prev.businesses || {};
-            const perHr = Object.entries(safeBiz).reduce((a, kv) => {
+            
+            const perHr = Object.entries(prev.businesses || {}).reduce((a, kv) => {
               const biz = BUSINESSES.find((b) => b.id === kv[0]);
               return a + kv[1] * (biz ? biz.perHr : 0);
             }, 0);
-            const newCash = prev.cash + perHr / 3600;
-
-            if (energy !== prev.energy || perHr > 0) {
-              if (perHr > 0) {
-                db.collection("users").doc(uid).update({
-                  cash: firebase.firestore.FieldValue.increment(perHr / 3600),
-                  energy,
-                  lastEnergy
-                }).catch(() => {});
-              } else if (energy !== prev.energy) {
-                db.collection("users").doc(uid).update({ energy, lastEnergy }).catch(() => {});
-              }
-              return Object.assign({}, prev, { energy: energy, lastEnergy: lastEnergy, cash: newCash });
+            
+            const earnedThisSec = perHr / 3600;
+            if (earnedThisSec > 0) {
+               setVault(v => v + earnedThisSec);
             }
-            return prev;
+            
+            return prev; // Don't update cash directly here anymore
           });
         }, 1000);
         return () => clearInterval(iv);
       }, [uid]);
+
+      const collectVault = async () => {
+        const amount = Math.floor(vault);
+        if (amount < 1) { AudioEngine.error(); return notify('Vault is empty. Wait small! ⏳', 'bad'); }
+        
+        setIsCollecting(true);
+        AudioEngine.collect();
+        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+
+        setS(prev => Object.assign({}, prev, { cash: (prev.cash || 0) + amount }));
+        setVault(0);
+        notify('Collected ' + fmt(amount) + ' from your businesses! 💰');
+        
+        if (uid) {
+          await db.collection("users").doc(uid).update({
+            cash: firebase.firestore.FieldValue.increment(amount),
+            lastSeen: Date.now()
+          }).catch(() => {});
+        }
+        
+        setTimeout(() => setIsCollecting(false), 800);
+      };
 
       if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' },
         h('div', { className: 'text-4xl' }, '⚠️'),
@@ -397,21 +425,23 @@
         );
       }
 
-      // Safe fallbacks for rendering
-      const safeBusinesses = s.businesses || {};
-      const safeAssets = s.assets || {};
-
-      const bizValue = Object.entries(safeBusinesses).reduce((a, kv) => {
+      const safeBiz = s.businesses || {};
+      const bizValue = Object.entries(safeBiz).reduce((a, kv) => {
         const biz = BUSINESSES.find((b) => b.id === kv[0]);
         return a + kv[1] * (biz ? biz.price : 0);
       }, 0);
-      const perHr = Object.entries(safeBusinesses).reduce((a, kv) => {
+      const perHr = Object.entries(safeBiz).reduce((a, kv) => {
         const biz = BUSINESSES.find((b) => b.id === kv[0]);
         return a + kv[1] * (biz ? biz.perHr : 0);
       }, 0);
-      const assetValue = Object.entries(safeAssets).reduce((a, kv) => a + kv[1] * (ASSET_PRICES[kv[0]] || 0), 0);
+      const assetValue = Object.entries(s.assets || {}).reduce((a, kv) => a + kv[1] * (ASSET_PRICES[kv[0]] || 0), 0);
       const netWorth = Math.floor((s.cash || 0) + bizValue + assetValue);
-      const ownedCount = Object.values(safeBusinesses).reduce((a, c) => a + c, 0);
+      const ownedCount = Object.values(safeBiz).reduce((a, c) => a + c, 0);
+
+      let bizRank = "Street Hustler";
+      if (ownedCount > 5) bizRank = "Small Business Owner";
+      if (ownedCount > 15) bizRank = "Business Mogul";
+      if (ownedCount > 30) bizRank = "Dangote of Lagos";
 
       const buyBusiness = (b) => {
         if (s.cash < b.price) {
@@ -446,12 +476,7 @@
         { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
         { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
         { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
-        { id: 'more', label: 'More', icon: '⋯', href: '#' },
-      ];
-      const MORE_PAGES = [
-        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
-        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
-        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
 
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
@@ -467,7 +492,7 @@
               h('div', { className: 'flex items-center gap-2 min-w-0' },
                 h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display' }, 'L'),
                 h('div', { className: 'min-w-0' },
-                  h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display' }, 'Business'),
+                  h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display' }, 'Business Empire'),
                   h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + fmt(s.cash))
                 )
               ),
@@ -479,29 +504,50 @@
           ),
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
-            h(Card, { className: 'p-4 mt-3', gold: true },
-              h('div', { className: 'grid grid-cols-2 gap-3' },
-                h('div', null,
-                  h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Business Value'),
-                  h('div', { className: 'text-xl font-black tabular-nums font-display mt-1 text-gradient-gold' }, fmt(bizValue))
-                ),
-                h('div', null,
-                  h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Per Hour'),
-                  h('div', { className: 'text-xl font-black text-[#22C55E] tabular-nums font-display mt-1' }, '+' + fmt(perHr))
-                )
-              ),
-              h('div', { className: 'mt-3 pt-3 border-t border-white/[0.08] flex items-center justify-between' },
-                h('div', { className: 'text-[10px] text-white/45 font-bold' },
-                  h('span', { className: 'text-[#FFD60A] font-black' }, String(ownedCount)),
-                  ' business' + (ownedCount !== 1 ? 'es' : '') + ' owned'
-                ),
-                h('div', { className: 'text-[10px] text-white/45 font-bold tabular-nums' },
-                  'Net Worth: ',
-                  h('span', { className: 'text-[#FFD60A] font-black' }, fmt(netWorth))
+            
+            // VAULT CARD
+            h(Card, { className: 'p-5 mt-3 relative overflow-hidden', gold: true },
+              h('div', { className: 'absolute -top-10 -right-10 w-32 h-32 rounded-full bg-[#FFD60A]/20 blur-2xl pointer-events-none' }),
+              h('div', { className: 'text-center relative z-10' },
+                h('div', { className: 'text-[10px] uppercase tracking-widest text-[#FFD60A]/70 font-bold mb-1' }, 'Business Vault'),
+                h('div', { className: 'text-4xl font-black text-gradient-gold tabular-nums font-display drop-shadow-md mb-2' }, fmt(vault)),
+                h('div', { className: 'text-[10px] text-white/50 mb-4' }, 'Your businesses are making money. Collect am!'),
+                
+                h('button', { 
+                  onClick: collectVault, 
+                  disabled: isCollecting || vault < 1,
+                  className: 'w-full py-4 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black font-black text-[15px] shadow-[0_8px_24px_-8px_rgba(34,197,94,0.7)] active:scale-95 transition disabled:opacity-50 disabled:shadow-none ' + (vault >= 1 ? 'collect-btn' : '')
+                }, 
+                  isCollecting ? 'Collecting...' : 'COLLECT ' + fmt(vault)
                 )
               )
             ),
 
+            // STATS GRID
+            h('div', { className: 'grid grid-cols-3 gap-2 mt-3' },
+              h(Card, { className: 'p-2.5 text-center' },
+                h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Per Hour'),
+                h('div', { className: 'text-[12px] font-black text-[#22C55E] tabular-nums mt-0.5' }, '+' + fmt(perHr))
+              ),
+              h(Card, { className: 'p-2.5 text-center' },
+                h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Owned'),
+                h('div', { className: 'text-[12px] font-black text-white tabular-nums mt-0.5' }, String(ownedCount))
+              ),
+              h(Card, { className: 'p-2.5 text-center' },
+                h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Title'),
+                h('div', { className: 'text-[10px] font-black text-[#FFD60A] mt-0.5 truncate' }, bizRank)
+              )
+            ),
+
+            // LIVE FEED
+            h('div', { className: 'mt-4 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center gap-2 overflow-hidden' },
+              h('span', { className: 'text-sm shrink-0 animate-pulse' }, '📡'),
+              h('div', { className: 'flex-1 overflow-hidden relative h-5' },
+                h('div', { className: 'absolute text-[10.5px] font-bold text-white/60 whitespace-nowrap marquee', key: feedMsg }, feedMsg)
+              )
+            ),
+
+            // TABS
             h('div', { className: 'mt-4 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar' },
               CATEGORIES.map(cat =>
                 h('button', {
@@ -515,16 +561,17 @@
               )
             ),
 
+            // YOUR BUSINESSES
             ownedCount > 0 && activeTab === 'All' && h(React.Fragment, null,
               h(SectionTitle, {
                 right: h('span', { className: 'text-[10px] font-bold text-[#22C55E] flex items-center gap-1.5' },
                   h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse glow-dot' }),
                   'LIVE INCOME'
                 )
-              }, 'Your Businesses'),
+              }, 'Your Empire'),
               h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden' },
-                BUSINESSES.filter((b) => (safeBusinesses[b.id] || 0) > 0).map((b) => {
-                  const owned = safeBusinesses[b.id];
+                BUSINESSES.filter((b) => (safeBiz[b.id] || 0) > 0).map((b) => {
+                  const owned = safeBiz[b.id];
                   return h('div', { key: b.id, className: 'px-3.5 py-2.5 flex items-center gap-3' },
                     h('div', { className: 'w-8 h-8 rounded-lg bg-white/[0.06] grid place-items-center text-base shrink-0' }, b.emoji),
                     h('div', { className: 'flex-1 min-w-0' },
@@ -543,12 +590,12 @@
 
             h('div', { className: 'space-y-2' },
               filteredBusinesses.map((b) => {
-                const owned = safeBusinesses[b.id] || 0;
+                const owned = safeBiz[b.id] || 0;
                 const canAfford = (s.cash || 0) >= b.price;
                 const roiHours = (b.price / b.perHr).toFixed(1);
                 return h(Card, {
                   key: b.id,
-                  className: 'p-3 flex items-center gap-3 ' + (owned > 0 ? 'border-[#FFD60A]/25' : '')
+                  className: 'p-3 flex items-center gap-3 transition-all ' + (owned > 0 ? 'border-[#FFD60A]/40 shadow-[0_0_15px_-5px_rgba(255,214,10,0.2)]' : '')
                 },
                   h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-2xl shrink-0 relative' },
                     b.emoji,
@@ -578,9 +625,7 @@
               h('div', { className: 'flex items-start gap-2' },
                 h('span', { className: 'text-base' }, '💡'),
                 h('p', { className: 'text-[10.5px] text-white/50 leading-relaxed' },
-                  'Business income dey land for your cash ',
-                  h('span', { className: 'text-[#FFD60A] font-bold' }, 'every second'),
-                  ' — even when you close the app. Buy more copies to multiply the hourly rate. Every business you buy go add to your ',
+                  'Your businesses no dey sleep. Money dey enter your vault every second. Collect am often so Sapa no go catch you. Every business you buy go add to your ',
                   h('span', { className: 'text-[#FFD60A] font-bold' }, 'Net Worth'),
                   '.'
                 )
@@ -588,57 +633,19 @@
             )
           ),
 
+          // BOTTOM NAV
           h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
               NAV.map((n) => {
                 const active = n.id === 'biz';
                 return h('a', {
-                  key: n.id,
-                  href: n.href,
-                  onClick: (e) => {
-                    if (n.id === 'more') {
-                      e.preventDefault();
-                      const el = document.getElementById('more-sheet');
-                      if (el) el.classList.remove('hidden');
-                    }
-                  },
+                  key: n.id, href: n.href,
                   className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')
                 },
                   h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
                   h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
                 );
               })
-            )
-          ),
-
-          h('div', { id: 'more-sheet', className: 'hidden fixed inset-0 z-50 flex items-end justify-center' },
-            h('div', {
-              className: 'absolute inset-0 bg-black/85',
-              onClick: () => {
-                const el = document.getElementById('more-sheet');
-                if (el) el.classList.add('hidden');
-              }
-            }),
-            h('div', {
-              className: 'relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp',
-              onClick: (e) => e.stopPropagation()
-            },
-              h('div', { className: 'w-10 h-1 rounded-full bg-white/15 mx-auto mb-4' }),
-              h('div', { className: 'space-y-2' },
-                MORE_PAGES.map((m) =>
-                  h('a', {
-                    key: m.id,
-                    href: m.href,
-                    className: 'w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left'
-                  },
-                    h('div', { className: 'w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0' }, m.icon),
-                    h('div', { className: 'min-w-0' },
-                      h('div', { className: 'text-[13px] font-extrabold font-display' }, m.label),
-                      h('div', { className: 'text-[10px] text-white/40 font-bold mt-0.5' }, m.desc)
-                    )
-                  )
-                )
-              )
             )
           ),
 
