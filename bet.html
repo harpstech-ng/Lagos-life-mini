@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Lagos Life Mini — Bet Center</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+      }},
+    };
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html, body {
+      margin: 0; padding: 0;
+      background: #08080B; color: #fff;
+      overflow-x: hidden; overscroll-behavior-y: none;
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent);
+    }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+    .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); box-shadow: 0 8px 30px -10px rgba(255,214,10,0.3); }
+    .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+    .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
+    .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    input { -webkit-user-select: text; user-select: text; }
+    input:focus { outline: none; }
+    
+    /* Aviator Specific */
+    .aviator-bg { background: radial-gradient(circle at center, #1A1A24 0%, #08080B 100%); }
+    .plane { position: absolute; transition: transform 0.1s linear; z-index: 10; }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
+    .animate-shake { animation: shake 0.4s; }
+    .crash-text { text-shadow: 0 0 20px rgba(239,68,68,0.8); }
+    .win-text { text-shadow: 0 0 20px rgba(34,197,94,0.8); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { console.error('Unhandled rejection:', e.reason); });
+  </script>
+
+  <script>
+    const { useState, useEffect, useRef } = React;
+    const h = React.createElement;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const MAX_E = 100;
+    const ENERGY_MS = 5 * 60 * 1000;
+    const BIZ_PER_HR = { water: 2_000, suya: 40_000, keke: 75_000, phone: 350_000, danfo: 800_000, wash: 4_000_000, bet9ja: 9_000_000, lounge: 90_000_000, oil: 1_000_000_000 };
+
+    const getCachedData = () => {
+      try {
+        const cached = localStorage.getItem("lagos_user_data");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+      const tg = window && window.Telegram && window.Telegram.WebApp;
+      return {
+        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        cash: 25000, real: 0, energy: MAX_E,
+        lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
+        taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+        transactions: []
+      };
+    };
+
+    const fmt = (n) => {
+      n = Math.floor(n || 0);
+      const s = n < 0 ? '-' : '';
+      n = Math.abs(n);
+      if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
+      if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return s + '₦' + (n / 1e3).toFixed(1) + 'K';
+      return s + '₦' + n.toLocaleString();
+    };
+    const fmtReal = (n) => '₦' + (n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    /* ═══ AUDIO ENGINE ═══ */
+    const AudioEngine = (() => {
+      let ctx = null;
+      function init() {
+        if (ctx) return;
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      function tone(f, d, t, w=0, g=0.3) {
+        if (!ctx) return; const start = ctx.currentTime + w;
+        const o = ctx.createOscillator(), gain = ctx.createGain();
+        o.type = t; o.frequency.value = f;
+        gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(g, start+0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start+d);
+        o.connect(gain); gain.connect(ctx.destination); o.start(start); o.stop(start+d+0.05);
+      }
+      return {
+        init,
+        tap: () => { init(); tone(880, 0.09, "triangle", 0, 0.28); },
+        coin: () => { init(); tone(1046, 0.08, "square", 0, 0.15); tone(1318, 0.15, "square", 0.07, 0.15); },
+        error: () => { init(); tone(220, 0.15, "sawtooth", 0, 0.25); tone(165, 0.25, "sawtooth", 0.1, 0.25); },
+        crash: () => { init(); tone(150, 0.4, "sawtooth", 0, 0.4); tone(100, 0.6, "square", 0.1, 0.3); },
+        cashout: () => { init(); tone(880, 0.1, "sine", 0, 0.2); tone(1046, 0.1, "sine", 0.08, 0.2); tone(1318, 0.2, "sine", 0.16, 0.2); }
+      };
+    })();
+
+    const Card = ({ children, className = '', gold = false }) =>
+      h('div', { className: 'rounded-2xl ' + (gold ? 'card-gold' : 'card-gradient') + ' ' + className }, children);
+
+    function App() {
+      const [s, setS] = useState(getCachedData);
+      const [uid, setUid] = useState(null);
+      const [authError, setAuthError] = useState(null);
+      const [toast, setToast] = useState(null);
+      
+      const [activeTab, setActiveTab] = useState("aviator"); // aviator, virtual, cards
+
+      // Aviator State
+      const [aviatorBet, setAviatorBet] = useState(10000);
+      const [aviatorState, setAviatorState] = useState("idle"); // idle, flying, crashed
+      const [multiplier, setMultiplier] = useState(1.00);
+      const [hasCashedOut, setHasCashedOut] = useState(false);
+      const [history, setHistory] = useState([1.2, 5.4, 1.0, 2.1, 12.5, 1.8, 1.0]);
+
+      // Virtual State
+      const [virtualBet, setVirtualBet] = useState(10000);
+      const [virtualState, setVirtualState] = useState("idle"); // idle, playing, result
+
+      // Cards State
+      const [cardBet, setCardBet] = useState(10000);
+      const [cardState, setCardState] = useState("idle"); // idle, playing
+      const [currentCard, setCurrentCard] = useState(null);
+
+      const aviatorInterval = useRef(null);
+      const crashPoint = useRef(0);
+
+      // Firebase Sync
+      useEffect(() => {
+        const tg = window && window.Telegram && window.Telegram.WebApp;
+        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+
+        auth.signInAnonymously().then((cred) => {
+          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+          setUid(userId);
+          
+          const userRef = db.collection("users").doc(userId);
+          const unsubscribe = userRef.onSnapshot((doc) => {
+            if (doc.exists) {
+              setS(prev => {
+                const dbData = doc.data();
+                const newData = Object.assign({}, prev, dbData, {
+                  businesses: dbData.businesses || prev.businesses || {},
+                  assets: dbData.assets || prev.assets || {},
+                  travels: dbData.travels || prev.travels || [],
+                  transactions: dbData.transactions || []
+                });
+                try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
+                return newData;
+              });
+            } else {
+              const defaultData = {
+                name: (tgUser && tgUser.first_name) || 'Hustler',
+                cash: 25000, real: 0, energy: MAX_E,
+                lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
+                taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+                transactions: []
+              };
+              userRef.set(defaultData).catch(() => {});
+              setS(defaultData);
+              try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
+            }
+          }, (error) => console.error("Snapshot error:", error));
+          return unsubscribe;
+        }).catch(e => setAuthError(e.message));
+      }, []);
+
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2400);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+
+      const updateCash = async (amount) => {
+        setS(prev => Object.assign({}, prev, { cash: prev.cash + amount }));
+        if (uid) {
+          await db.collection("users").doc(uid).update({
+            cash: firebase.firestore.FieldValue.increment(amount),
+            lastSeen: Date.now()
+          }).catch(() => {});
+        }
+      };
+
+      // --- AVIATOR LOGIC ---
+      const startAviator = () => {
+        if (s.cash < aviatorBet) { AudioEngine.error(); return notify('Not enough cash 💸', 'bad'); }
+        
+        updateCash(-aviatorBet);
+        setAviatorState("flying");
+        setMultiplier(1.00);
+        setHasCashedOut(false);
+        AudioEngine.tap();
+
+        // Generate crash point (House edge: 40% chance it crashes before 1.5x)
+        const r = Math.random();
+        let cp = 1.00;
+        if (r < 0.4) cp = 1.0 + Math.random() * 0.5; // 1.0x - 1.5x
+        else if (r < 0.7) cp = 1.5 + Math.random() * 1.5; // 1.5x - 3.0x
+        else if (r < 0.9) cp = 3.0 + Math.random() * 7.0; // 3.0x - 10.0x
+        else cp = 10.0 + Math.random() * 40.0; // 10.0x - 50.0x
+        crashPoint.current = cp;
+
+        let currentM = 1.00;
+        aviatorInterval.current = setInterval(() => {
+          currentM += 0.02 + (currentM * 0.01); // Accelerating growth
+          
+          if (currentM >= crashPoint.current) {
+            clearInterval(aviatorInterval.current);
+            setMultiplier(crashPoint.current);
+            setAviatorState("crashed");
+            AudioEngine.crash();
+            try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.notificationOccurred('error'); } catch(e) {}
+            
+            setHistory(prev => [Number(crashPoint.current.toFixed(2)), ...prev].slice(0, 10));
+            
+            if (!hasCashedOut) {
+              // Player lost
+            }
+          } else {
+            setMultiplier(currentM);
+            // Add subtle ticking sound for plane
+            if (Math.floor(currentM * 10) % 10 === 0) AudioEngine.tap();
+          }
+        }, 100);
+      };
+
+      const cashOutAviator = () => {
+        if (aviatorState !== "flying" || hasCashedOut) return;
+        clearInterval(aviatorInterval.current);
+        setHasCashedOut(true);
+        
+        const winAmount = Math.floor(aviatorBet * multiplier);
+        updateCash(winAmount);
+        AudioEngine.cashout();
+        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+        notify('Cashed out at ' + multiplier.toFixed(2) + 'x! +' + fmt(winAmount));
+        setAviatorState("idle");
+        setHistory(prev => [Number(multiplier.toFixed(2)), ...prev].slice(0, 10));
+      };
+
+      // --- VIRTUAL LOGIC ---
+      const playVirtual = (team) => {
+        if (s.cash < virtualBet) { AudioEngine.error(); return notify('Not enough cash 💸', 'bad'); }
+        
+        updateCash(-virtualBet);
+        setVirtualState("playing");
+        AudioEngine.tap();
+
+        setTimeout(() => {
+          const win = Math.random() > 0.5; // 50/50
+          if (win) {
+            const winAmount = virtualBet * 2;
+            updateCash(winAmount);
+            AudioEngine.coin();
+            notify('WINNER! You won ' + fmt(winAmount) + ' 🤑');
+          } else {
+            AudioEngine.error();
+            notify('You lost this one 😭', 'bad');
+          }
+          setVirtualState("idle");
+        }, 2500);
+      };
+
+      // --- CARDS LOGIC ---
+      const startCards = () => {
+        if (s.cash < cardBet) { AudioEngine.error(); return notify('Not enough cash 💸', 'bad'); }
+        updateCash(-cardBet);
+        setCurrentCard(Math.floor(Math.random() * 13) + 1); // 1-13
+        setCardState("playing");
+        AudioEngine.tap();
+      };
+
+      const playCard = (guess) => {
+        const nextCard = Math.floor(Math.random() * 13) + 1;
+        const win = guess === 'higher' ? nextCard > currentCard : nextCard < currentCard;
+        
+        if (nextCard === currentCard) {
+          notify('Draw! Try again.', 'bad');
+          setCurrentCard(nextCard);
+          return;
+        }
+
+        if (win) {
+          const winAmount = cardBet * 2;
+          updateCash(winAmount);
+          AudioEngine.coin();
+          notify('Correct! You won ' + fmt(winAmount) + ' 🃏');
+        } else {
+          AudioEngine.error();
+          notify('Wrong guess! You lost 😭', 'bad');
+        }
+        setCardState("idle");
+        setCurrentCard(null);
+      };
+
+      const NAV = [
+        { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
+        { id: 'hustle', label: 'Hustle', icon: '👊', href: 'hustle.html' },
+        { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
+        { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
+        { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: '#' },
+      ];
+      const MORE_PAGES = [
+        { id: 'bet', label: 'Bet Center', icon: '🎰', desc: 'Aviator, Bet9ja, Whot', href: 'bet.html' },
+        { id: 'babe', label: 'Babe Wahala', icon: '👩🏾‍❤️‍👨🏾', desc: 'Billing, DNA Test, Breakup', href: 'babe.html' },
+        { id: 'vip', label: 'Big Boys Lounge', icon: '👑', desc: 'VIP, Geh Geh, Gold Name', href: 'vip.html' },
+        { id: 'politics', label: 'Politics & BBN', icon: '🎩', desc: 'Elections, Big Brother', href: 'politics.html' },
+        { id: 'madness', label: 'Madness & Ritual', icon: '🍃', desc: 'Smoke Loud, Ritual, Kidnap', href: 'madness.html' },
+        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
+        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
+        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
+      ];
+
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
+        h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
+          
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+            h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
+              h('div', { className: 'flex items-center gap-2 min-w-0' },
+                h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display' }, 'L'),
+                h('div', { className: 'min-w-0' },
+                  h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display' }, 'Bet Center'),
+                  h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + fmt(s.cash))
+                )
+              ),
+              h('div', { className: 'flex items-center gap-1.5 shrink-0' },
+                h('div', { className: 'px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums' }, '⚡ ' + (s.energy || 0))
+              )
+            )
+          ),
+
+          h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
+            
+            // TABS
+            h('div', { className: 'mt-3 flex gap-2 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06]' },
+              ['aviator', 'virtual', 'cards'].map(tab => 
+                h('button', {
+                  key: tab,
+                  onClick: () => { setActiveTab(tab); AudioEngine.tap(); },
+                  className: 'flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ' + 
+                    (activeTab === tab ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-md' : 'text-white/50')
+                }, tab === 'aviator' ? '✈️ Aviator' : tab === 'virtual' ? '⚽ Virtual' : '🃏 Cards')
+              )
+            ),
+
+            // --- AVIATOR UI ---
+            activeTab === 'aviator' && h('div', { className: 'mt-4' },
+              h('div', { className: 'w-full h-56 rounded-2xl aviator-bg border border-white/[0.08] relative overflow-hidden flex flex-col items-center justify-center shadow-2xl' },
+                // Grid lines
+                h('div', { className: 'absolute inset-0 opacity-10', style: { backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' } }),
+                
+                aviatorState === 'idle' && h('div', { className: 'text-center z-10' },
+                  h('div', { className: 'text-5xl mb-2' }, '✈️'),
+                  h('div', { className: 'text-[13px] text-white/50 font-bold mb-4' }, 'Place your bet to start flying'),
+                  h('button', { onClick: startAviator, className: 'px-8 py-3 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black font-black text-sm shadow-[0_8px_24px_-8px_rgba(34,197,94,0.7)] active:scale-95 transition' }, 'PLACE BET')
+                ),
+
+                aviatorState === 'flying' && h('div', { className: 'absolute inset-0' },
+                  // Plane
+                  h('div', { className: 'plane text-4xl', style: { transform: `translate(${Math.min(300, (multiplier - 1) * 50)}px, ${Math.max(-120, -(multiplier - 1) * 20)}px)` } }, '✈️'),
+                  // Multiplier
+                  h('div', { className: 'absolute inset-0 flex flex-col items-center justify-center z-20' },
+                    h('div', { className: 'text-6xl font-black text-white win-text tabular-nums font-display' }, multiplier.toFixed(2) + 'x'),
+                    h('div', { className: 'text-[11px] font-bold text-[#22C55E] mt-1 animate-pulse' }, 'FLYING...')
+                  )
+                ),
+
+                aviatorState === 'crashed' && h('div', { className: 'absolute inset-0 flex flex-col items-center justify-center z-20 animate-shake' },
+                  h('div', { className: 'text-5xl mb-2' }, '💥'),
+                  h('div', { className: 'text-5xl font-black text-[#EF4444] crash-text tabular-nums font-display' }, multiplier.toFixed(2) + 'x'),
+                  h('div', { className: 'text-[13px] font-black text-[#EF4444] mt-2' }, 'FLEW AWAY'),
+                  h('div', { className: 'text-[10px] text-white/40 mt-1 mb-4' }, 'Omo plane don crash 😭'),
+                  h('button', { onClick: () => setAviatorState('idle'), className: 'px-8 py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 font-bold text-xs' }, 'Play Again')
+                )
+              ),
+
+              // History
+              h('div', { className: 'flex gap-1.5 mt-3 overflow-x-auto pb-1' },
+                history.map((hVal, i) => 
+                  h('div', { key: i, className: 'shrink-0 px-2.5 py-1 rounded-lg text-[10px] font-black tabular-nums ' + (hVal < 2.0 ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400') }, hVal.toFixed(2) + 'x')
+                )
+              ),
+
+              // Controls
+              h(Card, { className: 'p-4 mt-4' },
+                h('div', { className: 'flex justify-between items-end mb-2' },
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Bet Amount'),
+                  h('div', { className: 'text-[10px] text-white/40 tabular-nums' }, 'Bal: ' + fmt(s.cash))
+                ),
+                h('input', {
+                  type: 'number', value: aviatorBet, onChange: (e) => setAviatorBet(Math.floor(Number(e.target.value))),
+                  disabled: aviatorState !== 'idle',
+                  className: 'w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[18px] font-black text-white focus:border-[#FFD60A]/50 transition tabular-nums disabled:opacity-50'
+                }),
+                h('div', { className: 'flex gap-2 mt-2' },
+                  [10000, 100000, 1000000].map(amt => 
+                    h('button', { key: amt, onClick: () => setAviatorBet(amt), disabled: aviatorState !== 'idle', className: 'flex-1 py-1.5 rounded-lg bg-white/[0.06] text-[10px] font-bold text-white/60 active:bg-white/[0.1] transition' }, fmt(amt))
+                  ),
+                  h('button', { onClick: () => setAviatorBet(Math.floor(s.cash)), disabled: aviatorState !== 'idle', className: 'flex-1 py-1.5 rounded-lg bg-[#FFD60A]/20 text-[10px] font-black text-[#FFD60A] active:bg-[#FFD60A]/30 transition' }, 'MAX')
+                ),
+                
+                h('div', { className: 'mt-4' },
+                  aviatorState === 'flying' && !hasCashedOut 
+                    ? h('button', { onClick: cashOutAviator, className: 'w-full py-4 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[15px] shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)] active:scale-95 transition' }, 'CASH OUT ' + fmt(Math.floor(aviatorBet * multiplier)))
+                    : h('button', { onClick: startAviator, disabled: aviatorState !== 'idle', className: 'w-full py-4 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black font-black text-[15px] shadow-[0_8px_24px_-8px_rgba(34,197,94,0.7)] active:scale-95 transition disabled:opacity-50 disabled:shadow-none' }, 'PLACE BET')
+                )
+              )
+            ),
+
+            // --- VIRTUAL UI ---
+            activeTab === 'virtual' && h('div', { className: 'mt-4' },
+              h(Card, { className: 'p-6 text-center' },
+                h('div', { className: 'text-4xl mb-2' }, '⚽'),
+                h('div', { className: 'text-[16px] font-black font-display mb-4' }, 'Man U vs Arsenal'),
+                h('div', { className: 'flex justify-between items-center bg-white/[0.04] p-3 rounded-xl mb-4' },
+                  h('div', { className: 'text-center' },
+                    h('div', { className: 'text-2xl' }, '😈'),
+                    h('div', { className: 'text-[11px] font-bold mt-1' }, 'Man U'),
+                    h('div', { className: 'text-[13px] font-black text-[#FFD60A]' }, '1.95x')
+                  ),
+                  h('div', { className: 'text-[11px] font-black text-white/30' }, 'VS'),
+                  h('div', { className: 'text-center' },
+                    h('div', { className: 'text-2xl' }, '🔫'),
+                    h('div', { className: 'text-[11px] font-bold mt-1' }, 'Arsenal'),
+                    h('div', { className: 'text-[13px] font-black text-[#FFD60A]' }, '1.95x')
+                  )
+                ),
+                virtualState === 'playing' 
+                  ? h('div', { className: 'py-8 text-center' },
+                      h('div', { className: 'text-3xl animate-spin mb-2' }, '⚽'),
+                      h('div', { className: 'text-[12px] font-bold text-white/50' }, 'Match dey go...')
+                    )
+                  : h('div', { className: 'space-y-2' },
+                      h('button', { onClick: () => playVirtual('Man U'), className: 'w-full py-3 rounded-xl bg-white/[0.06] border border-white/10 font-bold text-[13px] active:scale-95 transition' }, 'Bet on Man U'),
+                      h('button', { onClick: () => playVirtual('Arsenal'), className: 'w-full py-3 rounded-xl bg-white/[0.06] border border-white/10 font-bold text-[13px] active:scale-95 transition' }, 'Bet on Arsenal')
+                    )
+              ),
+              h(Card, { className: 'p-4 mt-3' },
+                h('div', { className: 'flex justify-between items-end mb-2' },
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Stake Amount'),
+                  h('div', { className: 'text-[10px] text-white/40 tabular-nums' }, 'Bal: ' + fmt(s.cash))
+                ),
+                h('input', {
+                  type: 'number', value: virtualBet, onChange: (e) => setVirtualBet(Math.floor(Number(e.target.value))),
+                  disabled: virtualState === 'playing',
+                  className: 'w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[18px] font-black text-white focus:border-[#FFD60A]/50 transition tabular-nums disabled:opacity-50'
+                }),
+                h('div', { className: 'flex gap-2 mt-2' },
+                  [10000, 100000, 1000000].map(amt => 
+                    h('button', { key: amt, onClick: () => setVirtualBet(amt), disabled: virtualState === 'playing', className: 'flex-1 py-1.5 rounded-lg bg-white/[0.06] text-[10px] font-bold text-white/60 active:bg-white/[0.1] transition' }, fmt(amt))
+                  )
+                )
+              )
+            ),
+
+            // --- CARDS UI ---
+            activeTab === 'cards' && h('div', { className: 'mt-4' },
+              h(Card, { className: 'p-6 text-center' },
+                h('div', { className: 'text-4xl mb-2' }, '🃏'),
+                h('div', { className: 'text-[16px] font-black font-display mb-4' }, 'High - Low'),
+                cardState === 'idle' 
+                  ? h('div', null,
+                      h('div', { className: 'text-6xl mb-4' }, '❓'),
+                      h('button', { onClick: startCards, className: 'px-8 py-3 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black font-black text-sm shadow-[0_8px_24px_-8px_rgba(34,197,94,0.7)] active:scale-95 transition' }, 'START GAME')
+                    )
+                  : h('div', null,
+                      h('div', { className: 'text-[11px] text-white/40 uppercase tracking-widest mb-2' }, 'Current Card'),
+                      h('div', { className: 'text-7xl mb-6' }, currentCard > 10 ? '🃏' : currentCard > 5 ? '🂡' : '🂱'),
+                      h('div', { className: 'text-3xl font-black text-white mb-6' }, currentCard),
+                      h('div', { className: 'grid grid-cols-2 gap-2' },
+                        h('button', { onClick: () => playCard('higher'), className: 'py-4 rounded-xl bg-[#22C55E]/20 border border-[#22C55E]/30 font-black text-[#22C55E] text-lg active:scale-95 transition' }, '⬆️ HIGHER'),
+                        h('button', { onClick: () => playCard('lower'), className: 'py-4 rounded-xl bg-[#EF4444]/20 border border-[#EF4444]/30 font-black text-[#EF4444] text-lg active:scale-95 transition' }, '⬇️ LOWER')
+                      )
+                    )
+              ),
+              h(Card, { className: 'p-4 mt-3' },
+                h('div', { className: 'flex justify-between items-end mb-2' },
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Bet Amount'),
+                  h('div', { className: 'text-[10px] text-white/40 tabular-nums' }, 'Bal: ' + fmt(s.cash))
+                ),
+                h('input', {
+                  type: 'number', value: cardBet, onChange: (e) => setCardBet(Math.floor(Number(e.target.value))),
+                  disabled: cardState === 'playing',
+                  className: 'w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[18px] font-black text-white focus:border-[#FFD60A]/50 transition tabular-nums disabled:opacity-50'
+                }),
+                h('div', { className: 'flex gap-2 mt-2' },
+                  [10000, 100000, 1000000].map(amt => 
+                    h('button', { key: amt, onClick: () => setCardBet(amt), disabled: cardState === 'playing', className: 'flex-1 py-1.5 rounded-lg bg-white/[0.06] text-[10px] font-bold text-white/60 active:bg-white/[0.1] transition' }, fmt(amt))
+                  )
+                )
+              )
+            ),
+
+            h(Card, { className: 'p-3.5 mt-4' },
+              h('div', { className: 'flex items-start gap-2' },
+                h('span', { className: 'text-base' }, '⚠️'),
+                h('p', { className: 'text-[10.5px] text-white/50 leading-relaxed' },
+                  'Bet Center na for pure fun. No real money dey here. Play wisely and no let the game beat you. If you lose, go hustle for Home page. 😂'
+                )
+              )
+            )
+          ),
+
+          h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
+            h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
+              NAV.map((n) => {
+                const active = n.id === 'more';
+                return h('a', {
+                  key: n.id,
+                  href: n.href,
+                  onClick: (e) => {
+                    if (n.id === 'more') {
+                      e.preventDefault();
+                      const el = document.getElementById('more-sheet');
+                      if (el) el.classList.remove('hidden');
+                    }
+                  },
+                  className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')
+                },
+                  h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
+                  h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
+                );
+              })
+            )
+          ),
+
+          h('div', { id: 'more-sheet', className: 'hidden fixed inset-0 z-50 flex items-end justify-center' },
+            h('div', { className: 'absolute inset-0 bg-black/70 backdrop-blur-sm', onClick: () => { const el = document.getElementById('more-sheet'); if (el) el.classList.add('hidden'); } }),
+            h('div', { className: 'relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp', onClick: (e) => e.stopPropagation() },
+              h('div', { className: 'w-10 h-1 rounded-full bg-white/15 mx-auto mb-4' }),
+              h('div', { className: 'space-y-2 max-h-[70vh] overflow-y-auto' },
+                MORE_PAGES.map((m) =>
+                  h('a', { key: m.id, href: m.href, className: 'w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left' },
+                    h('div', { className: 'w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0' }, m.icon),
+                    h('div', { className: 'min-w-0' },
+                      h('div', { className: 'text-[13px] font-extrabold font-display' }, m.label),
+                      h('div', { className: 'text-[10px] text-white/40 font-bold mt-0.5' }, m.desc)
+                    )
+                  )
+                )
+              )
+            )
+          ),
+
+          toast && h('div', {
+            className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
+              (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')
+          }, toast.msg)
+        )
+      );
+    }
+
+    class ErrorBoundary extends React.Component {
+      constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+      static getDerivedStateFromError(error) { return { hasError: true, error: error }; }
+      componentDidCatch(error, info) { console.error('ErrorBoundary caught:', error, info); }
+      render() {
+        if (this.state.hasError) {
+          return h('div', { style: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', padding: '24px', textAlign: 'center', background: '#08080B', color: '#F87171', fontFamily: 'monospace', fontSize: '12px' } },
+            h('div', { style: { fontSize: '32px' } }, '⚠️'),
+            h('div', { style: { fontWeight: 'bold' } }, 'Something went wrong'),
+            h('div', { style: { opacity: 0.6, wordBreak: 'break-word' } }, String((this.state.error && this.state.error.message) || 'Unknown error')),
+            h('button', { style: { marginTop: '12px', padding: '8px 16px', background: '#FFD60A', color: '#000', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }, onClick: () => window.location.reload() }, 'Reload')
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(ErrorBoundary, null, h(App)));
+  </script>
+</body>
+</html>
