@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Lagos Life Mini — Client Palava</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B', green: '#22C55E' },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+      }},
+    };
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html, body {
+      margin: 0; padding: 0;
+      background: #08080B; color: #fff;
+      overflow-x: hidden; overscroll-behavior-y: none;
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(34,197,94,0.08), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,214,10,0.05), transparent);
+    }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+    .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    .card-green { background: linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(21,128,61,0.04) 100%); border: 1px solid rgba(34,197,94,0.25); box-shadow: 0 8px 30px -10px rgba(34,197,94,0.3); }
+    .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+    .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(34,197,94,0.2) 0%, rgba(34,197,94,0.05) 100%); border: 1px solid rgba(34,197,94,0.35); box-shadow: 0 0 25px rgba(34,197,94,0.25); }
+    .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    
+    /* Chat bubbles */
+    .chat-bubble-left { border-radius: 16px 16px 16px 4px; }
+    .chat-bubble-right { border-radius: 16px 16px 4px 16px; }
+    
+    /* Typing dots */
+    .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { console.error('Unhandled rejection:', e.reason); });
+  </script>
+
+  <script>
+    const { useState, useEffect, useRef } = React;
+    const h = React.createElement;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const MAX_E = 100;
+
+    const CLIENTS = [
+      {
+        id: 'amira',
+        name: 'Amira Gold',
+        avatar: '👩🏽‍💼',
+        country: 'Dubai 🇦🇪',
+        initialMsg: "Hello dear. I am Amira Gold, a businesswoman in Dubai. I want to invest $10,000 in your hustle. Send me your account details so I can transfer.",
+        options: [
+          { label: "Send fake account details", result: "win", amount: 5000000, msg: "Amira transferred $10k! You cashed out ₦5M. She don fall for your trap! 💸" },
+          { label: "Send real account details", result: "scam", amount: -500000, msg: "Amira hacked your account and cleared your money. You lost ₦500k! 😭" },
+          { label: "Ignore her", result: "neutral", amount: 0, msg: "You ignored Amira. She moved to the next guy. Safe move." }
+        ]
+      },
+      {
+        id: 'elon',
+        name: 'Elon Musk',
+        avatar: '🧑🏼‍💼',
+        country: 'USA 🇺🇸',
+        initialMsg: "Hey! It's Elon. I'm doing a BTC doubler event this weekend. Send 0.1 BTC and get 0.2 BTC back instantly. This is for my Lagos fans!",
+        options: [
+          { label: "Send 0.1 BTC", result: "scam", amount: -2000000, msg: "It wasn't Elon. It was a scammer from Aba. You lost ₦2M! 😭" },
+          { label: "Ask for proof", result: "win", amount: 3000000, msg: "You challenged him and caught him lying. His team paid you off to keep quiet. +₦3M 🤑" },
+          { label: "Ignore", result: "neutral", amount: 0, msg: "You ignored. Elon might be real, but you never know." }
+        ]
+      },
+      {
+        id: 'fbi',
+        name: 'FBI John',
+        avatar: '🕵️‍♂️',
+        country: 'Washington 🇺🇸',
+        initialMsg: "This is Agent John from the FBI Cyber Division. Your IP address has been flagged for fraud. Pay a fine of $500 or we will issue a warrant for your arrest.",
+        options: [
+          { label: "Pay the fine ($500)", result: "scam", amount: -500000, msg: "It was a scam! The FBI doesn't accept mobile transfers. You lost ₦500k." },
+          { label: "Tell him to come and arrest you", result: "win", amount: 1000000, msg: "He was a fake agent. He got scared and sent you ₦1M to delete his number! 😂" },
+          { label: "Ignore", result: "neutral", amount: 0, msg: "You ignored FBI John. Good choice." }
+        ]
+      },
+      {
+        id: 'patience',
+        name: 'Sugar Mummy Patience',
+        avatar: '👵🏾',
+        country: 'Lekki 🇳🇬',
+        initialMsg: "Hello my dear boy. I am Mummy Patience from Lekki. My husband is a politician and he is always travelling. I need a young guy to spoil with money. Send me your WhatsApp.",
+        options: [
+          { label: "Send your WhatsApp", result: "win", amount: 2000000, msg: "Mummy Patience was real! She sent you ₦2M for shopping. You don hammer! 💰" },
+          { label: "Ask for money first", result: "scam", amount: -100000, msg: "She asked you to pay ₦100k for delivery of the iPhone she promised. It was a scam. 😭" },
+          { label: "Run away", result: "neutral", amount: 0, msg: "You ran away. Better safe than sorry." }
+        ]
+      },
+      {
+        id: 'pastor',
+        name: 'Pastor Blessing',
+        avatar: '🧑🏾‍🦳',
+        country: 'Ikeja 🇳🇬',
+        initialMsg: "My son, the Lord has shown me a vision about your hustle. Sow a seed of ₦30,000 and God will double your hustle this month. Send to this account.",
+        options: [
+          { label: "Sow the seed", result: "scam", amount: -30000, msg: "Pastor used your seed to buy a Benz. You lost ₦30k. Pastor post am for feed: 'Thanks for your seed!' 😭" },
+          { label: "Rebuke the pastor", result: "win", amount: 50000, msg: "You shouted 'Fire!' and the pastor sent you ₦50k to avoid trouble. 😂" },
+          { label: "Ignore", result: "neutral", amount: 0, msg: "You ignored the pastor. Your hustle is in God's hands." }
+        ]
+      },
+      {
+        id: 'efcc',
+        name: 'EFCC Officer',
+        avatar: '👮🏾‍♂️',
+        country: 'Abuja 🇳🇬',
+        initialMsg: "This is Officer Ibrahim from EFCC. We have evidence of your yahoo activities. Pay ₦100,000 settlement or we will post your face on our Instagram page.",
+        options: [
+          { label: "Pay ₦100k settlement", result: "scam", amount: -100000, msg: "You paid. He blocked you immediately. It was a scam! 😭" },
+          { label: "Send him your real face", result: "win", amount: 200000, msg: "He was a fake EFCC. He ran away when you sent a picture of a cultist. +₦200k for the scare! 🤑" },
+          { label: "Ignore", result: "neutral", amount: 0, msg: "You ignored. Real EFCC doesn't text you." }
+        ]
+      }
+    ];
+
+    const getCachedData = () => {
+      try {
+        const cached = localStorage.getItem("lagos_user_data");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+      const tg = window && window.Telegram && window.Telegram.WebApp;
+      return {
+        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        cash: 25000, real: 0, energy: MAX_E,
+        lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
+        taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
+        transactions: []
+      };
+    };
+
+    const fmt = (n) => {
+      n = Math.floor(n || 0);
+      const s = n < 0 ? '-' : '';
+      n = Math.abs(n);
+      if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
+      if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return s + '₦' + (n / 1e3).toFixed(1) + 'K';
+      return s + '₦' + n.toLocaleString();
+    };
+
+    /* ═══ AUDIO ENGINE ═══ */
+    const AudioEngine = (() => {
+      let ctx = null;
+      function init() { if (ctx) return; ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      function tone(f, d, t, w=0, g=0.3) {
+        if (!ctx) return; const start = ctx.currentTime + w;
+        const o = ctx.createOscillator(), gain = ctx.createGain();
+        o.type = t; o.frequency.value = f;
+        gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(g, start+0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start+d);
+        o.connect(gain); gain.connect(ctx.destination); o.start(start); o.stop(start+d+0.05);
+      }
+      return {
+        tap: () => { init(); tone(880, 0.09, "triangle", 0, 0.28); },
+        coin: () => { init(); tone(1046, 0.08, "square", 0, 0.15); tone(1318, 0.15, "square", 0.07, 0.15); },
+        error: () => { init(); tone(220, 0.15, "sawtooth", 0, 0.25); tone(165, 0.25, "sawtooth", 0.1, 0.25); },
+        ping: () => { init(); tone(880, 0.1, "sine", 0, 0.3); tone(1108, 0.15, "sine", 0.1, 0.3); }
+      };
+    })();
+
+    const Card = ({ children, className = '', green = false }) =>
+      h('div', { className: 'rounded-2xl ' + (green ? 'card-green' : 'card-gradient') + ' ' + className }, children);
+
+    const SectionTitle = ({ children, right }) =>
+      h('div', { className: 'flex items-end justify-between mb-2.5 mt-6' },
+        h('h2', { className: 'text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display' }, children),
+        right
+      );
+
+    function App() {
+      const [s, setS] = useState(getCachedData);
+      const [uid, setUid] = useState(null);
+      const [authError, setAuthError] = useState(null);
+      const [toast, setToast] = useState(null);
+      const [feed, setFeed] = useState([]);
+      
+      // Game State
+      const [inbox, setInbox] = useState([]); // Array of client objects waiting in inbox
+      const [activeChat, setActiveChat] = useState(null); // Current client object
+      const [chatHistory, setChatHistory] = useState([]); // Messages in current chat
+      const [isTyping, setIsTyping] = useState(false);
+      const [gameState, setGameState] = useState('idle'); // idle, chatting, result
+
+      const timerRef = useRef(null);
+      const chatEndRef = useRef(null);
+
+      // Firebase Sync
+      useEffect(() => {
+        const tg = window && window.Telegram && window.Telegram.WebApp;
+        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+
+        auth.signInAnonymously().then((cred) => {
+          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+          setUid(userId);
+          
+          const userRef = db.collection("users").doc(userId);
+          const unsubscribe = userRef.onSnapshot((doc) => {
+            if (doc.exists) {
+              setS(prev => {
+                const dbData = doc.data();
+                const newData = Object.assign({}, prev, dbData, {
+                  transactions: dbData.transactions || []
+                });
+                try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
+                return newData;
+              });
+            } else {
+              const defaultData = {
+                name: (tgUser && tgUser.first_name) || 'Hustler',
+                cash: 25000, real: 0, energy: MAX_E,
+                lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
+                taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
+                transactions: []
+              };
+              userRef.set(defaultData).catch(() => {});
+              setS(defaultData);
+              try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
+            }
+          }, (error) => console.error("Snapshot error:", error));
+          return unsubscribe;
+        }).catch(e => setAuthError(e.message));
+      }, []);
+
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2400);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      useEffect(() => {
+        if (chatEndRef.current) {
+          chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, [chatHistory, isTyping]);
+
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+      const addFeed = (msg) => setFeed(prev => [{ id: Date.now(), msg }, ...prev].slice(0, 10));
+
+      const updateUser = async (data) => {
+        setS(prev => Object.assign({}, prev, data));
+        if (uid) {
+          await db.collection("users").doc(uid).update(Object.assign({}, data, { lastSeen: Date.now() })).catch(() => {});
+        }
+      };
+
+      // Spawn a new client
+      const spawnClient = () => {
+        if (gameState === 'chatting') return;
+        const randomClient = CLIENTS[Math.floor(Math.random() * CLIENTS.length)];
+        
+        // Avoid spawning the same client twice in a row if active chat exists
+        if (activeChat && activeChat.id === randomClient.id) return spawnClient();
+
+        AudioEngine.ping();
+        setInbox(prev => [{ ...randomClient, time: Date.now() }, ...prev]);
+      };
+
+      // Auto-spawn clients every 15 seconds if idle
+      useEffect(() => {
+        if (gameState === 'chatting') {
+          if (timerRef.current) clearInterval(timerRef.current);
+          return;
+        }
+
+        timerRef.current = setInterval(() => {
+          spawnClient();
+        }, 15000);
+
+        return () => clearInterval(timerRef.current);
+      }, [gameState, activeChat]);
+
+      const openChat = (client) => {
+        setActiveChat(client);
+        setInbox(prev => prev.filter(c => c.id !== client.id));
+        setChatHistory([{ sender: 'client', text: client.initialMsg }]);
+        setGameState('chatting');
+        setIsTyping(true);
+        AudioEngine.tap();
+      };
+
+      const handleOption = (option) => {
+        if (isTyping) return;
+        
+        setChatHistory(prev => [...prev, { sender: 'me', text: option.label }]);
+        setIsTyping(true);
+        AudioEngine.tap();
+
+        setTimeout(() => {
+          setIsTyping(false);
+          
+          let finalAmount = option.amount;
+          if (option.result === 'win' && option.amount > 0) {
+            updateUser({ cash: s.cash + option.amount });
+            AudioEngine.coin();
+            notify('WON ' + fmt(option.amount) + ' 🤑');
+            addFeed('💸 ' + (s.name || 'You') + ' scammed ' + activeChat.name + ' and gained ' + fmt(option.amount) + '!');
+          } else if (option.result === 'scam' && option.amount < 0) {
+            finalAmount = Math.max(-s.cash, option.amount); // Don't go below 0
+            updateUser({ cash: s.cash + finalAmount });
+            AudioEngine.error();
+            notify('LOST ' + fmt(Math.abs(finalAmount)) + ' 😭', 'bad');
+            addFeed('🚨 ' + (s.name || 'You') + ' got scammed by ' + activeChat.name + ' and lost ' + fmt(Math.abs(finalAmount)) + '!');
+          } else {
+            notify('No gain, no loss.');
+          }
+
+          setChatHistory(prev => [...prev, { 
+            sender: 'client', 
+            text: option.msg, 
+            isResult: true, 
+            resultType: option.result,
+            amount: finalAmount
+          }]);
+          
+          setGameState('result');
+        }, 1500 + Math.random() * 1000); // 1.5 - 2.5s typing delay
+      };
+
+      const closeChat = () => {
+        setActiveChat(null);
+        setChatHistory([]);
+        setGameState('idle');
+        AudioEngine.tap();
+      };
+
+      if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
+
+      const NAV = [
+        { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
+        { id: 'hustle', label: 'Hustle', icon: '👊', href: 'hustle.html' },
+        { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
+        { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
+        { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: '#' },
+      ];
+      const MORE_PAGES = [
+        { id: 'bet', label: 'Bet Center', icon: '🎰', desc: 'Aviator, Bet9ja, Whot', href: 'bet.html' },
+        { id: 'babe', label: 'Babe Wahala', icon: '👩🏾‍❤️‍👨🏾', desc: 'Billing, DNA Test, Breakup', href: 'babe.html' },
+        { id: 'vip', label: 'Big Boys Lounge', icon: '👑', desc: 'VIP, Geh Geh, Gold Name', href: 'vip.html' },
+        { id: 'politics', label: 'Politics & BBN', icon: '🎩', desc: 'Elections, Big Brother', href: 'politics.html' },
+        { id: 'madness', label: 'Madness & Ritual', icon: '🍃', desc: 'Smoke Loud, Ritual, Kidnap', href: 'madness.html' },
+        { id: 'client', label: 'Client Palava', icon: '💻', desc: 'Yahoo, Scam, EFCC', href: 'client.html' },
+        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
+        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
+        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
+      ];
+
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-green-500 selection:text-black' },
+        h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
+          
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+            h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
+              h('div', { className: 'flex items-center gap-2 min-w-0' },
+                h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-green-400 to-green-600 grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(34,197,94,0.7)] font-display' }, 'L'),
+                h('div', { className: 'min-w-0' },
+                  h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-green-400/80 leading-none font-display' }, 'Client Palava'),
+                  h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + fmt(s.cash))
+                )
+              ),
+              h('div', { className: 'flex items-center gap-1.5 shrink-0' },
+                h('div', { className: 'px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums' }, '⚡ ' + (s.energy || 0))
+              )
+            )
+          ),
+
+          h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
+            
+            // --- INBOX UI ---
+            gameState === 'idle' && h('div', null,
+              h(Card, { className: 'p-5 mt-3 text-center', green: true },
+                h('div', { className: 'text-5xl mb-2' }, '💻'),
+                h('div', { className: 'text-[15px] font-black text-white font-display' }, 'YAHOO INBOX'),
+                h('div', { className: 'text-[10px] text-white/50 mt-1' }, 'Wait for clients to ping you. Use your street sense to scam them!')
+              ),
+
+              h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-green-400 flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse glow-dot' }), 'WAITING') }, 'Inbox'),
+              
+              inbox.length === 0 
+                ? h(Card, { className: 'p-8 text-center' },
+                    h('div', { className: 'text-3xl mb-2 animate-pulse' }, '📱'),
+                    h('div', { className: 'text-[11px] font-bold text-white/40' }, 'No new messages...'),
+                    h('div', { className: 'text-[9px] text-white/30 mt-1' }, 'Clients will ping you shortly.'),
+                    h('button', { onClick: spawnClient, className: 'mt-4 px-4 py-2 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-bold text-white/70 active:scale-95 transition' }, 'Force a Ping')
+                  )
+                : h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden' },
+                    inbox.map((c) => 
+                      h('div', { key: c.id, onClick: () => openChat(c), className: 'p-3 flex items-center gap-3 cursor-pointer hover:bg-white/[0.02] transition' },
+                        h('div', { className: 'w-10 h-10 rounded-full bg-white/[0.1] grid place-items-center text-lg shrink-0' }, c.avatar),
+                        h('div', { className: 'flex-1 min-w-0' },
+                          h('div', { className: 'flex justify-between items-baseline' },
+                            h('div', { className: 'text-[13px] font-extrabold truncate font-display text-white' }, c.name),
+                            h('div', { className: 'text-[9px] text-green-400' }, 'NEW')
+                          ),
+                          h('div', { className: 'text-[10px] text-white/40 truncate' }, c.initialMsg)
+                        )
+                      )
+                    )
+                  )
+            ),
+
+            // --- CHAT UI ---
+            gameState !== 'idle' && activeChat && h('div', { className: 'mt-3 flex flex-col h-[calc(100vh-180px)]' },
+              // Chat Header
+              h('div', { className: 'flex items-center gap-2 mb-2 p-2 bg-white/[0.04] rounded-xl border border-white/[0.08]' },
+                h('button', { onClick: closeChat, className: 'text-white/50 text-lg px-2' }, '←'),
+                h('div', { className: 'w-8 h-8 rounded-full bg-white/[0.1] grid place-items-center text-sm' }, activeChat.avatar),
+                h('div', null,
+                  h('div', { className: 'text-[12px] font-extrabold font-display' }, activeChat.name),
+                  h('div', { className: 'text-[9px] text-green-400' }, activeChat.country)
+                )
+              ),
+
+              // Chat Messages
+              h('div', { className: 'flex-1 overflow-y-auto space-y-3 p-2 bg-[#0A0A0F] rounded-xl border border-white/[0.05]' },
+                chatHistory.map((msg, i) => 
+                  h('div', { key: i, className: 'flex ' + (msg.sender === 'me' ? 'justify-end' : 'justify-start') },
+                    h('div', { className: 'max-w-[80%] px-3 py-2 text-[12px] leading-relaxed ' +
+                      (msg.sender === 'me' 
+                        ? 'bg-green-600 text-white chat-bubble-right' 
+                        : msg.isResult 
+                          ? (msg.resultType === 'win' ? 'bg-green-500/20 text-green-300 border border-green-500/30 chat-bubble-left' : msg.resultType === 'scam' ? 'bg-red-500/20 text-red-300 border border-red-500/30 chat-bubble-left' : 'bg-white/[0.1] text-white/70 chat-bubble-left')
+                          : 'bg-white/[0.1] text-white chat-bubble-left')
+                    },
+                      msg.isResult && h('div', { className: 'text-[14px] mb-1' }, msg.resultType === 'win' ? '🤑' : msg.resultType === 'scam' ? '😭' : '😐'),
+                      msg.text,
+                      msg.isResult && msg.amount !== 0 && h('div', { className: 'text-[13px] font-black tabular-nums mt-1 ' + (msg.amount > 0 ? 'text-green-400' : 'text-red-400') }, (msg.amount > 0 ? '+' : '') + fmt(msg.amount))
+                    )
+                  )
+                ),
+                isTyping && h('div', { className: 'flex justify-start' },
+                  h('div', { className: 'bg-white/[0.1] px-4 py-3 rounded-2xl rounded-tl-sm flex gap-1' },
+                    h('span', { className: 'typing-dot w-1.5 h-1.5 bg-white/50 rounded-full' }),
+                    h('span', { className: 'typing-dot w-1.5 h-1.5 bg-white/50 rounded-full' }),
+                    h('span', { className: 'typing-dot w-1.5 h-1.5 bg-white/50 rounded-full' })
+                  )
+                ),
+                h('div', { ref: chatEndRef })
+              ),
+
+              // Options
+              h('div', { className: 'mt-2 space-y-2' },
+                gameState === 'chatting' && activeChat.options.map((opt, i) => 
+                  h('button', { 
+                    key: i, 
+                    onClick: () => handleOption(opt),
+                    disabled: isTyping,
+                    className: 'w-full py-3 px-4 rounded-xl bg-white/[0.06] border border-white/10 text-[12px] font-bold text-left active:scale-[0.98] transition disabled:opacity-50 hover:bg-white/[0.1]' 
+                  }, opt.label)
+                ),
+                gameState === 'result' && h('button', { onClick: closeChat, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-green-400 to-green-600 text-black font-black text-[13px] shadow-[0_8px_24px_-8px_rgba(34,197,94,0.7)] active:scale-95 transition' }, 'Close Chat')
+              )
+            ),
+
+            // LIVE FEED
+            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-green-400 flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse glow-dot' }), 'LIVE') }, 'Scam Feed'),
+            h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden min-h-[100px]' },
+              feed.length === 0 ? h('div', { className: 'px-4 py-6 text-center text-[11px] text-white/30' }, 'No scam activity yet.') :
+              feed.map(f => h('div', { key: f.id, className: 'px-4 py-3 text-[11px] text-white/70 animate-slideDown' }, f.msg))
+            )
+          ),
+
+          // Navigation
+          h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
+            h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
+              NAV.map((n) => {
+                const active = n.id === 'more';
+                return h('a', {
+                  key: n.id, href: n.href,
+                  onClick: (e) => { if (n.id === 'more') { e.preventDefault(); const el = document.getElementById('more-sheet'); if (el) el.classList.remove('hidden'); } },
+                  className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-green-400 nav-active-pill' : 'text-white/35')
+                },
+                  h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
+                  h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
+                );
+              })
+            )
+          ),
+          h('div', { id: 'more-sheet', className: 'hidden fixed inset-0 z-50 flex items-end justify-center' },
+            h('div', { className: 'absolute inset-0 bg-black/70 backdrop-blur-sm', onClick: () => { const el = document.getElementById('more-sheet'); if (el) el.classList.add('hidden'); } }),
+            h('div', { className: 'relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp', onClick: (e) => e.stopPropagation() },
+              h('div', { className: 'w-10 h-1 rounded-full bg-white/15 mx-auto mb-4' }),
+              h('div', { className: 'space-y-2 max-h-[70vh] overflow-y-auto' },
+                MORE_PAGES.map((m) =>
+                  h('a', { key: m.id, href: m.href, className: 'w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left' },
+                    h('div', { className: 'w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0' }, m.icon),
+                    h('div', { className: 'min-w-0' },
+                      h('div', { className: 'text-[13px] font-extrabold font-display' }, m.label),
+                      h('div', { className: 'text-[10px] text-white/40 font-bold mt-0.5' }, m.desc)
+                    )
+                  )
+                )
+              )
+            )
+          ),
+          toast && h('div', {
+            className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
+              (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-green-400 to-green-600 text-black')
+          }, toast.msg)
+        )
+      );
+    }
+
+    class ErrorBoundary extends React.Component {
+      constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+      static getDerivedStateFromError(error) { return { hasError: true, error: error }; }
+      componentDidCatch(error, info) { console.error('ErrorBoundary caught:', error, info); }
+      render() {
+        if (this.state.hasError) {
+          return h('div', { style: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', padding: '24px', textAlign: 'center', background: '#08080B', color: '#F87171', fontFamily: 'monospace', fontSize: '12px' } },
+            h('div', { style: { fontSize: '32px' } }, '⚠️'),
+            h('div', { style: { fontWeight: 'bold' } }, 'Something went wrong'),
+            h('div', { style: { opacity: 0.6, wordBreak: 'break-word' } }, String((this.state.error && this.state.error.message) || 'Unknown error')),
+            h('button', { style: { marginTop: '12px', padding: '8px 16px', background: '#FFD60A', color: '#000', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }, onClick: () => window.location.reload() }, 'Reload')
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(ErrorBoundary, null, h(App)));
+  </script>
+</body>
+</html>
