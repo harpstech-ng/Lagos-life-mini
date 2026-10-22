@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Lagos Life Mini — Madness</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B', red: '#EF4444' },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+      }},
+    };
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html, body {
+      margin: 0; padding: 0;
+      background: #08080B; color: #fff;
+      overflow-x: hidden; overscroll-behavior-y: none;
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(239,68,68,0.08), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,214,10,0.05), transparent);
+    }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+    .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    .card-red { background: linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(185,28,28,0.04) 100%); border: 1px solid rgba(239,68,68,0.25); box-shadow: 0 8px 30px -10px rgba(239,68,68,0.3); }
+    .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+    .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(239,68,68,0.2) 0%, rgba(239,68,68,0.05) 100%); border: 1px solid rgba(239,68,68,0.35); box-shadow: 0 0 25px rgba(239,68,68,0.25); }
+    .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    
+    /* Smoke Effect */
+    .smoke-blur { filter: blur(6px); transition: filter 1s ease; pointer-events: none; }
+    .smoke-bg { background: radial-gradient(circle, rgba(34,197,94,0.2) 0%, transparent 70%); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { console.error('Unhandled rejection:', e.reason); });
+  </script>
+
+  <script>
+    const { useState, useEffect, useRef } = React;
+    const h = React.createElement;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const MAX_E = 100;
+
+    const getCachedData = () => {
+      try {
+        const cached = localStorage.getItem("lagos_user_data");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+      const tg = window && window.Telegram && window.Telegram.WebApp;
+      return {
+        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        cash: 25000, real: 0, energy: MAX_E,
+        lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
+        taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
+        transactions: []
+      };
+    };
+
+    const fmt = (n) => {
+      n = Math.floor(n || 0);
+      const s = n < 0 ? '-' : '';
+      n = Math.abs(n);
+      if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
+      if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return s + '₦' + (n / 1e3).toFixed(1) + 'K';
+      return s + '₦' + n.toLocaleString();
+    };
+
+    /* ═══ AUDIO ENGINE ═══ */
+    const AudioEngine = (() => {
+      let ctx = null;
+      function init() { if (ctx) return; ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      function tone(f, d, t, w=0, g=0.3) {
+        if (!ctx) return; const start = ctx.currentTime + w;
+        const o = ctx.createOscillator(), gain = ctx.createGain();
+        o.type = t; o.frequency.value = f;
+        gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(g, start+0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start+d);
+        o.connect(gain); gain.connect(ctx.destination); o.start(start); o.stop(start+d+0.05);
+      }
+      return {
+        tap: () => { init(); tone(880, 0.09, "triangle", 0, 0.28); },
+        coin: () => { init(); tone(1046, 0.08, "square", 0, 0.15); tone(1318, 0.15, "square", 0.07, 0.15); },
+        error: () => { init(); tone(220, 0.15, "sawtooth", 0, 0.25); tone(165, 0.25, "sawtooth", 0.1, 0.25); },
+        ritual: () => { init(); tone(150, 0.5, "sawtooth", 0, 0.3); tone(120, 0.6, "sawtooth", 0.2, 0.3); tone(80, 1.0, "square", 0.4, 0.3); }
+      };
+    })();
+
+    const Card = ({ children, className = '', red = false }) =>
+      h('div', { className: 'rounded-2xl ' + (red ? 'card-red' : 'card-gradient') + ' ' + className }, children);
+
+    const SectionTitle = ({ children, right }) =>
+      h('div', { className: 'flex items-end justify-between mb-2.5 mt-6' },
+        h('h2', { className: 'text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display' }, children),
+        right
+      );
+
+    function App() {
+      const [s, setS] = useState(getCachedData);
+      const [uid, setUid] = useState(null);
+      const [authError, setAuthError] = useState(null);
+      const [toast, setToast] = useState(null);
+      const [feed, setFeed] = useState([]);
+      
+      // Modals
+      const [kidnapModal, setKidnapModal] = useState(false);
+      const [ritualModal, setRitualModal] = useState(false);
+      const [smokeModal, setSmokeModal] = useState(false);
+
+      // Timers
+      const [kidnapTimer, setKidnapTimer] = useState(15);
+      const [smokeTimer, setSmokeTimer] = useState(30);
+      
+      const timerRef = useRef(null);
+      const smokeInterval = useRef(null);
+
+      // Firebase Sync
+      useEffect(() => {
+        const tg = window && window.Telegram && window.Telegram.WebApp;
+        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+
+        auth.signInAnonymously().then((cred) => {
+          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+          setUid(userId);
+          
+          const userRef = db.collection("users").doc(userId);
+          const unsubscribe = userRef.onSnapshot((doc) => {
+            if (doc.exists) {
+              setS(prev => {
+                const dbData = doc.data();
+                const newData = Object.assign({}, prev, dbData, {
+                  transactions: dbData.transactions || []
+                });
+                try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
+                return newData;
+              });
+            } else {
+              const defaultData = {
+                name: (tgUser && tgUser.first_name) || 'Hustler',
+                cash: 25000, real: 0, energy: MAX_E,
+                lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
+                taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
+                transactions: []
+              };
+              userRef.set(defaultData).catch(() => {});
+              setS(defaultData);
+              try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
+            }
+          }, (error) => console.error("Snapshot error:", error));
+          return unsubscribe;
+        }).catch(e => setAuthError(e.message));
+      }, []);
+
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2400);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+      const addFeed = (msg) => setFeed(prev => [{ id: Date.now(), msg }, ...prev].slice(0, 10));
+
+      const updateUser = async (data) => {
+        setS(prev => Object.assign({}, prev, data));
+        if (uid) {
+          await db.collection("users").doc(uid).update(Object.assign({}, data, { lastSeen: Date.now() })).catch(() => {});
+        }
+      };
+
+      // --- ONE CHANCE / KIDNAP ---
+      const enterDanfo = () => {
+        if (s.cash < 1000) { AudioEngine.error(); return notify('You need ₦1k for Danfo 🚐', 'bad'); }
+        
+        updateUser({ cash: s.cash - 1000 });
+        AudioEngine.tap();
+
+        const isKidnap = Math.random() < 0.10; // 10% chance
+        if (isKidnap) {
+          setKidnapModal(true);
+          setKidnapTimer(15);
+          timerRef.current = setInterval(() => {
+            setKidnapTimer(prev => {
+              if (prev <= 1) {
+                clearInterval(timerRef.current);
+                setKidnapModal(false);
+                updateUser({ cash: s.cash - 500000 });
+                AudioEngine.error();
+                notify('You were not bailed. You lost ₦500k! 😭', 'bad');
+                addFeed('🚐 ' + (s.name || 'You') + ' was kidnapped in One Chance and no one paid the ransom. Lost ₦500k!');
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+        } else {
+          notify('Safe journey! You reached your destination 🚐');
+        }
+      };
+
+      const payRansom = () => {
+        if (s.cash < 2000000) { AudioEngine.error(); return notify('You don\'t have ₦2M for ransom 💸', 'bad'); }
+        clearInterval(timerRef.current);
+        setKidnapModal(false);
+        updateUser({ cash: s.cash - 2000000 });
+        AudioEngine.coin();
+        notify('Ransom paid. They released you 🚐');
+        addFeed('🚐 ' + (s.name || 'You') + ' paid ₦2M ransom to kidnappers and escaped!');
+      };
+
+      // --- MONEY RITUAL ---
+      const doRitual = () => {
+        if (s.cash < 50000) { AudioEngine.error(); return notify('You need ₦50k for ritual materials 🩸', 'bad'); }
+        
+        const friendNames = ['Tolu', 'Emeka', 'Bisi', 'Chidi', 'Amaka'];
+        const victim = friendNames[Math.floor(Math.random() * friendNames.length)];
+
+        updateUser({ cash: s.cash + 10000000 - 50000 });
+        setRitualModal(false);
+        AudioEngine.ritual();
+        notify('RITUAL SUCCESSFUL! +₦10,000,000 🩸');
+        addFeed('🩸 ' + (s.name || 'You') + ' just used ' + victim + ' for money ritual! ' + victim + ' lost ₦1M!');
+        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+      };
+
+      // --- SMOKE LOUD ---
+      const buyLoud = () => {
+        if (s.cash < 10000) { AudioEngine.error(); return notify('You need ₦10k for loud 🍃', 'bad'); }
+        
+        updateUser({ cash: s.cash - 10000 });
+        setSmokeModal(true);
+        setSmokeTimer(30);
+        AudioEngine.tap();
+
+        smokeInterval.current = setInterval(() => {
+          setSmokeTimer(prev => {
+            if (prev <= 1) {
+              clearInterval(smokeInterval.current);
+              setSmokeModal(false);
+              updateUser({ cash: s.cash - 100000 });
+              AudioEngine.error();
+              notify('You fainted! Hospital bill is ₦100k 😭', 'bad');
+              addFeed('🍃 ' + (s.name || 'You') + ' fainted after smoking loud and paid ₦100k hospital bill!');
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      };
+
+      // --- PASTOR SEED ---
+      const sowSeed = () => {
+        if (s.cash < 100000) { AudioEngine.error(); return notify('Seed na ₦100k 💸', 'bad'); }
+        
+        const isScam = Math.random() < 0.90; // 90% scam
+        updateUser({ cash: s.cash - 100000 });
+
+        if (isScam) {
+          AudioEngine.error();
+          notify('Pastor ran away with your seed! 😭', 'bad');
+          addFeed('🙏 Pastor don use ' + (s.name || 'You') + ' seed take buy Benz for game 😭 Thanks for your seed!');
+        } else {
+          AudioEngine.coin();
+          updateUser({ cash: s.cash + 500000 });
+          notify('God blessed you! +₦500k 🙏');
+          addFeed('🙏 God blessed ' + (s.name || 'You') + ' with ₦500k after sowing a seed!');
+        }
+      };
+
+      if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
+
+      const NAV = [
+        { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
+        { id: 'hustle', label: 'Hustle', icon: '👊', href: 'hustle.html' },
+        { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
+        { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
+        { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: '#' },
+      ];
+      const MORE_PAGES = [
+        { id: 'bet', label: 'Bet Center', icon: '🎰', desc: 'Aviator, Bet9ja, Whot', href: 'bet.html' },
+        { id: 'babe', label: 'Babe Wahala', icon: '👩🏾‍❤️‍👨🏾', desc: 'Billing, DNA Test, Breakup', href: 'babe.html' },
+        { id: 'vip', label: 'Big Boys Lounge', icon: '👑', desc: 'VIP, Geh Geh, Gold Name', href: 'vip.html' },
+        { id: 'politics', label: 'Politics & BBN', icon: '🎩', desc: 'Elections, Big Brother', href: 'politics.html' },
+        { id: 'madness', label: 'Madness & Ritual', icon: '🍃', desc: 'Smoke Loud, Ritual, Kidnap', href: 'madness.html' },
+        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
+        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
+        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
+      ];
+
+      // --- SMOKE BLUR OVERLAY ---
+      const isHigh = smokeModal;
+
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-red-500 selection:text-black' },
+        h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative ' + (isHigh ? 'smoke-blur' : '') },
+          
+          isHigh && h('div', { className: 'fixed inset-0 z-[100] smoke-bg flex flex-col items-center justify-center text-center pointer-events-none' },
+            h('div', { className: 'text-7xl mb-4 animate-bounce' }, '🍃'),
+            h('div', { className: 'text-3xl font-black text-green-400 font-display' }, 'YOU ARE HIGH!'),
+            h('div', { className: 'text-[12px] text-white/60 mt-2' }, 'Enjoy the feeling...'),
+            h('div', { className: 'text-2xl font-black text-white mt-4 tabular-nums' }, smokeTimer + 's')
+          ),
+
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+            h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
+              h('div', { className: 'flex items-center gap-2 min-w-0' },
+                h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-red-400 to-red-600 grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(239,68,68,0.7)] font-display' }, 'L'),
+                h('div', { className: 'min-w-0' },
+                  h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-red-400/80 leading-none font-display' }, 'Madness & Ritual'),
+                  h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + fmt(s.cash))
+                )
+              ),
+              h('div', { className: 'flex items-center gap-1.5 shrink-0' },
+                h('div', { className: 'px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums' }, '⚡ ' + (s.energy || 0))
+              )
+            )
+          ),
+
+          h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
+            
+            h(SectionTitle, null, 'Crazy Actions'),
+            
+            h('div', { className: 'space-y-3' },
+              // ONE CHANCE
+              h(Card, { className: 'p-4 flex items-center gap-3' },
+                h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-2xl shrink-0' }, '🚐'),
+                h('div', { className: 'flex-1 min-w-0' },
+                  h('div', { className: 'text-[13px] font-extrabold font-display' }, 'One Chance (Kidnap)'),
+                  h('div', { className: 'text-[9px] text-white/40 mb-1' }, '10% chance you enter kidnappers bus.'),
+                  h('button', { onClick: enterDanfo, className: 'px-4 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-[10px] font-black border border-red-500/30 active:scale-95 transition' }, 'Enter Danfo (₦1K)')
+                )
+              ),
+
+              // MONEY RITUAL
+              h(Card, { className: 'p-4 flex items-center gap-3' },
+                h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-2xl shrink-0' }, '🩸'),
+                h('div', { className: 'flex-1 min-w-0' },
+                  h('div', { className: 'text-[13px] font-extrabold font-display' }, 'Money Ritual'),
+                  h('div', { className: 'text-[9px] text-white/40 mb-1' }, 'Use a friend, get ₦10M.'),
+                  h('button', { onClick: () => setRitualModal(true), className: 'px-4 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-[10px] font-black border border-red-500/30 active:scale-95 transition' }, 'Do Ritual (₦50K)')
+                )
+              ),
+
+              // SMOKE LOUD
+              h(Card, { className: 'p-4 flex items-center gap-3' },
+                h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-2xl shrink-0' }, '🍃'),
+                h('div', { className: 'flex-1 min-w-0' },
+                  h('div', { className: 'text-[13px] font-extrabold font-display' }, 'Smoke Loud'),
+                  h('div', { className: 'text-[9px] text-white/40 mb-1' }, 'Get high. Faint. Pay hospital bill.'),
+                  h('button', { onClick: buyLoud, className: 'px-4 py-1.5 rounded-lg bg-green-500/20 text-green-400 text-[10px] font-black border border-green-500/30 active:scale-95 transition' }, 'Buy Loud (₦10K)')
+                )
+              ),
+
+              // PASTOR SEED
+              h(Card, { className: 'p-4 flex items-center gap-3' },
+                h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-2xl shrink-0' }, '🙏'),
+                h('div', { className: 'flex-1 min-w-0' },
+                  h('div', { className: 'text-[13px] font-extrabold font-display' }, 'Pastor Seed'),
+                  h('div', { className: 'text-[9px] text-white/40 mb-1' }, 'Sow a seed. 90% chance pastor runs away.'),
+                  h('button', { onClick: sowSeed, className: 'px-4 py-1.5 rounded-lg bg-[#FFD60A]/20 text-[#FFD60A] text-[10px] font-black border border-[#FFD60A]/30 active:scale-95 transition' }, 'Sow Seed (₦100K)')
+                )
+              )
+            ),
+
+            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-red-400 flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse glow-dot' }), 'LIVE') }, 'Madness Feed'),
+            h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden min-h-[150px]' },
+              feed.length === 0 ? h('div', { className: 'px-4 py-6 text-center text-[11px] text-white/30' }, 'No madness yet. Go and do something crazy!') :
+              feed.map(f => h('div', { key: f.id, className: 'px-4 py-3 text-[11px] text-white/70 animate-slideDown' }, f.msg))
+            )
+          ),
+
+          // Navigation
+          h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
+            h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
+              NAV.map((n) => {
+                const active = n.id === 'more';
+                return h('a', {
+                  key: n.id, href: n.href,
+                  onClick: (e) => { if (n.id === 'more') { e.preventDefault(); const el = document.getElementById('more-sheet'); if (el) el.classList.remove('hidden'); } },
+                  className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-red-400 nav-active-pill' : 'text-white/35')
+                },
+                  h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
+                  h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
+                );
+              })
+            )
+          ),
+          h('div', { id: 'more-sheet', className: 'hidden fixed inset-0 z-50 flex items-end justify-center' },
+            h('div', { className: 'absolute inset-0 bg-black/70 backdrop-blur-sm', onClick: () => { const el = document.getElementById('more-sheet'); if (el) el.classList.add('hidden'); } }),
+            h('div', { className: 'relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp', onClick: (e) => e.stopPropagation() },
+              h('div', { className: 'w-10 h-1 rounded-full bg-white/15 mx-auto mb-4' }),
+              h('div', { className: 'space-y-2 max-h-[70vh] overflow-y-auto' },
+                MORE_PAGES.map((m) =>
+                  h('a', { key: m.id, href: m.href, className: 'w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left' },
+                    h('div', { className: 'w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0' }, m.icon),
+                    h('div', { className: 'min-w-0' },
+                      h('div', { className: 'text-[13px] font-extrabold font-display' }, m.label),
+                      h('div', { className: 'text-[10px] text-white/40 font-bold mt-0.5' }, m.desc)
+                    )
+                  )
+                )
+              )
+            )
+          ),
+
+          // --- MODALS ---
+          
+          // KIDNAP MODAL
+          kidnapModal && h('div', { className: 'fixed inset-0 z-[110] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md' }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-red-500/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(239,68,68,0.4)] animate-popIn text-center' },
+              h('div', { className: 'text-6xl mb-2 animate-bounce' }, '🚐'),
+              h('div', { className: 'text-[15px] font-black text-red-500 font-display' }, 'ONE CHANCE! KIDNAPPED!'),
+              h('p', { className: 'text-[12px] text-white/70 mt-2 mb-4' }, 'You don enter kidnappers Danfo. Dem dey demand ₦2M ransom or dem go dump you for bush.'),
+              
+              h('div', { className: 'w-full bg-white/10 rounded-full h-2 mb-4' },
+                h('div', { className: 'bg-red-500 h-full rounded-full transition-all', style: { width: (kidnapTimer / 15 * 100) + '%' } })
+              ),
+              h('div', { className: 'text-[10px] text-red-400 font-bold mb-4' }, 'Time left: ' + kidnapTimer + 's'),
+              
+              h('div', { className: 'space-y-2' },
+                h('button', { onClick: payRansom, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[13px] active:scale-95 transition' }, 'Pay ₦2M Ransom'),
+                h('button', { onClick: () => { clearInterval(timerRef.current); setKidnapModal(false); updateUser({ cash: s.cash - 500000 }); notify('You escaped but lost ₦500k!', 'bad'); }, className: 'w-full py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/50 font-bold text-[11px]' }, 'Struggle and jump out (Lose ₦500k)')
+              )
+            )
+          ),
+
+          // RITUAL MODAL
+          ritualModal && h('div', { className: 'fixed inset-0 z-[110] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setRitualModal(false) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-red-500/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(239,68,68,0.4)] animate-popIn text-center' },
+              h('div', { className: 'text-6xl mb-2' }, '🩸'),
+              h('div', { className: 'text-[15px] font-black text-red-500 font-display' }, 'MONEY RITUAL'),
+              h('p', { className: 'text-[12px] text-white/70 mt-2 mb-4' }, 'Do you want to use a friend for money ritual? You will get ₦10M, but your friend will lose ₦1M and get a notification.'),
+              
+              h('div', { className: 'space-y-2' },
+                h('button', { onClick: doRitual, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-red-500 to-red-700 text-white font-black text-[13px] active:scale-95 transition' }, 'Yes, Do It (₦50K)'),
+                h('button', { onClick: () => setRitualModal(false), className: 'w-full py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/50 font-bold text-[11px]' }, 'Cancel')
+              )
+            )
+          ),
+
+          toast && h('div', {
+            className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
+              (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-green-400 to-green-600 text-white')
+          }, toast.msg)
+        )
+      );
+    }
+
+    class ErrorBoundary extends React.Component {
+      constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+      static getDerivedStateFromError(error) { return { hasError: true, error: error }; }
+      componentDidCatch(error, info) { console.error('ErrorBoundary caught:', error, info); }
+      render() {
+        if (this.state.hasError) {
+          return h('div', { style: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', padding: '24px', textAlign: 'center', background: '#08080B', color: '#F87171', fontFamily: 'monospace', fontSize: '12px' } },
+            h('div', { style: { fontSize: '32px' } }, '⚠️'),
+            h('div', { style: { fontWeight: 'bold' } }, 'Something went wrong'),
+            h('div', { style: { opacity: 0.6, wordBreak: 'break-word' } }, String((this.state.error && this.state.error.message) || 'Unknown error')),
+            h('button', { style: { marginTop: '12px', padding: '8px 16px', background: '#FFD60A', color: '#000', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }, onClick: () => window.location.reload() }, 'Reload')
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(ErrorBoundary, null, h(App)));
+  </script>
+</body>
+</html>
