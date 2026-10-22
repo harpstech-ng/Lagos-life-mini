@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Lagos Life Mini — Explore</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+      }},
+    };
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html, body {
+      margin: 0; padding: 0;
+      background: #08080B; color: #fff;
+      overflow-x: hidden; overscroll-behavior-y: none;
+      font-family: 'Inter', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent);
+    }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
+    .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { console.error('Unhandled rejection:', e.reason); });
+  </script>
+
+  <script>
+    const { useState, useEffect } = React;
+    const h = React.createElement;
+
+    // Pull cached data just for the header stats
+    const getCachedData = () => {
+      try {
+        const cached = localStorage.getItem("lagos_user_data");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+      const tg = window && window.Telegram && window.Telegram.WebApp;
+      return {
+        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        cash: 25000, real: 0, clout: 0, energy: 100
+      };
+    };
+
+    const fmt = (n) => {
+      n = Math.floor(n || 0);
+      if (n >= 1e12) return '₦' + (n / 1e12).toFixed(2) + 'T';
+      if (n >= 1e9) return '₦' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return '₦' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return '₦' + (n / 1e3).toFixed(1) + 'K';
+      return '₦' + n.toLocaleString();
+    };
+
+    const Card = ({ children, className = '' }) =>
+      h('div', { className: 'rounded-2xl card-gradient ' + className }, children);
+
+    const SectionTitle = ({ children, right }) =>
+      h('div', { className: 'flex items-end justify-between mb-2.5 mt-6' },
+        h('h2', { className: 'text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display' }, children),
+        right
+      );
+
+    function App() {
+      const [s] = useState(getCachedData);
+
+      const NAV = [
+        { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
+        { id: 'hustle', label: 'Hustle', icon: '👊', href: 'hustle.html' },
+        { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
+        { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
+        { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
+      ];
+
+      const FEATURES = [
+        {
+          category: 'Empire & Money',
+          items: [
+            { id: 'bet', label: 'Bet Center', icon: '🎰', desc: 'Aviator, Virtual, Cards', href: 'bet.html', color: 'from-emerald-500/20 to-emerald-700/10' },
+            { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100, Withdraw real', href: 'leaderboard.html', color: 'from-amber-400/20 to-amber-700/10' },
+          ]
+        },
+        {
+          category: 'Flex & Status',
+          items: [
+            { id: 'vip', label: 'Big Boys Lounge', icon: '👑', desc: 'VIP, Geh Geh, Gold Name', href: 'vip.html', color: 'from-amber-500/20 to-yellow-700/10' },
+            { id: 'politics', label: 'Politics & BBN', icon: '🎩', desc: 'Elections, Big Brother', href: 'politics.html', color: 'from-blue-500/20 to-blue-700/10' },
+          ]
+        },
+        {
+          category: 'Wahala & Drama',
+          items: [
+            { id: 'babe', label: 'Babe Wahala', icon: '👩🏾‍❤️‍👨🏾', desc: 'Billing, DNA Test, Breakup', href: 'babe.html', color: 'from-pink-500/20 to-pink-700/10' },
+            { id: 'client', label: 'Client Palava', icon: '💻', desc: 'Yahoo, Scam, EFCC', href: 'client.html', color: 'from-green-500/20 to-green-700/10' },
+            { id: 'marriage', label: 'Marriage & Divorce', icon: '💍', desc: 'Weddings, Cheating, Court', href: 'marriage.html', color: 'from-rose-500/20 to-rose-700/10' },
+            { id: 'madness', label: 'Madness & Ritual', icon: '🍃', desc: 'Smoke Loud, Ritual, Kidnap', href: 'madness.html', color: 'from-red-500/20 to-red-700/10' },
+          ]
+        },
+        {
+          category: 'Streets & Travel',
+          items: [
+            { id: 'street', label: 'Street Hustle', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html', color: 'from-slate-500/20 to-slate-700/10' },
+            { id: 'travel', label: 'Travel & Japa', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html', color: 'from-cyan-500/20 to-cyan-700/10' },
+          ]
+        }
+      ];
+
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
+        h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
+          
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+            h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
+              h('div', { className: 'flex items-center gap-2 min-w-0' },
+                h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display' }, 'L'),
+                h('div', { className: 'min-w-0' },
+                  h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display' }, 'Explore'),
+                  h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + fmt(s.cash))
+                )
+              ),
+              h('div', { className: 'flex items-center gap-1.5 shrink-0' },
+                h('div', { className: 'px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums' }, '⚡ ' + (s.energy || 0))
+              )
+            )
+          ),
+
+          h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
+            
+            h('div', { className: 'mt-4 p-4 rounded-2xl bg-gradient-to-br from-[#FFD60A]/10 to-transparent border border-[#FFD60A]/20' },
+              h('div', { className: 'text-[16px] font-black text-[#FFD60A] font-display' }, 'Welcome to Lagos Life 🇳🇬'),
+              h('div', { className: 'text-[11px] text-white/60 mt-1 leading-relaxed' }, 
+                'This is your hub for everything. Build your empire, flex on the streets, or create pure wahala. Where do you want to go today?'
+              )
+            ),
+
+            FEATURES.map(section => 
+              h('div', { key: section.category },
+                h(SectionTitle, null, section.category),
+                h('div', { className: 'grid grid-cols-2 gap-2.5' },
+                  section.items.map(item => 
+                    h('a', { 
+                      key: item.id, 
+                      href: item.href, 
+                      className: 'relative overflow-hidden rounded-2xl card-gradient p-3 active:scale-[0.97] transition-all flex flex-col h-full' 
+                    },
+                      h('div', { className: 'absolute inset-0 bg-gradient-to-br ' + item.color + ' opacity-50 pointer-events-none' }),
+                      h('div', { className: 'relative z-10 flex-1' },
+                        h('div', { className: 'text-2xl mb-2' }, item.icon),
+                        h('div', { className: 'text-[12px] font-extrabold font-display leading-tight' }, item.label),
+                        h('div', { className: 'text-[9px] text-white/50 mt-0.5 leading-tight' }, item.desc)
+                      )
+                    )
+                  )
+                )
+              )
+            ),
+
+            h('div', { className: 'mt-8 mb-4 text-center' },
+              h('div', { className: 'text-[10px] font-bold text-white/20' }, 'Lagos Life Mini v2.0 — Hustle or Nothing')
+            )
+          ),
+
+          // Navigation
+          h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
+            h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
+              NAV.map((n) => {
+                const active = n.id === 'more';
+                return h('a', {
+                  key: n.id, href: n.href,
+                  className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')
+                },
+                  h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
+                  h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
+                );
+              })
+            )
+          )
+        )
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+  </script>
+</body>
+</html>
