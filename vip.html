@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Lagos Life Mini — Big Boys Lounge</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+      }},
+    };
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.15), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.1), transparent); }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+    .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    .card-vip { background: linear-gradient(135deg, #1A1508 0%, #0A0804 100%); border: 1px solid rgba(255,214,10,0.3); box-shadow: 0 8px 30px -10px rgba(255,214,10,0.2); }
+    .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+    .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
+    .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    input { -webkit-user-select: text; user-select: text; }
+    input:focus { outline: none; }
+    
+    .vip-shine { position: relative; overflow: hidden; }
+    .vip-shine::after { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,214,10,0.2), transparent); animation: shine 3s infinite; }
+    @keyframes shine { 0% { left: -100%; } 100% { left: 200%; } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { console.error('Unhandled rejection:', e.reason); });
+  </script>
+
+  <script>
+    const { useState, useEffect, useRef } = React;
+    const h = React.createElement;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const MAX_E = 100;
+    const VIP_COST = 5000; // ₦5,000 Real
+
+    const getCachedData = () => {
+      try {
+        const cached = localStorage.getItem("lagos_user_data");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+      const tg = window && window.Telegram && window.Telegram.WebApp;
+      return {
+        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        cash: 25000, real: 0, energy: MAX_E,
+        lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
+        taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
+        transactions: []
+      };
+    };
+
+    const fmt = (n) => {
+      n = Math.floor(n || 0);
+      const s = n < 0 ? '-' : '';
+      n = Math.abs(n);
+      if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
+      if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return s + '₦' + (n / 1e3).toFixed(1) + 'K';
+      return s + '₦' + n.toLocaleString();
+    };
+    const fmtReal = (n) => '₦' + (n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    /* ═══ AUDIO ENGINE ═══ */
+    const AudioEngine = (() => {
+      let ctx = null;
+      function init() { if (ctx) return; ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      function tone(f, d, t, w=0, g=0.3) {
+        if (!ctx) return; const start = ctx.currentTime + w;
+        const o = ctx.createOscillator(), gain = ctx.createGain();
+        o.type = t; o.frequency.value = f;
+        gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(g, start+0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start+d);
+        o.connect(gain); gain.connect(ctx.destination); o.start(start); o.stop(start+d+0.05);
+      }
+      return {
+        tap: () => { init(); tone(880, 0.09, "triangle", 0, 0.28); },
+        coin: () => { init(); tone(1046, 0.08, "square", 0, 0.15); tone(1318, 0.15, "square", 0.07, 0.15); },
+        error: () => { init(); tone(220, 0.15, "sawtooth", 0, 0.25); tone(165, 0.25, "sawtooth", 0.1, 0.25); },
+        vip: () => { init(); tone(523, 0.2, "sine", 0, 0.2); tone(659, 0.2, "sine", 0.15, 0.2); tone(783, 0.3, "sine", 0.3, 0.2); tone(1046, 0.4, "sine", 0.45, 0.2); }
+      };
+    })();
+
+    const Card = ({ children, className = '', vip = false }) =>
+      h('div', { className: 'rounded-2xl ' + (vip ? 'card-vip' : 'card-gradient') + ' ' + className }, children);
+
+    const SectionTitle = ({ children, right }) =>
+      h('div', { className: 'flex items-end justify-between mb-2.5 mt-6' },
+        h('h2', { className: 'text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display' }, children),
+        right
+      );
+
+    function App() {
+      const [s, setS] = useState(getCachedData);
+      const [uid, setUid] = useState(null);
+      const [authError, setAuthError] = useState(null);
+      const [toast, setToast] = useState(null);
+      
+      // VIP State
+      const [chatLog, setChatLog] = useState([
+        { sender: 'Geh Geh', text: 'Ah, see this one. You wan enter Big Boys Lounge? Make sure say your account balance dey heavy o.', emoji: '🕶️' },
+        { sender: 'Pella', text: 'This one na money na water. If you no get money, commot for here.', emoji: '💸' }
+      ]);
+      const [sprayAmt, setSprayAmt] = useState(100000);
+      
+      const chatEndRef = useRef(null);
+
+      // Firebase Sync
+      useEffect(() => {
+        const tg = window && window.Telegram && window.Telegram.WebApp;
+        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+
+        auth.signInAnonymously().then((cred) => {
+          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+          setUid(userId);
+          
+          const userRef = db.collection("users").doc(userId);
+          const unsubscribe = userRef.onSnapshot((doc) => {
+            if (doc.exists) {
+              setS(prev => {
+                const dbData = doc.data();
+                const newData = Object.assign({}, prev, dbData, {
+                  transactions: dbData.transactions || [],
+                  isVip: dbData.isVip || false
+                });
+                try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
+                return newData;
+              });
+            } else {
+              const defaultData = {
+                name: (tgUser && tgUser.first_name) || 'Hustler',
+                cash: 25000, real: 0, energy: MAX_E,
+                lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
+                taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
+                transactions: []
+              };
+              userRef.set(defaultData).catch(() => {});
+              setS(defaultData);
+              try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
+            }
+          }, (error) => console.error("Snapshot error:", error));
+          return unsubscribe;
+        }).catch(e => setAuthError(e.message));
+      }, []);
+
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2400);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      useEffect(() => {
+        if (chatEndRef.current) {
+          chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, [chatLog]);
+
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+
+      const updateUser = async (data) => {
+        setS(prev => Object.assign({}, prev, data));
+        if (uid) {
+          await db.collection("users").doc(uid).update(Object.assign({}, data, { lastSeen: Date.now() })).catch(() => {});
+        }
+      };
+
+      const topUpDemo = () => {
+        updateUser({ real: (s.real || 0) + 5000 });
+        notify('Demo top-up: +₦5,000.00 real 💳');
+        AudioEngine.coin();
+      };
+
+      const enterVip = () => {
+        if ((s.real || 0) < VIP_COST) { AudioEngine.error(); return notify('You need ₦5,000 Real to enter 🚫', 'bad'); }
+        
+        updateUser({ 
+          real: s.real - VIP_COST, 
+          isVip: true, 
+          goldName: true 
+        });
+        
+        AudioEngine.vip();
+        notify('👑 WELCOME TO THE BIG BOYS LOUNGE!');
+        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+      };
+
+      const chatWithBot = (bot) => {
+        AudioEngine.tap();
+        let reply = '';
+        if (bot === 'Geh Geh') {
+          const replies = [
+            "You never get money, you wan enter Big Boys Lounge? 😂",
+            "My guy, make you go hustle. This place no be for broke people.",
+            "See as your account dey dry. Go and buy business!",
+            "Odogwu! You dey try. But you still need more money."
+          ];
+          reply = replies[Math.floor(Math.random() * replies.length)];
+        } else {
+          const replies = [
+            "Money na water 💸",
+            "If you no get money, you no get respect.",
+            "This one na real ballers lounge. No fake life allowed.",
+            "Pella don talk am. Money must be made!"
+          ];
+          reply = replies[Math.floor(Math.random() * replies.length)];
+        }
+
+        setChatLog(prev => [...prev, { sender: 'You', text: 'Talk to ' + bot, emoji: '👤' }]);
+        setTimeout(() => {
+          setChatLog(prev => [...prev, { sender: bot, text: reply, emoji: bot === 'Geh Geh' ? '🕶️' : '💸' }]);
+        }, 1000);
+      };
+
+      const sprayMoney = () => {
+        if (s.cash < sprayAmt) { AudioEngine.error(); return notify('You no get money for spray 💸', 'bad'); }
+        
+        updateUser({ 
+          cash: s.cash - sprayAmt, 
+          clout: (s.clout || 0) + 500 
+        });
+        
+        AudioEngine.coin();
+        notify('You sprayed ' + fmt(sprayAmt) + ' in the VIP Lounge! +500 Clout 🔥');
+        
+        // Add to chat feed
+        setChatLog(prev => [...prev, { sender: 'System', text: '👑 ' + (s.name || 'You') + ' just sprayed ' + fmt(sprayAmt) + ' for the Big Boys Lounge!', emoji: '💸' }]);
+      };
+
+      if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
+
+      const NAV = [
+        { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
+        { id: 'hustle', label: 'Hustle', icon: '👊', href: 'hustle.html' },
+        { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
+        { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
+        { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: '#' },
+      ];
+      const MORE_PAGES = [
+        { id: 'bet', label: 'Bet Center', icon: '🎰', desc: 'Aviator, Bet9ja, Whot', href: 'bet.html' },
+        { id: 'babe', label: 'Babe Wahala', icon: '👩🏾‍❤️‍👨🏾', desc: 'Billing, DNA Test, Breakup', href: 'babe.html' },
+        { id: 'vip', label: 'Big Boys Lounge', icon: '👑', desc: 'VIP, Geh Geh, Gold Name', href: 'vip.html' },
+        { id: 'politics', label: 'Politics & BBN', icon: '🎩', desc: 'Elections, Big Brother', href: 'politics.html' },
+        { id: 'madness', label: 'Madness & Ritual', icon: '🍃', desc: 'Smoke Loud, Ritual, Kidnap', href: 'madness.html' },
+        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
+        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
+        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
+      ];
+
+      // --- LOCKED SCREEN ---
+      if (!s.isVip) {
+        return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
+          h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
+            h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+              h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
+                h('div', { className: 'flex items-center gap-2 min-w-0' },
+                  h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display' }, 'L'),
+                  h('div', { className: 'min-w-0' },
+                    h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display' }, 'Big Boys Lounge'),
+                    h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + fmt(s.cash))
+                  )
+                ),
+                h('div', { className: 'flex items-center gap-1.5 shrink-0' },
+                  h('div', { className: 'px-2 py-1 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] text-[10px] font-extrabold tabular-nums' }, fmtReal(s.real || 0))
+                )
+              )
+            ),
+            h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown flex flex-col items-center justify-center text-center mt-10' },
+              h('div', { className: 'text-7xl mb-4' }, '🔒'),
+              h('h1', { className: 'text-2xl font-black text-[#FFD60A] font-display mb-2' }, 'VIP ACCESS ONLY'),
+              h('p', { className: 'text-[12px] text-white/50 leading-relaxed mb-6 max-w-xs' }, 
+                'This is the Big Boys Lounge. Only true ballers can enter. Unlock exclusive perks, Gold Name with Crown 👑, 2x Hustle Speed, No Agbero Tax, and chat with Geh Geh & Pella.'
+              ),
+              
+              h(Card, { className: 'w-full p-5 text-left mb-6' },
+                h('div', { className: 'space-y-3' },
+                  h('div', { className: 'flex items-center gap-2' },
+                    h('span', { className: 'text-green-400' }, '✅'),
+                    h('span', { className: 'text-[12px] font-bold' }, 'Gold Name + Crown 👑')
+                  ),
+                  h('div', { className: 'flex items-center gap-2' },
+                    h('span', { className: 'text-green-400' }, '✅'),
+                    h('span', { className: 'text-[12px] font-bold' }, '2x Hustle Speed')
+                  ),
+                  h('div', { className: 'flex items-center gap-2' },
+                    h('span', { className: 'text-green-400' }, '✅'),
+                    h('span', { className: 'text-[12px] font-bold' }, 'No Agbero Tax')
+                  ),
+                  h('div', { className: 'flex items-center gap-2' },
+                    h('span', { className: 'text-green-400' }, '✅'),
+                    h('span', { className: 'text-[12px] font-bold' }, 'Chat with Geh Geh & Pella')
+                  )
+                )
+              ),
+
+              h('button', { onClick: enterVip, className: 'w-full py-4 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[15px] shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)] active:scale-95 transition mb-3' }, 
+                'Pay ₦5,000 Real to Enter'
+              ),
+              h('button', { onClick: topUpDemo, className: 'w-full py-3 rounded-xl bg-white/[0.06] border border-white/10 text-[11px] font-extrabold text-white/65 active:scale-[0.97] transition' }, 
+                '💳 Top Up ₦5,000 Real (Demo)'
+              )
+            ),
+            // Navigation
+            h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
+              h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
+                NAV.map((n) => {
+                  const active = n.id === 'more';
+                  return h('a', {
+                    key: n.id, href: n.href,
+                    onClick: (e) => { if (n.id === 'more') { e.preventDefault(); const el = document.getElementById('more-sheet'); if (el) el.classList.remove('hidden'); } },
+                    className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')
+                  },
+                    h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
+                    h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
+                  );
+                })
+              )
+            ),
+            h('div', { id: 'more-sheet', className: 'hidden fixed inset-0 z-50 flex items-end justify-center' },
+              h('div', { className: 'absolute inset-0 bg-black/70 backdrop-blur-sm', onClick: () => { const el = document.getElementById('more-sheet'); if (el) el.classList.add('hidden'); } }),
+              h('div', { className: 'relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp', onClick: (e) => e.stopPropagation() },
+                h('div', { className: 'w-10 h-1 rounded-full bg-white/15 mx-auto mb-4' }),
+                h('div', { className: 'space-y-2 max-h-[70vh] overflow-y-auto' },
+                  MORE_PAGES.map((m) =>
+                    h('a', { key: m.id, href: m.href, className: 'w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left' },
+                      h('div', { className: 'w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0' }, m.icon),
+                      h('div', { className: 'min-w-0' },
+                        h('div', { className: 'text-[13px] font-extrabold font-display' }, m.label),
+                        h('div', { className: 'text-[10px] text-white/40 font-bold mt-0.5' }, m.desc)
+                      )
+                    )
+                  )
+                )
+              )
+            ),
+            toast && h('div', {
+              className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
+                (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')
+            }, toast.msg)
+          )
+        );
+      }
+
+      // --- VIP INSIDE SCREEN ---
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
+        h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+            h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
+              h('div', { className: 'flex items-center gap-2 min-w-0' },
+                h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display' }, 'L'),
+                h('div', { className: 'min-w-0' },
+                  h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display flex items-center gap-1' }, 'BIG BOYS LOUNGE', h('span', null, '👑')),
+                  h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + fmt(s.cash))
+                )
+              ),
+              h('div', { className: 'flex items-center gap-1.5 shrink-0' },
+                h('div', { className: 'px-2 py-1 rounded-lg bg-[#FFD60A]/20 border border-[#FFD60A]/30 text-[#FFD60A] text-[10px] font-extrabold tabular-nums' }, '🔥 ' + (s.clout || 0))
+              )
+            )
+          ),
+
+          h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
+            
+            // VIP STATUS CARD
+            h(Card, { className: 'vip-shine p-4 mt-3 text-center', vip: true },
+              h('div', { className: 'text-4xl mb-1' }, '👑'),
+              h('div', { className: 'text-[16px] font-black text-gradient-gold font-display' }, 'WELCOME, CHAIRMAN'),
+              h('div', { className: 'text-[10px] text-white/50 mt-1' }, 'You are officially a Big Boy. Enjoy the perks.'),
+              h('div', { className: 'grid grid-cols-2 gap-2 mt-4' },
+                h('div', { className: 'bg-black/30 rounded-xl p-2 border border-[#FFD60A]/20' },
+                  h('div', { className: 'text-[9px] text-[#FFD60A] uppercase font-bold' }, '2x Hustle Speed'),
+                  h('div', { className: 'text-[11px] font-black text-white' }, 'ACTIVE ⚡')
+                ),
+                h('div', { className: 'bg-black/30 rounded-xl p-2 border border-[#FFD60A]/20' },
+                  h('div', { className: 'text-[9px] text-[#FFD60A] uppercase font-bold' }, 'No Agbero Tax'),
+                  h('div', { className: 'text-[11px] font-black text-white' }, 'ACTIVE 🛡️')
+                )
+              )
+            ),
+
+            // CHAT WITH GEH GEH / PELLA
+            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A] flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#FFD60A] animate-pulse glow-dot' }), 'LIVE') }, 'Exclusive Chat'),
+            h(Card, { className: 'p-3 h-64 flex flex-col' },
+              h('div', { className: 'flex-1 overflow-y-auto space-y-3 mb-3 pr-1' },
+                chatLog.map((chat, i) => 
+                  h('div', { key: i, className: 'flex items-start gap-2 ' + (chat.sender === 'You' ? 'flex-row-reverse' : '') },
+                    h('div', { className: 'w-7 h-7 rounded-full bg-white/[0.1] grid place-items-center text-sm shrink-0' }, chat.emoji),
+                    h('div', { className: 'max-w-[80%] rounded-xl px-3 py-2 text-[11px] ' + 
+                      (chat.sender === 'You' ? 'bg-[#FFD60A]/20 text-[#FFD60A]' : chat.sender === 'System' ? 'bg-red-500/20 text-red-300 italic text-center w-full' : 'bg-white/[0.06] text-white/80') },
+                      chat.sender !== 'You' && chat.sender !== 'System' && h('div', { className: 'font-bold text-[9px] mb-0.5 opacity-60' }, chat.sender),
+                      chat.text
+                    )
+                  )
+                ),
+                h('div', { ref: chatEndRef })
+              ),
+              h('div', { className: 'flex gap-2' },
+                h('button', { onClick: () => chatWithBot('Geh Geh'), className: 'flex-1 py-2 rounded-lg bg-white/[0.06] text-[10px] font-bold text-white/70 active:scale-95 transition' }, 'Talk to Geh Geh'),
+                h('button', { onClick: () => chatWithBot('Pella'), className: 'flex-1 py-2 rounded-lg bg-white/[0.06] text-[10px] font-bold text-white/70 active:scale-95 transition' }, 'Talk to Pella')
+              )
+            ),
+
+            // PRIVATE SPRAY PARTY
+            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-white/30' }, 'Flex your money') }, 'Private Spray Party'),
+            h(Card, { className: 'p-4' },
+              h('div', { className: 'text-[11px] text-white/50 mb-3' }, 'Spray fake money in the lounge to gain massive Clout. Everyone will see your name.'),
+              h('div', { className: 'flex justify-between items-end mb-2' },
+                h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Spray Amount'),
+                h('div', { className: 'text-[10px] text-white/40 tabular-nums' }, 'Cash: ' + fmt(s.cash))
+              ),
+              h('input', {
+                type: 'number', value: sprayAmt, onChange: (e) => setSprayAmt(Math.floor(Number(e.target.value))),
+                className: 'w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[18px] font-black text-white focus:border-[#FFD60A]/50 transition tabular-nums'
+              }),
+              h('div', { className: 'flex gap-2 mt-2' },
+                [100000, 1000000, 10000000].map(amt => 
+                  h('button', { key: amt, onClick: () => setSprayAmt(amt), className: 'flex-1 py-1.5 rounded-lg bg-white/[0.06] text-[10px] font-bold text-white/60 active:bg-white/[0.1] transition' }, fmt(amt))
+                )
+              ),
+              h('button', { onClick: sprayMoney, className: 'w-full mt-4 py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[13px] shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)] active:scale-95 transition' }, '💸 SPRAY MONEY')
+            )
+          ),
+
+          // Navigation
+          h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
+            h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
+              NAV.map((n) => {
+                const active = n.id === 'more';
+                return h('a', {
+                  key: n.id, href: n.href,
+                  onClick: (e) => { if (n.id === 'more') { e.preventDefault(); const el = document.getElementById('more-sheet'); if (el) el.classList.remove('hidden'); } },
+                  className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')
+                },
+                  h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
+                  h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
+                );
+              })
+            )
+          ),
+          h('div', { id: 'more-sheet', className: 'hidden fixed inset-0 z-50 flex items-end justify-center' },
+            h('div', { className: 'absolute inset-0 bg-black/70 backdrop-blur-sm', onClick: () => { const el = document.getElementById('more-sheet'); if (el) el.classList.add('hidden'); } }),
+            h('div', { className: 'relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp', onClick: (e) => e.stopPropagation() },
+              h('div', { className: 'w-10 h-1 rounded-full bg-white/15 mx-auto mb-4' }),
+              h('div', { className: 'space-y-2 max-h-[70vh] overflow-y-auto' },
+                MORE_PAGES.map((m) =>
+                  h('a', { key: m.id, href: m.href, className: 'w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left' },
+                    h('div', { className: 'w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0' }, m.icon),
+                    h('div', { className: 'min-w-0' },
+                      h('div', { className: 'text-[13px] font-extrabold font-display' }, m.label),
+                      h('div', { className: 'text-[10px] text-white/40 font-bold mt-0.5' }, m.desc)
+                    )
+                  )
+                )
+              )
+            )
+          ),
+          toast && h('div', {
+            className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
+              (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')
+          }, toast.msg)
+        )
+      );
+    }
+
+    class ErrorBoundary extends React.Component {
+      constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+      static getDerivedStateFromError(error) { return { hasError: true, error: error }; }
+      componentDidCatch(error, info) { console.error('ErrorBoundary caught:', error, info); }
+      render() {
+        if (this.state.hasError) {
+          return h('div', { style: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', padding: '24px', textAlign: 'center', background: '#08080B', color: '#F87171', fontFamily: 'monospace', fontSize: '12px' } },
+            h('div', { style: { fontSize: '32px' } }, '⚠️'),
+            h('div', { style: { fontWeight: 'bold' } }, 'Something went wrong'),
+            h('div', { style: { opacity: 0.6, wordBreak: 'break-word' } }, String((this.state.error && this.state.error.message) || 'Unknown error')),
+            h('button', { style: { marginTop: '12px', padding: '8px 16px', background: '#FFD60A', color: '#000', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }, onClick: () => window.location.reload() }, 'Reload')
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(ErrorBoundary, null, h(App)));
+  </script>
+</body>
+</html>
