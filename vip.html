@@ -10,8 +10,10 @@
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js'"></script>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -57,6 +59,12 @@
     .vip-shine { position: relative; overflow: hidden; }
     .vip-shine::after { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,214,10,0.2), transparent); animation: shine 3s infinite; }
     @keyframes shine { 0% { left: -100%; } 100% { left: 200%; } }
+    
+    .marquee { animation: marquee 20s linear infinite; white-space: nowrap; }
+    @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+
+    @keyframes flashRed { 0%, 100% { background-color: transparent; } 50% { background-color: rgba(239, 68, 68, 0.4); } }
+    .flash-red { animation: flashRed 0.5s 3; }
   </style>
 </head>
 <body>
@@ -85,7 +93,34 @@
     const auth = firebase.auth();
 
     const MAX_E = 100;
-    const VIP_COST = 5000; // ₦5,000 Real
+    const VIP_COST = 5000;
+
+    const VIP_USERS = [
+      { name: 'Geh Geh', emoji: '🕶️' },
+      { name: 'Peller', emoji: '💸' },
+      { name: 'Obi Cubana', emoji: '🎩' },
+      { name: 'E-Money', emoji: '💰' },
+      { name: 'Mompha', emoji: '⌚' },
+      { name: 'Cubana Chief Priest', emoji: '🍾' }
+    ];
+
+    const FAKE_REPLIES = [
+      "Chai! See balling 🤑",
+      "Odogwu! You too much 🔥",
+      "Na you dey reign 👑",
+      "Make we link up later 🤝",
+      "Money na water 💸",
+      "This guy don blow! 🚀",
+      "I respect your hustle 💪"
+    ];
+
+    const OPPRESSION_FEED = [
+      "Obi Cubana just sprayed ₦500M on dancers! 🤑",
+      "E-Money bought the whole club a bottle of Ace of Spades 🍾",
+      "Mompha just tipped the DJ ₦50M for playing his song 🎧",
+      "Geh Geh just bought a Ferrari for his dog 🐕🏎️",
+      "Peller sprayed 100 million fake dollars to the crowd 💸"
+    ];
 
     const getCachedData = () => {
       try {
@@ -97,7 +132,7 @@
         name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
-        taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
+        taps: 0, clout: 0, goldName: false, isVip: false, vipTitle: 'Big Boy', lastSeen: Date.now(),
         transactions: []
       };
     };
@@ -114,7 +149,6 @@
     };
     const fmtReal = (n) => '₦' + (n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    /* ═══ AUDIO ENGINE ═══ */
     const AudioEngine = (() => {
       let ctx = null;
       function init() { if (ctx) return; ctx = new (window.AudioContext || window.webkitAudioContext)(); }
@@ -149,16 +183,23 @@
       const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
       
-      // VIP State
       const [chatLog, setChatLog] = useState([
         { sender: 'Geh Geh', text: 'Ah, see this one. You wan enter Big Boys Lounge? Make sure say your account balance dey heavy o.', emoji: '🕶️' },
-        { sender: 'Pella', text: 'This one na money na water. If you no get money, commot for here.', emoji: '💸' }
+        { sender: 'Peller', text: 'This one na money na water. If you no get money, commot for here.', emoji: '💸' }
       ]);
-      const [sprayAmt, setSprayAmt] = useState(100000);
+      
+      const [chatInput, setChatInput] = useState('');
+      const [isTyping, setIsTyping] = useState(false);
+      const [typingUser, setTypingUser] = useState('');
+
+      const [sprayAmt, setSprayAmt] = useState(10000000);
+      const [feedMsg, setFeedMsg] = useState(OPPRESSION_FEED[0]);
+      const [activeKings, setActiveKings] = useState(50);
+      const [customTitle, setCustomTitle] = useState('');
+      const [flashScreen, setFlashScreen] = useState(false);
       
       const chatEndRef = useRef(null);
 
-      // Firebase Sync
       useEffect(() => {
         const tg = window && window.Telegram && window.Telegram.WebApp;
         if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
@@ -175,7 +216,8 @@
                 const dbData = doc.data();
                 const newData = Object.assign({}, prev, dbData, {
                   transactions: dbData.transactions || [],
-                  isVip: dbData.isVip || false
+                  isVip: dbData.isVip || false,
+                  vipTitle: dbData.vipTitle || 'Big Boy'
                 });
                 try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
                 return newData;
@@ -185,7 +227,7 @@
                 name: (tgUser && tgUser.first_name) || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
-                taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
+                taps: 0, clout: 0, goldName: false, isVip: false, vipTitle: 'Big Boy', lastSeen: Date.now(),
                 transactions: []
               };
               userRef.set(defaultData).catch(() => {});
@@ -207,7 +249,34 @@
         if (chatEndRef.current) {
           chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
-      }, [chatLog]);
+      }, [chatLog, isTyping]);
+
+      // Random Oppression Feed
+      useEffect(() => {
+        const iv = setInterval(() => {
+          setFeedMsg(OPPRESSION_FEED[Math.floor(Math.random() * OPPRESSION_FEED.length)]);
+          setActiveKings(prev => prev + Math.floor(Math.random() * 3) - 1);
+        }, 5000);
+        return () => clearInterval(iv);
+      }, []);
+
+      // Fake Chat Bot Intervals
+      useEffect(() => {
+        if (!s.isVip) return;
+        const iv = setInterval(() => {
+          const randomUser = VIP_USERS[Math.floor(Math.random() * VIP_USERS.length)];
+          const randomMsgs = [
+            "Just bought a new G-Wagon to the club 🚙",
+            "Who is buying the next round of Azul? 🍾",
+            "Money na water 💸",
+            "I just sprayed 50M for my babe 💃🏾",
+            "This lounge too dry today, let's shut down Quilox 🚨"
+          ];
+          const msg = randomMsgs[Math.floor(Math.random() * randomMsgs.length)];
+          setChatLog(prev => [...prev.slice(-20), { sender: randomUser.name, text: msg, emoji: randomUser.emoji }]);
+        }, 12000);
+        return () => clearInterval(iv);
+      }, [s.isVip]);
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
@@ -238,46 +307,94 @@
         try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
       };
 
-      const chatWithBot = (bot) => {
+      const sendMessage = () => {
+        if (!chatInput.trim()) return;
+        
+        const newMsg = { sender: 'You', text: chatInput.trim(), emoji: '👤' };
+        setChatLog(prev => [...prev, newMsg]);
+        setChatInput('');
         AudioEngine.tap();
-        let reply = '';
-        if (bot === 'Geh Geh') {
-          const replies = [
-            "You never get money, you wan enter Big Boys Lounge? 😂",
-            "My guy, make you go hustle. This place no be for broke people.",
-            "See as your account dey dry. Go and buy business!",
-            "Odogwu! You dey try. But you still need more money."
-          ];
-          reply = replies[Math.floor(Math.random() * replies.length)];
-        } else {
-          const replies = [
-            "Money na water 💸",
-            "If you no get money, you no get respect.",
-            "This one na real ballers lounge. No fake life allowed.",
-            "Pella don talk am. Money must be made!"
-          ];
-          reply = replies[Math.floor(Math.random() * replies.length)];
-        }
 
-        setChatLog(prev => [...prev, { sender: 'You', text: 'Talk to ' + bot, emoji: '👤' }]);
+        // Trigger fake reply
         setTimeout(() => {
-          setChatLog(prev => [...prev, { sender: bot, text: reply, emoji: bot === 'Geh Geh' ? '🕶️' : '💸' }]);
-        }, 1000);
+          const randomUser = VIP_USERS[Math.floor(Math.random() * VIP_USERS.length)];
+          setTypingUser(randomUser.name);
+          setIsTyping(true);
+
+          setTimeout(() => {
+            setIsTyping(false);
+            const reply = FAKE_REPLIES[Math.floor(Math.random() * FAKE_REPLIES.length)];
+            setChatLog(prev => [...prev, { sender: randomUser.name, text: reply, emoji: randomUser.emoji }]);
+          }, 2000);
+        }, 500);
       };
 
+      // REAL MONEY ACTIONS
+      const buyDrinks = () => {
+        if ((s.real || 0) < 500) { AudioEngine.error(); return notify('Need ₦500 real 💸', 'bad'); }
+        updateUser({ real: s.real - 500, clout: (s.clout || 0) + 200 });
+        AudioEngine.coin();
+        setChatLog(prev => [...prev, { sender: 'SYSTEM', text: '🍾 ' + (s.name || 'You') + ' just bought a round of drinks for the whole lounge! Everyone is hailing you!', emoji: '🍾' }]);
+        notify('You bought drinks! +200 Clout 🍾');
+      };
+
+      const hireBodyguard = () => {
+        if ((s.real || 0) < 1000) { AudioEngine.error(); return notify('Need ₦1,000 real 💸', 'bad'); }
+        updateUser({ real: s.real - 1000, clout: (s.clout || 0) + 300 });
+        AudioEngine.vip();
+        setChatLog(prev => [...prev, { sender: 'SYSTEM', text: '🛡️ ' + (s.name || 'You') + ' just hired 5 bodyguards! Nobody can touch you in this lounge!', emoji: '🛡️' }]);
+        notify('Bodyguards hired! +300 Clout 🛡️');
+      };
+
+      const hijackDJ = () => {
+        if ((s.real || 0) < 200) { AudioEngine.error(); return notify('Need ₦200 real 💸', 'bad'); }
+        updateUser({ real: s.real - 200, clout: (s.clout || 0) + 100 });
+        AudioEngine.vip();
+        setChatLog(prev => [...prev, { sender: 'SYSTEM', text: '🚨 ' + (s.name || 'You') + ' hijacked the DJ! The whole club is playing your song!', emoji: '🎧' }]);
+        notify('You hijacked the DJ! 🎧');
+      };
+
+      const shutDownClub = () => {
+        if ((s.real || 0) < 2000) { AudioEngine.error(); return notify('Need ₦2,000 real 💸', 'bad'); }
+        updateUser({ real: s.real - 2000, clout: (s.clout || 0) + 1000 });
+        AudioEngine.error();
+        setFlashScreen(true);
+        setTimeout(() => setFlashScreen(false), 2000);
+        setChatLog(prev => [...prev, { sender: 'SYSTEM', text: '🚨 BREAKING: ' + (s.name || 'You') + ' just SHUT DOWN THE CLUB with real money! The party has stopped!', emoji: '🚨' }]);
+        notify('YOU SHUT DOWN THE CLUB! 🚨');
+      };
+
+      const setTitle = () => {
+        if (!customTitle.trim()) return notify('Enter a title first', 'bad');
+        if ((s.real || 0) < 500) { AudioEngine.error(); return notify('Need ₦500 real 💸', 'bad'); }
+        updateUser({ real: s.real - 500, vipTitle: customTitle });
+        notify('Title updated to ' + customTitle + ' 👑');
+        AudioEngine.coin();
+      };
+
+      // FAKE MONEY ACTIONS
       const sprayMoney = () => {
         if (s.cash < sprayAmt) { AudioEngine.error(); return notify('You no get money for spray 💸', 'bad'); }
-        
-        updateUser({ 
-          cash: s.cash - sprayAmt, 
-          clout: (s.clout || 0) + 500 
-        });
-        
+        updateUser({ cash: s.cash - sprayAmt, clout: (s.clout || 0) + 500 });
         AudioEngine.coin();
-        notify('You sprayed ' + fmt(sprayAmt) + ' in the VIP Lounge! +500 Clout 🔥');
-        
-        // Add to chat feed
-        setChatLog(prev => [...prev, { sender: 'System', text: '👑 ' + (s.name || 'You') + ' just sprayed ' + fmt(sprayAmt) + ' for the Big Boys Lounge!', emoji: '💸' }]);
+        setChatLog(prev => [...prev, { sender: 'SYSTEM', text: '👑 ' + (s.name || 'You') + ' just sprayed ' + fmt(sprayAmt) + ' for the Big Boys Lounge!', emoji: '💸' }]);
+        notify('You sprayed ' + fmt(sprayAmt) + '! +500 Clout 🔥');
+      };
+
+      const buyTable = () => {
+        if (s.cash < 50000000) { AudioEngine.error(); return notify('Need ₦50M fake 💸', 'bad'); }
+        updateUser({ cash: s.cash - 50000000, clout: (s.clout || 0) + 300 });
+        AudioEngine.vip();
+        setChatLog(prev => [...prev, { sender: 'SYSTEM', text: '🪑 ' + (s.name || 'You') + ' just bought the biggest VIP table for ₦50M! Area boys are guiding it!', emoji: '🪑' }]);
+        notify('Table bought! +300 Clout 🪑');
+      };
+
+      const sendSapaAlert = () => {
+        if (s.cash < 5000000) { AudioEngine.error(); return notify('Need ₦5M fake 💸', 'bad'); }
+        updateUser({ cash: s.cash - 5000000, clout: (s.clout || 0) + 100 });
+        AudioEngine.error();
+        setChatLog(prev => [...prev, { sender: 'SYSTEM', text: '😂 ' + (s.name || 'You') + ' just sent a Sapa Alert to everybody in the lounge! "Make una no sleep o!"', emoji: '😂' }]);
+        notify('Sapa Alert sent! 😂');
       };
 
       if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
@@ -288,17 +405,7 @@
         { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
         { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
         { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
-        { id: 'more', label: 'More', icon: '⋯', href: '#' },
-      ];
-      const MORE_PAGES = [
-        { id: 'bet', label: 'Bet Center', icon: '🎰', desc: 'Aviator, Bet9ja, Whot', href: 'bet.html' },
-        { id: 'babe', label: 'Babe Wahala', icon: '👩🏾‍❤️‍👨🏾', desc: 'Billing, DNA Test, Breakup', href: 'babe.html' },
-        { id: 'vip', label: 'Big Boys Lounge', icon: '👑', desc: 'VIP, Geh Geh, Gold Name', href: 'vip.html' },
-        { id: 'politics', label: 'Politics & BBN', icon: '🎩', desc: 'Elections, Big Brother', href: 'politics.html' },
-        { id: 'madness', label: 'Madness & Ritual', icon: '🍃', desc: 'Smoke Loud, Ritual, Kidnap', href: 'madness.html' },
-        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
-        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
-        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
 
       // --- LOCKED SCREEN ---
@@ -323,7 +430,7 @@
               h('div', { className: 'text-7xl mb-4' }, '🔒'),
               h('h1', { className: 'text-2xl font-black text-[#FFD60A] font-display mb-2' }, 'VIP ACCESS ONLY'),
               h('p', { className: 'text-[12px] text-white/50 leading-relaxed mb-6 max-w-xs' }, 
-                'This is the Big Boys Lounge. Only true ballers can enter. Unlock exclusive perks, Gold Name with Crown 👑, 2x Hustle Speed, No Agbero Tax, and chat with Geh Geh & Pella.'
+                'This is the Big Boys Lounge. Only true ballers can enter. Unlock exclusive perks, Gold Name with Crown 👑, 2x Hustle Speed, and chat with real billionaires.'
               ),
               
               h(Card, { className: 'w-full p-5 text-left mb-6' },
@@ -338,11 +445,11 @@
                   ),
                   h('div', { className: 'flex items-center gap-2' },
                     h('span', { className: 'text-green-400' }, '✅'),
-                    h('span', { className: 'text-[12px] font-bold' }, 'No Agbero Tax')
+                    h('span', { className: 'text-[12px] font-bold' }, 'Exclusive Group Chat with Geh Geh & Peller')
                   ),
                   h('div', { className: 'flex items-center gap-2' },
                     h('span', { className: 'text-green-400' }, '✅'),
-                    h('span', { className: 'text-[12px] font-bold' }, 'Chat with Geh Geh & Pella')
+                    h('span', { className: 'text-[12px] font-bold' }, 'Send Oppression to the Feed')
                   )
                 )
               ),
@@ -361,30 +468,12 @@
                   const active = n.id === 'more';
                   return h('a', {
                     key: n.id, href: n.href,
-                    onClick: (e) => { if (n.id === 'more') { e.preventDefault(); const el = document.getElementById('more-sheet'); if (el) el.classList.remove('hidden'); } },
                     className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')
                   },
                     h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
                     h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
                   );
                 })
-              )
-            ),
-            h('div', { id: 'more-sheet', className: 'hidden fixed inset-0 z-50 flex items-end justify-center' },
-              h('div', { className: 'absolute inset-0 bg-black/70 backdrop-blur-sm', onClick: () => { const el = document.getElementById('more-sheet'); if (el) el.classList.add('hidden'); } }),
-              h('div', { className: 'relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp', onClick: (e) => e.stopPropagation() },
-                h('div', { className: 'w-10 h-1 rounded-full bg-white/15 mx-auto mb-4' }),
-                h('div', { className: 'space-y-2 max-h-[70vh] overflow-y-auto' },
-                  MORE_PAGES.map((m) =>
-                    h('a', { key: m.id, href: m.href, className: 'w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left' },
-                      h('div', { className: 'w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0' }, m.icon),
-                      h('div', { className: 'min-w-0' },
-                        h('div', { className: 'text-[13px] font-extrabold font-display' }, m.label),
-                        h('div', { className: 'text-[10px] text-white/40 font-bold mt-0.5' }, m.desc)
-                      )
-                    )
-                  )
-                )
               )
             ),
             toast && h('div', {
@@ -396,7 +485,7 @@
       }
 
       // --- VIP INSIDE SCREEN ---
-      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black ' + (flashScreen ? 'flash-red' : '') },
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
           h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
             h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
@@ -407,18 +496,30 @@
                   h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + fmt(s.cash))
                 )
               ),
-              h('div', { className: 'flex items-center gap-1.5 shrink-0' },
-                h('div', { className: 'px-2 py-1 rounded-lg bg-[#FFD60A]/20 border border-[#FFD60A]/30 text-[#FFD60A] text-[10px] font-extrabold tabular-nums' }, '🔥 ' + (s.clout || 0))
+              h('div', { className: 'flex flex-col items-end shrink-0' },
+                h('div', { className: 'flex items-center gap-1 text-[9px] text-green-400 font-bold' },
+                  h('span', { className: 'w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse glow-dot' }),
+                  activeKings + ' Kings Active'
+                ),
+                h('div', { className: 'px-2 py-1 rounded-lg bg-[#FFD60A]/20 border border-[#FFD60A]/30 text-[#FFD60A] text-[10px] font-extrabold tabular-nums mt-1' }, '🔥 ' + (s.clout || 0))
               )
             )
           ),
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
             
+            // OPPRESSION FEED TICKER
+            h('div', { className: 'mt-3 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center gap-2 overflow-hidden' },
+              h('span', { className: 'text-sm shrink-0 animate-pulse' }, '📡'),
+              h('div', { className: 'flex-1 overflow-hidden relative h-5' },
+                h('div', { className: 'absolute text-[10.5px] font-bold text-[#FFD60A] whitespace-nowrap marquee', key: feedMsg }, feedMsg)
+              )
+            ),
+
             // VIP STATUS CARD
             h(Card, { className: 'vip-shine p-4 mt-3 text-center', vip: true },
               h('div', { className: 'text-4xl mb-1' }, '👑'),
-              h('div', { className: 'text-[16px] font-black text-gradient-gold font-display' }, 'WELCOME, CHAIRMAN'),
+              h('div', { className: 'text-[16px] font-black text-gradient-gold font-display' }, 'WELCOME, ' + (s.vipTitle || 'BIG BOY')),
               h('div', { className: 'text-[10px] text-white/50 mt-1' }, 'You are officially a Big Boy. Enjoy the perks.'),
               h('div', { className: 'grid grid-cols-2 gap-2 mt-4' },
                 h('div', { className: 'bg-black/30 rounded-xl p-2 border border-[#FFD60A]/20' },
@@ -432,46 +533,67 @@
               )
             ),
 
-            // CHAT WITH GEH GEH / PELLA
-            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A] flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#FFD60A] animate-pulse glow-dot' }), 'LIVE') }, 'Exclusive Chat'),
-            h(Card, { className: 'p-3 h-64 flex flex-col' },
-              h('div', { className: 'flex-1 overflow-y-auto space-y-3 mb-3 pr-1' },
-                chatLog.map((chat, i) => 
-                  h('div', { key: i, className: 'flex items-start gap-2 ' + (chat.sender === 'You' ? 'flex-row-reverse' : '') },
+            // GROUP CHAT
+            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A] flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#FFD60A] animate-pulse glow-dot' }), 'LIVE CHAT') }, 'The Lounge'),
+            h(Card, { className: 'p-3 h-80 flex flex-col' },
+              h('div', { className: 'flex-1 overflow-y-auto space-y-3 mb-2 pr-1' },
+                chatLog.map((chat, i) => {
+                  if (chat.sender === 'SYSTEM') {
+                    return h('div', { key: i, className: 'bg-[#FFD60A]/10 border border-[#FFD60A]/30 text-[#FFD60A] font-bold italic text-center w-full rounded-xl px-3 py-2 text-[11px]' }, chat.text);
+                  }
+                  const isMe = chat.sender === 'You';
+                  return h('div', { key: i, className: 'flex items-start gap-2 ' + (isMe ? 'flex-row-reverse' : '') },
                     h('div', { className: 'w-7 h-7 rounded-full bg-white/[0.1] grid place-items-center text-sm shrink-0' }, chat.emoji),
-                    h('div', { className: 'max-w-[80%] rounded-xl px-3 py-2 text-[11px] ' + 
-                      (chat.sender === 'You' ? 'bg-[#FFD60A]/20 text-[#FFD60A]' : chat.sender === 'System' ? 'bg-red-500/20 text-red-300 italic text-center w-full' : 'bg-white/[0.06] text-white/80') },
-                      chat.sender !== 'You' && chat.sender !== 'System' && h('div', { className: 'font-bold text-[9px] mb-0.5 opacity-60' }, chat.sender),
+                    h('div', { className: 'max-w-[80%] rounded-xl px-3 py-2 text-[11px] ' + (isMe ? 'bg-[#FFD60A]/20 text-[#FFD60A]' : 'bg-white/[0.06] text-white/80') },
+                      !isMe && h('div', { className: 'font-bold text-[9px] mb-0.5 opacity-60' }, chat.sender),
                       chat.text
                     )
-                  )
-                ),
+                  );
+                }),
+                isTyping && h('div', { className: 'text-[10px] text-white/40 italic px-2' }, typingUser + ' is typing...'),
                 h('div', { ref: chatEndRef })
               ),
+              // CHAT INPUT
               h('div', { className: 'flex gap-2' },
-                h('button', { onClick: () => chatWithBot('Geh Geh'), className: 'flex-1 py-2 rounded-lg bg-white/[0.06] text-[10px] font-bold text-white/70 active:scale-95 transition' }, 'Talk to Geh Geh'),
-                h('button', { onClick: () => chatWithBot('Pella'), className: 'flex-1 py-2 rounded-lg bg-white/[0.06] text-[10px] font-bold text-white/70 active:scale-95 transition' }, 'Talk to Pella')
+                h('input', {
+                  value: chatInput,
+                  onChange: (e) => setChatInput(e.target.value),
+                  onKeyDown: (e) => { if (e.key === 'Enter') sendMessage(); },
+                  placeholder: 'Type a message...',
+                  className: 'flex-1 rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2 text-[12px] text-white placeholder-white/30 focus:border-[#FFD60A]/50 transition'
+                }),
+                h('button', { onClick: sendMessage, className: 'px-4 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[11px] active:scale-95 transition' }, 'Send')
               )
             ),
 
-            // PRIVATE SPRAY PARTY
-            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-white/30' }, 'Flex your money') }, 'Private Spray Party'),
+            // REAL MONEY OPPRESSION
+            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-green-400' }, 'Pay to Oppress') }, 'Real Money Flexes'),
             h(Card, { className: 'p-4' },
-              h('div', { className: 'text-[11px] text-white/50 mb-3' }, 'Spray fake money in the lounge to gain massive Clout. Everyone will see your name.'),
-              h('div', { className: 'flex justify-between items-end mb-2' },
-                h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Spray Amount'),
-                h('div', { className: 'text-[10px] text-white/40 tabular-nums' }, 'Cash: ' + fmt(s.cash))
+              h('div', { className: 'grid grid-cols-2 gap-2 mb-3' },
+                h('button', { onClick: buyDrinks, className: 'py-2.5 rounded-xl bg-green-500/20 border border-green-500/30 text-green-400 font-bold text-[10px] active:scale-95 transition' }, 'Buy Drinks (₦500)'),
+                h('button', { onClick: hireBodyguard, className: 'py-2.5 rounded-xl bg-blue-500/20 border border-blue-500/30 text-blue-400 font-bold text-[10px] active:scale-95 transition' }, 'Bodyguard (₦1K)'),
+                h('button', { onClick: hijackDJ, className: 'py-2.5 rounded-xl bg-purple-500/20 border border-purple-500/30 text-purple-400 font-bold text-[10px] active:scale-95 transition' }, 'Hijack DJ (₦200)'),
+                h('button', { onClick: shutDownClub, className: 'py-2.5 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 font-bold text-[10px] active:scale-95 transition' }, 'Shut Club (₦2K)')
               ),
-              h('input', {
-                type: 'number', value: sprayAmt, onChange: (e) => setSprayAmt(Math.floor(Number(e.target.value))),
-                className: 'w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[18px] font-black text-white focus:border-[#FFD60A]/50 transition tabular-nums'
-              }),
-              h('div', { className: 'flex gap-2 mt-2' },
-                [100000, 1000000, 10000000].map(amt => 
-                  h('button', { key: amt, onClick: () => setSprayAmt(amt), className: 'flex-1 py-1.5 rounded-lg bg-white/[0.06] text-[10px] font-bold text-white/60 active:bg-white/[0.1] transition' }, fmt(amt))
-                )
+              h('div', { className: 'flex gap-2' },
+                h('input', {
+                  value: customTitle, onChange: (e) => setCustomTitle(e.target.value),
+                  placeholder: 'Custom Title (e.g. Odogwu)',
+                  className: 'flex-1 rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2 text-[12px] text-white focus:border-[#FFD60A]/50 transition'
+                }),
+                h('button', { onClick: setTitle, className: 'px-4 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[11px] active:scale-95 transition' }, 'Set ₦500')
+              )
+            ),
+
+            // FAKE MONEY FLEX
+            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-white/30' }, 'Spray Money') }, 'Fake Flexes'),
+            h(Card, { className: 'p-4' },
+              h('div', { className: 'grid grid-cols-3 gap-2 mb-3' },
+                h('button', { onClick: buyTable, className: 'py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 font-bold text-[10px] active:scale-95 transition' }, 'Buy Table'),
+                h('button', { onClick: () => setSprayAmt(10000000), className: 'py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 font-bold text-[10px] active:scale-95 transition' }, '10M Spray'),
+                h('button', { onClick: sendSapaAlert, className: 'py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 font-bold text-[10px] active:scale-95 transition' }, 'Sapa Alert')
               ),
-              h('button', { onClick: sprayMoney, className: 'w-full mt-4 py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[13px] shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)] active:scale-95 transition' }, '💸 SPRAY MONEY')
+              h('button', { onClick: sprayMoney, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[13px] shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)] active:scale-95 transition' }, '💸 SPRAY MONEY')
             )
           ),
 
@@ -482,7 +604,6 @@
                 const active = n.id === 'more';
                 return h('a', {
                   key: n.id, href: n.href,
-                  onClick: (e) => { if (n.id === 'more') { e.preventDefault(); const el = document.getElementById('more-sheet'); if (el) el.classList.remove('hidden'); } },
                   className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')
                 },
                   h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
@@ -491,23 +612,7 @@
               })
             )
           ),
-          h('div', { id: 'more-sheet', className: 'hidden fixed inset-0 z-50 flex items-end justify-center' },
-            h('div', { className: 'absolute inset-0 bg-black/70 backdrop-blur-sm', onClick: () => { const el = document.getElementById('more-sheet'); if (el) el.classList.add('hidden'); } }),
-            h('div', { className: 'relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp', onClick: (e) => e.stopPropagation() },
-              h('div', { className: 'w-10 h-1 rounded-full bg-white/15 mx-auto mb-4' }),
-              h('div', { className: 'space-y-2 max-h-[70vh] overflow-y-auto' },
-                MORE_PAGES.map((m) =>
-                  h('a', { key: m.id, href: m.href, className: 'w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left' },
-                    h('div', { className: 'w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0' }, m.icon),
-                    h('div', { className: 'min-w-0' },
-                      h('div', { className: 'text-[13px] font-extrabold font-display' }, m.label),
-                      h('div', { className: 'text-[10px] text-white/40 font-bold mt-0.5' }, m.desc)
-                    )
-                  )
-                )
-              )
-            )
-          ),
+          
           toast && h('div', {
             className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
               (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')
