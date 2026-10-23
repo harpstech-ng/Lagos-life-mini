@@ -10,8 +10,10 @@
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js'"></script>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -32,18 +34,8 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-    html, body {
-      margin: 0; padding: 0;
-      background: #08080B; color: #fff;
-      overflow-x: hidden; overscroll-behavior-y: none;
-      font-family: 'Inter', system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
-    body {
-      background-image:
-        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(34,197,94,0.08), transparent),
-        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,214,10,0.05), transparent);
-    }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(34,197,94,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,214,10,0.05), transparent); }
     ::-webkit-scrollbar { width: 0; height: 0; }
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
     .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
@@ -61,12 +53,12 @@
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    input { -webkit-user-select: text; user-select: text; }
+    input:focus { outline: none; }
     
-    /* Chat bubbles */
     .chat-bubble-left { border-radius: 16px 16px 16px 4px; }
     .chat-bubble-right { border-radius: 16px 16px 4px 16px; }
     
-    /* Typing dots */
     .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
     .typing-dot:nth-child(1) { animation-delay: -0.32s; }
     .typing-dot:nth-child(2) { animation-delay: -0.16s; }
@@ -100,77 +92,85 @@
 
     const MAX_E = 100;
 
+    const YAHOO_RANKS = [
+      { min: 0, name: 'Small Boy', color: 'text-gray-400' },
+      { min: 3, name: 'Yahoo Boy', color: 'text-green-400' },
+      { min: 6, name: 'Gboy', color: 'text-cyan-400' },
+      { min: 10, name: 'Odogwu of Yahoo', color: 'text-[#FFD60A]' },
+      { min: 20, name: 'Aje Butler', color: 'text-purple-400' }
+    ];
+
     const CLIENTS = [
       {
-        id: 'amira',
-        name: 'Amira Gold',
-        avatar: '👩🏽‍💼',
-        country: 'Dubai 🇦🇪',
-        initialMsg: "Hello dear. I am Amira Gold, a businesswoman in Dubai. I want to invest $10,000 in your hustle. Send me your account details so I can transfer.",
+        id: 'amira', name: 'Amira Gold', avatar: '👩🏽‍💼', country: 'Dubai 🇦🇪',
+        initialMsg: "Hello dear. I am Amira Gold from Dubai. I want to invest $10,000 in your hustle. Send account details.",
         options: [
-          { label: "Send fake account details", result: "win", amount: 5000000, msg: "Amira transferred $10k! You cashed out ₦5M. She don fall for your trap! 💸" },
-          { label: "Send real account details", result: "scam", amount: -500000, msg: "Amira hacked your account and cleared your money. You lost ₦500k! 😭" },
-          { label: "Ignore her", result: "neutral", amount: 0, msg: "You ignored Amira. She moved to the next guy. Safe move." }
+          { label: "Send fake account details", result: "win", amount: 5000000, msg: "Amira transferred $10k! You cashed out ₦5M. She don fall for your trap! 💸", heat: 15 },
+          { label: "Send real account", result: "scam", amount: -500000, msg: "Amira hacked your account and cleared your money. You lost ₦500k! 😭", heat: 0 },
+          { label: "Ignore", result: "neutral", amount: 0, msg: "You ignored Amira. Safe move.", heat: -5 }
         ]
       },
       {
-        id: 'elon',
-        name: 'Elon Musk',
-        avatar: '🧑🏼‍💼',
-        country: 'USA 🇺🇸',
-        initialMsg: "Hey! It's Elon. I'm doing a BTC doubler event this weekend. Send 0.1 BTC and get 0.2 BTC back instantly. This is for my Lagos fans!",
+        id: 'chinese', name: 'Mr. Wang', avatar: '🇨🇳', country: 'China 🇨🇳',
+        initialMsg: "I want to buy land in Mushin for my gold mine. I will pay $50,000. Send your bank details.",
         options: [
-          { label: "Send 0.1 BTC", result: "scam", amount: -2000000, msg: "It wasn't Elon. It was a scammer from Aba. You lost ₦2M! 😭" },
-          { label: "Ask for proof", result: "win", amount: 3000000, msg: "You challenged him and caught him lying. His team paid you off to keep quiet. +₦3M 🤑" },
-          { label: "Ignore", result: "neutral", amount: 0, msg: "You ignored. Elon might be real, but you never know." }
+          { label: "Sell him fake coordinates", result: "win", amount: 8000000, msg: "He paid! You sold him a fake map to a public toilet. 🤑", heat: 25 },
+          { label: "Ask for visa first", result: "scam", amount: -100000, msg: "He charged you ₦100k for visa processing and blocked you. 😭", heat: 0 },
+          { label: "Ignore", result: "neutral", amount: 0, msg: "You ignored. Safe.", heat: -5 }
         ]
       },
       {
-        id: 'fbi',
-        name: 'FBI John',
-        avatar: '🕵️‍♂️',
-        country: 'Washington 🇺🇸',
-        initialMsg: "This is Agent John from the FBI Cyber Division. Your IP address has been flagged for fraud. Pay a fine of $500 or we will issue a warrant for your arrest.",
+        id: 'doctor', name: 'Dr. Smith', avatar: '🧑🏼‍⚕️', country: 'UK 🇬🇧',
+        initialMsg: "My patient died and left $5M. I want to transfer it to your account. You keep 30%.",
         options: [
-          { label: "Pay the fine ($500)", result: "scam", amount: -500000, msg: "It was a scam! The FBI doesn't accept mobile transfers. You lost ₦500k." },
-          { label: "Tell him to come and arrest you", result: "win", amount: 1000000, msg: "He was a fake agent. He got scared and sent you ₦1M to delete his number! 😂" },
-          { label: "Ignore", result: "neutral", amount: 0, msg: "You ignored FBI John. Good choice." }
+          { label: "Send account details", result: "win", amount: 15000000, msg: "Dr. Smith transferred the $5M! You got ₦15M. 💰", heat: 30 },
+          { label: "Ask for $1k upfront", result: "scam", amount: -50000, msg: "He asked you to pay for transfer fees. It was a scam. 😭", heat: 0 },
+          { label: "Report to Interpol", result: "neutral", amount: 0, msg: "You reported him. Nothing happened.", heat: -10 }
         ]
       },
       {
-        id: 'patience',
-        name: 'Sugar Mummy Patience',
-        avatar: '👵🏾',
-        country: 'Lekki 🇳🇬',
-        initialMsg: "Hello my dear boy. I am Mummy Patience from Lekki. My husband is a politician and he is always travelling. I need a young guy to spoil with money. Send me your WhatsApp.",
+        id: 'crypto', name: 'Crypto Bro', avatar: '🧑🏾‍💻', country: 'Lagos 🇳🇬',
+        initialMsg: "Bro, this new coin ($LAGOS) is going to the moon. Invest ₦100k and make ₦1M next week.",
         options: [
-          { label: "Send your WhatsApp", result: "win", amount: 2000000, msg: "Mummy Patience was real! She sent you ₦2M for shopping. You don hammer! 💰" },
-          { label: "Ask for money first", result: "scam", amount: -100000, msg: "She asked you to pay ₦100k for delivery of the iPhone she promised. It was a scam. 😭" },
-          { label: "Run away", result: "neutral", amount: 0, msg: "You ran away. Better safe than sorry." }
+          { label: "Sell him fake coin", result: "win", amount: 3000000, msg: "You created a fake coin and he bought it for ₦3M! 🚀", heat: 20 },
+          { label: "Invest in his coin", result: "scam", amount: -100000, msg: "The coin rugged. You lost ₦100k. 😭", heat: 0 },
+          { label: "Laugh at him", result: "neutral", amount: 0, msg: "You laughed at him. He blocked you.", heat: -5 }
         ]
       },
       {
-        id: 'pastor',
-        name: 'Pastor Blessing',
-        avatar: '🧑🏾‍🦳',
-        country: 'Ikeja 🇳🇬',
-        initialMsg: "My son, the Lord has shown me a vision about your hustle. Sow a seed of ₦30,000 and God will double your hustle this month. Send to this account.",
+        id: 'babe', name: 'Desperate Babe', avatar: '👩🏾', country: 'Ikeja 🇳🇬',
+        initialMsg: "Babe, my account is blocked. I need ₦50k for transport to see you. I'll pay back.",
         options: [
-          { label: "Sow the seed", result: "scam", amount: -30000, msg: "Pastor used your seed to buy a Benz. You lost ₦30k. Pastor post am for feed: 'Thanks for your seed!' 😭" },
-          { label: "Rebuke the pastor", result: "win", amount: 50000, msg: "You shouted 'Fire!' and the pastor sent you ₦50k to avoid trouble. 😂" },
-          { label: "Ignore", result: "neutral", amount: 0, msg: "You ignored the pastor. Your hustle is in God's hands." }
+          { label: "Tell her to trek", result: "win", amount: 100000, msg: "You told her to trek. She rained insults on you but you gained ₦100k clout! 😂", heat: 5 },
+          { label: "Send her the money", result: "scam", amount: -50000, msg: "She took the money and blocked you. 😭", heat: 0 },
+          { label: "Ignore", result: "neutral", amount: 0, msg: "You ignored. Safe.", heat: -5 }
         ]
       },
       {
-        id: 'efcc',
-        name: 'EFCC Officer',
-        avatar: '👮🏾‍♂️',
-        country: 'Abuja 🇳🇬',
-        initialMsg: "This is Officer Ibrahim from EFCC. We have evidence of your yahoo activities. Pay ₦100,000 settlement or we will post your face on our Instagram page.",
+        id: 'fbi', name: 'FBI John', avatar: '🕵️‍♂️', country: 'USA 🇺🇸',
+        initialMsg: "This is Agent John from the FBI. Your IP has been flagged for fraud. Pay a fine of $500 or we issue a warrant.",
         options: [
-          { label: "Pay ₦100k settlement", result: "scam", amount: -100000, msg: "You paid. He blocked you immediately. It was a scam! 😭" },
-          { label: "Send him your real face", result: "win", amount: 200000, msg: "He was a fake EFCC. He ran away when you sent a picture of a cultist. +₦200k for the scare! 🤑" },
-          { label: "Ignore", result: "neutral", amount: 0, msg: "You ignored. Real EFCC doesn't text you." }
+          { label: "Pay the fine ($500)", result: "scam", amount: -500000, msg: "It was a scam! You lost ₦500k.", heat: 0 },
+          { label: "Tell him to arrest you", result: "win", amount: 1000000, msg: "He got scared and sent you ₦1M to delete his number! 😂", heat: 10 },
+          { label: "Ignore", result: "neutral", amount: 0, msg: "You ignored FBI John.", heat: -5 }
+        ]
+      },
+      {
+        id: 'pastor', name: 'Pastor Blessing', avatar: '🧑🏾‍🦳', country: 'Ikeja 🇳🇬',
+        initialMsg: "My son, the Lord has shown me a vision. Sow a seed of ₦30,000 and God will double your hustle.",
+        options: [
+          { label: "Sow the seed", result: "scam", amount: -30000, msg: "Pastor used your seed to buy a Benz. 😭", heat: 0 },
+          { label: "Rebuke the pastor", result: "win", amount: 50000, msg: "You shouted 'Fire!' and he sent you ₦50k to avoid trouble. 😂", heat: 5 },
+          { label: "Ignore", result: "neutral", amount: 0, msg: "You ignored the pastor.", heat: -5 }
+        ]
+      },
+      {
+        id: 'efcc', name: 'EFCC Officer', avatar: '👮🏾‍♂️', country: 'Abuja 🇳🇬',
+        initialMsg: "Officer Ibrahim from EFCC. Pay ₦100,000 settlement or we post your face on Instagram.",
+        options: [
+          { label: "Pay ₦100k settlement", result: "scam", amount: -100000, msg: "You paid. He blocked you immediately. Scam! 😭", heat: 0 },
+          { label: "Send him a cultist picture", result: "win", amount: 200000, msg: "He ran away! +₦200k for the scare! 🤑", heat: 10 },
+          { label: "Ignore", result: "neutral", amount: 0, msg: "Real EFCC doesn't text you.", heat: -5 }
         ]
       }
     ];
@@ -178,7 +178,10 @@
     const getCachedData = () => {
       try {
         const cached = localStorage.getItem("lagos_user_data");
-        if (cached) return JSON.parse(cached);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return Object.assign({}, parsed, { yahooWins: parsed.yahooWins || 0, heat: parsed.heat || 0 });
+        }
       } catch (e) {}
       const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
@@ -186,7 +189,7 @@
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
         taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
-        transactions: []
+        transactions: [], yahooWins: 0, heat: 0
       };
     };
 
@@ -201,7 +204,6 @@
       return s + '₦' + n.toLocaleString();
     };
 
-    /* ═══ AUDIO ENGINE ═══ */
     const AudioEngine = (() => {
       let ctx = null;
       function init() { if (ctx) return; ctx = new (window.AudioContext || window.webkitAudioContext)(); }
@@ -217,7 +219,8 @@
         tap: () => { init(); tone(880, 0.09, "triangle", 0, 0.28); },
         coin: () => { init(); tone(1046, 0.08, "square", 0, 0.15); tone(1318, 0.15, "square", 0.07, 0.15); },
         error: () => { init(); tone(220, 0.15, "sawtooth", 0, 0.25); tone(165, 0.25, "sawtooth", 0.1, 0.25); },
-        ping: () => { init(); tone(880, 0.1, "sine", 0, 0.3); tone(1108, 0.15, "sine", 0.1, 0.3); }
+        ping: () => { init(); tone(880, 0.1, "sine", 0, 0.3); tone(1108, 0.15, "sine", 0.1, 0.3); },
+        siren: () => { init(); tone(800, 0.4, "sawtooth", 0, 0.4); tone(600, 0.4, "sawtooth", 0.4, 0.4); tone(800, 0.4, "sawtooth", 0.8, 0.4); }
       };
     })();
 
@@ -237,17 +240,16 @@
       const [toast, setToast] = useState(null);
       const [feed, setFeed] = useState([]);
       
-      // Game State
-      const [inbox, setInbox] = useState([]); // Array of client objects waiting in inbox
-      const [activeChat, setActiveChat] = useState(null); // Current client object
-      const [chatHistory, setChatHistory] = useState([]); // Messages in current chat
+      const [inbox, setInbox] = useState([]); 
+      const [activeChat, setActiveChat] = useState(null); 
+      const [chatHistory, setChatHistory] = useState([]); 
       const [isTyping, setIsTyping] = useState(false);
-      const [gameState, setGameState] = useState('idle'); // idle, chatting, result
+      const [gameState, setGameState] = useState('idle'); 
+      const [raidModal, setRaidModal] = useState(false);
 
       const timerRef = useRef(null);
       const chatEndRef = useRef(null);
 
-      // Firebase Sync
       useEffect(() => {
         const tg = window && window.Telegram && window.Telegram.WebApp;
         if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
@@ -263,7 +265,9 @@
               setS(prev => {
                 const dbData = doc.data();
                 const newData = Object.assign({}, prev, dbData, {
-                  transactions: dbData.transactions || []
+                  transactions: dbData.transactions || [],
+                  yahooWins: dbData.yahooWins || 0,
+                  heat: dbData.heat || 0
                 });
                 try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
                 return newData;
@@ -274,7 +278,7 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
-                transactions: []
+                transactions: [], yahooWins: 0, heat: 0
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
@@ -307,29 +311,20 @@
         }
       };
 
-      // Spawn a new client
       const spawnClient = () => {
         if (gameState === 'chatting') return;
         const randomClient = CLIENTS[Math.floor(Math.random() * CLIENTS.length)];
-        
-        // Avoid spawning the same client twice in a row if active chat exists
         if (activeChat && activeChat.id === randomClient.id) return spawnClient();
-
         AudioEngine.ping();
         setInbox(prev => [{ ...randomClient, time: Date.now() }, ...prev]);
       };
 
-      // Auto-spawn clients every 15 seconds if idle
       useEffect(() => {
         if (gameState === 'chatting') {
           if (timerRef.current) clearInterval(timerRef.current);
           return;
         }
-
-        timerRef.current = setInterval(() => {
-          spawnClient();
-        }, 15000);
-
+        timerRef.current = setInterval(spawnClient, 15000);
         return () => clearInterval(timerRef.current);
       }, [gameState, activeChat]);
 
@@ -353,18 +348,25 @@
           setIsTyping(false);
           
           let finalAmount = option.amount;
+          let newHeat = Math.max(0, Math.min(100, (s.heat || 0) + (option.heat || 0)));
+
           if (option.result === 'win' && option.amount > 0) {
-            updateUser({ cash: s.cash + option.amount });
+            updateUser({ 
+              cash: s.cash + option.amount, 
+              yahooWins: (s.yahooWins || 0) + 1,
+              heat: newHeat
+            });
             AudioEngine.coin();
             notify('WON ' + fmt(option.amount) + ' 🤑');
             addFeed('💸 ' + (s.name || 'You') + ' scammed ' + activeChat.name + ' and gained ' + fmt(option.amount) + '!');
           } else if (option.result === 'scam' && option.amount < 0) {
-            finalAmount = Math.max(-s.cash, option.amount); // Don't go below 0
-            updateUser({ cash: s.cash + finalAmount });
+            finalAmount = Math.max(-s.cash, option.amount);
+            updateUser({ cash: s.cash + finalAmount, heat: newHeat });
             AudioEngine.error();
             notify('LOST ' + fmt(Math.abs(finalAmount)) + ' 😭', 'bad');
             addFeed('🚨 ' + (s.name || 'You') + ' got scammed by ' + activeChat.name + ' and lost ' + fmt(Math.abs(finalAmount)) + '!');
           } else {
+            updateUser({ heat: newHeat });
             notify('No gain, no loss.');
           }
 
@@ -377,7 +379,16 @@
           }]);
           
           setGameState('result');
-        }, 1500 + Math.random() * 1000); // 1.5 - 2.5s typing delay
+
+          // Check for EFCC Raid
+          if (newHeat >= 100) {
+            setTimeout(() => {
+              setRaidModal(true);
+              AudioEngine.siren();
+            }, 1000);
+          }
+
+        }, 1500 + Math.random() * 1000); 
       };
 
       const closeChat = () => {
@@ -385,6 +396,20 @@
         setChatHistory([]);
         setGameState('idle');
         AudioEngine.tap();
+      };
+
+      const blockClient = () => {
+        updateUser({ heat: Math.max(0, (s.heat || 0) - 10) });
+        notify('Client blocked. Heat reduced 📉');
+        closeChat();
+      };
+
+      const resolveRaid = async () => {
+        const bailAmount = Math.floor(s.cash * 0.3); // 30% of cash
+        updateUser({ cash: s.cash - bailAmount, heat: 0 });
+        setRaidModal(false);
+        notify('EFCC took ' + fmt(bailAmount) + ' as bail! 😭', 'bad');
+        closeChat();
       };
 
       if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
@@ -395,19 +420,10 @@
         { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
         { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
         { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
-        { id: 'more', label: 'More', icon: '⋯', href: '#' },
+        { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
-      const MORE_PAGES = [
-        { id: 'bet', label: 'Bet Center', icon: '🎰', desc: 'Aviator, Bet9ja, Whot', href: 'bet.html' },
-        { id: 'babe', label: 'Babe Wahala', icon: '👩🏾‍❤️‍👨🏾', desc: 'Billing, DNA Test, Breakup', href: 'babe.html' },
-        { id: 'vip', label: 'Big Boys Lounge', icon: '👑', desc: 'VIP, Geh Geh, Gold Name', href: 'vip.html' },
-        { id: 'politics', label: 'Politics & BBN', icon: '🎩', desc: 'Elections, Big Brother', href: 'politics.html' },
-        { id: 'madness', label: 'Madness & Ritual', icon: '🍃', desc: 'Smoke Loud, Ritual, Kidnap', href: 'madness.html' },
-        { id: 'client', label: 'Client Palava', icon: '💻', desc: 'Yahoo, Scam, EFCC', href: 'client.html' },
-        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
-        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
-        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
-      ];
+
+      const currentRank = [...YAHOO_RANKS].reverse().find(r => (s.yahooWins || 0) >= r.min) || YAHOO_RANKS[0];
 
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-green-500 selection:text-black' },
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
@@ -421,8 +437,12 @@
                   h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + fmt(s.cash))
                 )
               ),
-              h('div', { className: 'flex items-center gap-1.5 shrink-0' },
-                h('div', { className: 'px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums' }, '⚡ ' + (s.energy || 0))
+              h('div', { className: 'flex flex-col items-end shrink-0' },
+                h('div', { className: 'text-[9px] font-black ' + currentRank.color }, currentRank.name),
+                h('div', { className: 'w-16 h-2 rounded-full bg-white/10 overflow-hidden mt-1' },
+                  h('div', { className: 'h-full bg-gradient-to-r from-yellow-400 to-red-500 rounded-full transition-all', style: { width: Math.min(100, (s.heat || 0)) + '%' } })
+                ),
+                h('div', { className: 'text-[8px] text-white/40 font-bold mt-0.5' }, 'EFCC HEAT')
               )
             )
           ),
@@ -464,17 +484,16 @@
 
             // --- CHAT UI ---
             gameState !== 'idle' && activeChat && h('div', { className: 'mt-3 flex flex-col h-[calc(100vh-180px)]' },
-              // Chat Header
               h('div', { className: 'flex items-center gap-2 mb-2 p-2 bg-white/[0.04] rounded-xl border border-white/[0.08]' },
                 h('button', { onClick: closeChat, className: 'text-white/50 text-lg px-2' }, '←'),
                 h('div', { className: 'w-8 h-8 rounded-full bg-white/[0.1] grid place-items-center text-sm' }, activeChat.avatar),
-                h('div', null,
+                h('div', { className: 'flex-1 min-w-0' },
                   h('div', { className: 'text-[12px] font-extrabold font-display' }, activeChat.name),
                   h('div', { className: 'text-[9px] text-green-400' }, activeChat.country)
-                )
+                ),
+                h('button', { onClick: blockClient, className: 'px-2 py-1 rounded bg-red-500/20 text-red-400 text-[9px] font-bold active:scale-95' }, 'Block')
               ),
 
-              // Chat Messages
               h('div', { className: 'flex-1 overflow-y-auto space-y-3 p-2 bg-[#0A0A0F] rounded-xl border border-white/[0.05]' },
                 chatHistory.map((msg, i) => 
                   h('div', { key: i, className: 'flex ' + (msg.sender === 'me' ? 'justify-end' : 'justify-start') },
@@ -501,7 +520,6 @@
                 h('div', { ref: chatEndRef })
               ),
 
-              // Options
               h('div', { className: 'mt-2 space-y-2' },
                 gameState === 'chatting' && activeChat.options.map((opt, i) => 
                   h('button', { 
@@ -523,6 +541,17 @@
             )
           ),
 
+          // RAID MODAL
+          raidModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-red-900/90 backdrop-blur-md' }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-red-500/50 rounded-3xl p-5 animate-popIn text-center' },
+              h('div', { className: 'text-6xl mb-2 animate-bounce' }, '🚔'),
+              h('div', { className: 'text-[15px] font-black text-red-500 font-display' }, 'EFCC RAID!'),
+              h('p', { className: 'text-[12px] text-white/80 mt-2 mb-4' }, 'Your heat was too high! EFCC traced your IP and arrested you. You have to pay 30% of your cash as bail.'),
+              h('button', { onClick: resolveRaid, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-red-500 to-red-700 text-white font-black text-[13px] active:scale-95 transition' }, 'Pay Bail & Leave')
+            )
+          ),
+
           // Navigation
           h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
@@ -530,7 +559,6 @@
                 const active = n.id === 'more';
                 return h('a', {
                   key: n.id, href: n.href,
-                  onClick: (e) => { if (n.id === 'more') { e.preventDefault(); const el = document.getElementById('more-sheet'); if (el) el.classList.remove('hidden'); } },
                   className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-green-400 nav-active-pill' : 'text-white/35')
                 },
                   h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
@@ -539,23 +567,7 @@
               })
             )
           ),
-          h('div', { id: 'more-sheet', className: 'hidden fixed inset-0 z-50 flex items-end justify-center' },
-            h('div', { className: 'absolute inset-0 bg-black/70 backdrop-blur-sm', onClick: () => { const el = document.getElementById('more-sheet'); if (el) el.classList.add('hidden'); } }),
-            h('div', { className: 'relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp', onClick: (e) => e.stopPropagation() },
-              h('div', { className: 'w-10 h-1 rounded-full bg-white/15 mx-auto mb-4' }),
-              h('div', { className: 'space-y-2 max-h-[70vh] overflow-y-auto' },
-                MORE_PAGES.map((m) =>
-                  h('a', { key: m.id, href: m.href, className: 'w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left' },
-                    h('div', { className: 'w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0' }, m.icon),
-                    h('div', { className: 'min-w-0' },
-                      h('div', { className: 'text-[13px] font-extrabold font-display' }, m.label),
-                      h('div', { className: 'text-[10px] text-white/40 font-bold mt-0.5' }, m.desc)
-                    )
-                  )
-                )
-              )
-            )
-          ),
+
           toast && h('div', {
             className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
               (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-green-400 to-green-600 text-black')
