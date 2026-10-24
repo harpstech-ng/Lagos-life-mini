@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Lagos Life Mini — Marriage & Divorce</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            gold: "#FFD60A",
+            gold2: "#FFB800",
+            ink: "#08080B",
+            pink: "#EC4899",
+            red: "#EF4444"
+          },
+          fontFamily: {
+            sans: ["Inter", "system-ui", "sans-serif"],
+            display: ["Sora", "Inter", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(236,72,153,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(239,68,68,0.05), transparent); }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+    .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    .card-pink { background: linear-gradient(135deg, rgba(236,72,153,0.12) 0%, rgba(190,24,93,0.04) 100%); border: 1px solid rgba(236,72,153,0.25); box-shadow: 0 8px 30px -10px rgba(236,72,153,0.3); }
+    .card-red { background: linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(185,28,28,0.04) 100%); border: 1px solid rgba(239,68,68,0.25); box-shadow: 0 8px 30px -10px rgba(239,68,68,0.3); }
+    .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+    .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(236,72,153,0.2) 0%, rgba(236,72,153,0.05) 100%); border: 1px solid rgba(236,72,153,0.35); box-shadow: 0 0 25px rgba(236,72,153,0.25); }
+    .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    input { -webkit-user-select: text; user-select: text; }
+    input:focus { outline: none; }
+    
+    .court-bg { background-image: repeating-linear-gradient(45deg, rgba(239,68,68,0.05) 0, rgba(239,68,68,0.05) 2px, transparent 2px, transparent 8px); }
+    .chat-bubble-left { border-radius: 16px 16px 16px 4px; }
+    .chat-bubble-right { border-radius: 16px 16px 4px 16px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { console.error('Unhandled rejection:', e.reason); });
+  </script>
+
+  <script>
+    const { useState, useEffect, useRef } = React;
+    const h = React.createElement;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const MARRIAGE_COST = 10000000;
+    const SETTLE_COST = 5000000;
+
+    const getCachedData = () => {
+      try {
+        const cached = localStorage.getItem("lagos_user_data");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return Object.assign({}, parsed, {
+            marriage: parsed.marriage || { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 },
+            gender: parsed.gender || 'boy'
+          });
+        }
+      } catch (e) {}
+      const tg = window && window.Telegram && window.Telegram.WebApp;
+      return {
+        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        cash: 25000, real: 0, energy: 100,
+        lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
+        taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
+        transactions: [], marriage: { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 }, gender: 'boy'
+      };
+    };
+
+    const fmt = (n) => {
+      n = Math.floor(n || 0);
+      const s = n < 0 ? '-' : '';
+      n = Math.abs(n);
+      if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
+      if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return s + '₦' + (n / 1e3).toFixed(1) + 'K';
+      return s + '₦' + n.toLocaleString();
+    };
+
+    const AudioEngine = (() => {
+      let ctx = null;
+      function init() { if (ctx) return; ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      function tone(f, d, t, w=0, g=0.3) {
+        if (!ctx) return; const start = ctx.currentTime + w;
+        const o = ctx.createOscillator(), gain = ctx.createGain();
+        o.type = t; o.frequency.value = f;
+        gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(g, start+0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start+d);
+        o.connect(gain); gain.connect(ctx.destination); o.start(start); o.stop(start+d+0.05);
+      }
+      return {
+        tap: () => { init(); tone(880, 0.09, "triangle", 0, 0.28); },
+        coin: () => { init(); tone(1046, 0.08, "square", 0, 0.15); tone(1318, 0.15, "square", 0.07, 0.15); },
+        error: () => { init(); tone(220, 0.15, "sawtooth", 0, 0.25); tone(165, 0.25, "sawtooth", 0.1, 0.25); },
+        wedding: () => { init(); tone(523, 0.2, "sine", 0, 0.2); tone(659, 0.2, "sine", 0.15, 0.2); tone(783, 0.4, "sine", 0.3, 0.2); },
+        gavel: () => { init(); tone(150, 0.1, "square", 0, 0.5); tone(100, 0.3, "square", 0.1, 0.5); }
+      };
+    })();
+
+    const Card = ({ children, className = '', pink = false, red = false }) =>
+      h('div', { className: 'rounded-2xl ' + (pink ? 'card-pink' : red ? 'card-red' : 'card-gradient') + ' ' + className }, children);
+
+    const SectionTitle = ({ children, right }) =>
+      h('div', { className: 'flex items-end justify-between mb-2.5 mt-6' },
+        h('h2', { className: 'text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display' }, children),
+        right
+      );
+
+    function App() {
+      const [s, setS] = useState(getCachedData);
+      const [uid, setUid] = useState(null);
+      const [authError, setAuthError] = useState(null);
+      const [toast, setToast] = useState(null);
+      const [feed, setFeed] = useState([]);
+      
+      const [activeTab, setActiveTab] = useState("dashboard"); 
+
+      const [datingPool, setDatingPool] = useState([]);
+      const [incomingProposals, setIncomingProposals] = useState([]);
+      const [courtResult, setCourtResult] = useState(null);
+      
+      const [activeChatUser, setActiveChatUser] = useState(null);
+      const [chatMessages, setChatMessages] = useState([]);
+      const [chatInput, setChatInput] = useState('');
+      const chatEndRef = useRef(null);
+
+      useEffect(() => {
+        const tg = window && window.Telegram && window.Telegram.WebApp;
+        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+
+        auth.signInAnonymously().then((cred) => {
+          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+          setUid(userId);
+          
+          const userRef = db.collection("users").doc(userId);
+          const unsubscribe = userRef.onSnapshot((doc) => {
+            if (doc.exists) {
+              setS(prev => {
+                const dbData = doc.data();
+                const newData = Object.assign({}, prev, dbData, {
+                  transactions: dbData.transactions || [],
+                  marriage: dbData.marriage || { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 },
+                  gender: dbData.gender || 'boy'
+                });
+                try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
+                return newData;
+              });
+            } else {
+              const defaultData = {
+                name: (tgUser && tgUser.first_name) || 'Hustler',
+                cash: 25000, real: 0, energy: 100,
+                lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
+                taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
+                transactions: [], marriage: { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 }, gender: 'boy'
+              };
+              userRef.set(defaultData).catch(() => {});
+              setS(defaultData);
+              try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
+            }
+          }, (error) => console.error("Snapshot error:", error));
+          return unsubscribe;
+        }).catch(e => setAuthError(e.message));
+      }, []);
+
+      useEffect(() => {
+        if (!uid || !s.gender) return;
+        const targetGender = s.gender === 'boy' ? 'girl' : 'boy';
+        const unsub = db.collection("users")
+          .where("gender", "==", targetGender)
+          .limit(20)
+          .onSnapshot((snap) => {
+            const users = [];
+            snap.forEach(doc => {
+              const data = doc.data();
+              if (doc.id !== uid && (!data.marriage || data.marriage.status === 'single')) {
+                users.push({ id: doc.id, name: data.name });
+              }
+            });
+            setDatingPool(users);
+          });
+        return () => unsub();
+      }, [uid, s.gender]);
+
+      useEffect(() => {
+        if (!uid) return;
+        const unsub = db.collection("proposals")
+          .where("toId", "==", uid)
+          .where("status", "==", "pending")
+          .onSnapshot((snap) => {
+            const props = [];
+            snap.forEach(doc => props.push({ id: doc.id, ...doc.data() }));
+            setIncomingProposals(props);
+          });
+        return () => unsub();
+      }, [uid]);
+
+      useEffect(() => {
+        if (!activeChatUser || !uid) return;
+        const chatId = [uid, activeChatUser.id].sort().join('_');
+        const unsub = db.collection("messages")
+          .where("chatId", "==", chatId)
+          .orderBy("createdAt", "asc")
+          .onSnapshot((snap) => {
+            const msgs = [];
+            snap.forEach(doc => msgs.push(doc.data()));
+            setChatMessages(msgs);
+            setTimeout(() => { if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' }); }, 100);
+          }, (e) => console.error(e));
+        return () => unsub();
+      }, [activeChatUser, uid]);
+
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2400);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+      const addFeed = (msg) => setFeed(prev => [{ id: Date.now(), msg }, ...prev].slice(0, 10));
+
+      const updateUser = async (data) => {
+        setS(prev => Object.assign({}, prev, data));
+        if (uid) {
+          await db.collection("users").doc(uid).update(Object.assign({}, data, { lastSeen: Date.now() })).catch(() => {});
+        }
+      };
+
+      const sendMessage = async () => {
+        if (!chatInput.trim() || !activeChatUser || !uid) return;
+        const text = chatInput.trim();
+        setChatInput('');
+        AudioEngine.tap();
+        const chatId = [uid, activeChatUser.id].sort().join('_');
+        await db.collection("messages").add({
+          chatId, senderId: uid, senderName: s.name || 'Hustler', text, createdAt: Date.now()
+        });
+      };
+
+      const sendGift = async () => {
+        if (s.cash < 1000000) return notify('You need ₦1M to send a gift!', 'bad');
+        updateUser({ cash: s.cash - 1000000 });
+        if (activeChatUser && activeChatUser.id.indexOf('test_') === -1) {
+          await db.collection("users").doc(activeChatUser.id).update({
+            cash: firebase.firestore.FieldValue.increment(1000000)
+          }).catch(function(e){});
+        }
+        AudioEngine.coin();
+        const chatId = [uid, activeChatUser.id].sort().join('_');
+        await db.collection("messages").add({
+          chatId, senderId: 'SYSTEM', senderName: 'SYSTEM', text: '🎁 ' + (s.name || 'You') + ' just sent a ₦1M gift!', createdAt: Date.now()
+        });
+        notify('Gift sent! ₦1M 💸');
+      };
+
+      const sendProposal = async (target) => {
+        if (s.cash < MARRIAGE_COST) return notify('You need ₦10M for the bride price!', 'bad');
+        await db.collection("proposals").add({
+          fromId: uid, fromName: s.name || 'Hustler', toId: target.id, status: 'pending', createdAt: Date.now()
+        });
+        AudioEngine.tap();
+        notify('Proposal sent to ' + target.name + '! 💍');
+        addFeed('💍 ' + (s.name || 'You') + ' just proposed to ' + target.name + '!');
+      };
+
+      const spawnTestPartner = () => {
+        const fakeId = 'test_' + Date.now();
+        const fakeName = s.gender === 'boy' ? 'Test Babe' : 'Test Guy';
+        setDatingPool(function(prev) { return [{ id: fakeId, name: fakeName, isTest: true }].concat(prev); });
+        notify('Test partner spawned! You can now chat or propose.');
+      };
+
+      const acceptProposal = async (prop) => {
+        if (prop.fromId.indexOf('test_') === -1) {
+          await db.collection("users").doc(prop.fromId).update({
+            cash: firebase.firestore.FieldValue.increment(-MARRIAGE_COST),
+            marriage: { status: 'married', spouseId: uid, spouseName: s.name || 'Hustler', jointAccount: 0 }
+          }).catch(function(e){});
+        }
+        updateUser({ marriage: { status: 'married', spouseId: prop.fromId, spouseName: prop.fromName, jointAccount: 0 } });
+        await db.collection("proposals").doc(prop.id).update({ status: 'accepted' });
+        AudioEngine.wedding();
+        notify('You accepted ' + prop.fromName + '\'s proposal! 💍');
+        addFeed('💍 WEDDING BELLS: ' + prop.fromName + ' and ' + (s.name || 'You') + ' are now married!');
+        setActiveTab('dashboard');
+      };
+
+      const rejectProposal = async (prop) => {
+        await db.collection("proposals").doc(prop.id).update({ status: 'rejected' });
+        notify('Proposal rejected.');
+        addFeed('💔 ' + (s.name || 'You') + ' rejected ' + prop.fromName + '\'s marriage proposal.');
+      };
+
+      // --- JOINT ACCOUNT ---
+      const depositJoint = () => {
+        if (s.cash < 1000000) return notify('Need ₦1M to deposit', 'bad');
+        updateUser({ 
+          cash: s.cash - 1000000, 
+          marriage: Object.assign({}, s.marriage, { jointAccount: (s.marriage.jointAccount || 0) + 1000000 }) 
+        });
+        notify('Deposited ₦1M to Joint Account');
+        AudioEngine.coin();
+      };
+
+      const runAwayJoint = async () => {
+        const amount = s.marriage.jointAccount || 0;
+        if (amount <= 0) return notify('Joint account is empty', 'bad');
+        
+        updateUser({ 
+          cash: s.cash + amount, 
+          marriage: { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 } 
+        });
+        
+        if (s.marriage.spouseId && s.marriage.spouseId.indexOf('test_') === -1) {
+          await db.collection("users").doc(s.marriage.spouseId).update({
+            marriage: { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 }
+          }).catch(function(e){});
+        }
+        AudioEngine.error();
+        addFeed('🚨 OPPRESSION: ' + (s.name || 'You') + ' just ran away with the joint account money!');
+        notify('You ran away with the joint money! 💸');
+      };
+
+      // --- CRAZY MARRIAGE EVENTS ---
+      const cheat = async () => {
+        if (s.marriage.status !== 'married') return;
+        AudioEngine.tap();
+        const roll = Math.random();
+        
+        if (roll < 0.3) {
+          updateUser({ marriage: Object.assign({}, s.marriage, { status: 'inCourt' }) });
+          if (s.marriage.spouseId && s.marriage.spouseId.indexOf('test_') === -1) {
+            await db.collection("users").doc(s.marriage.spouseId).update({ "marriage.status": "inCourt" }).catch(function(e){});
+          }
+          AudioEngine.gavel();
+          notify('WAHALA! You got caught cheating! 🚨', 'bad');
+          addFeed('🚨 ' + s.marriage.spouseName + ' caught ' + (s.name || 'You') + ' cheating in Victoria Island! Court case don start!');
+        } else if (roll < 0.6) {
+          notify('Side chick is blackmailing you for ₦2M! 💸', 'bad');
+          updateUser({ cash: Math.max(0, s.cash - 2000000), clout: (s.clout || 0) + 100 });
+          addFeed('🤫 ' + (s.name || 'You') + ' paid off a side chick to keep quiet. Silent moves!');
+        } else {
+          updateUser({ clout: (s.clout || 0) + 100 });
+          AudioEngine.coin();
+          notify('You cheated and got away with it. +100 Clout 😈');
+        }
+      };
+
+      const catchSpouse = () => {
+        if (Math.random() < 0.5) {
+          notify('You caught your spouse cheating! 😱', 'bad');
+          addFeed('🕵🏾‍♂️ PI caught ' + s.marriage.spouseName + ' cheating with the gateman!');
+          updateUser({ marriage: { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 } });
+        } else {
+          notify('Your spouse is loyal. No cheating found.');
+        }
+      };
+
+      const mamaG = () => {
+        if (s.cash < 2000000) return notify('Mama G needs ₦2M for aso ebi!', 'bad');
+        updateUser({ cash: s.cash - 2000000, clout: (s.clout || 0) + 50 });
+        notify('Mama G collected ₦2M. She blessed you.');
+        addFeed('👩🏾‍🦳 Mama G just collected ₦2M aso ebi money from ' + (s.name || 'You'));
+      };
+
+      const babyMama = () => {
+        if (s.cash < 500000) return notify('Baby Mama needs ₦500k for school fees!', 'bad');
+        updateUser({ cash: s.cash - 500000 });
+        notify('Baby Mama collected ₦500k. Drama avoided.');
+        addFeed('👶🏾 ' + (s.name || 'You') + ' paid ₦500k to baby mama for school fees.');
+      };
+
+      const anniversary = () => {
+        if (s.cash < 10000000) return notify('Anniversary gift (G-Wagon) costs ₦10M!', 'bad');
+        updateUser({ cash: s.cash - 10000000, clout: (s.clout || 0) + 500 });
+        AudioEngine.wedding();
+        notify('You bought spouse a G-Wagon! +500 Clout 👑');
+        addFeed('🚙 ' + (s.name || 'You') + ' just bought a G-Wagon for his wife for their anniversary!');
+      };
+
+      const settleOutOfCourt = async () => {
+        if (s.cash < SETTLE_COST) return notify('You need ₦5M to settle the judge 💸', 'bad');
+        if (s.marriage.spouseId && s.marriage.spouseId.indexOf('test_') === -1) {
+          await db.collection("users").doc(s.marriage.spouseId).update({
+            cash: firebase.firestore.FieldValue.increment(SETTLE_COST),
+            marriage: { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 }
+          }).catch(function(e){});
+        }
+        updateUser({ cash: s.cash - SETTLE_COST, marriage: { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 } });
+        AudioEngine.coin();
+        notify('You settled the judge with ₦5M. 🤫');
+        addFeed('⚖️ ' + (s.name || 'You') + ' settled divorce out of court for ₦5M.');
+      };
+
+      const faceTheJudge = () => {
+        AudioEngine.gavel();
+        const isGuilty = Math.random() < 0.7;
+        setTimeout(async () => {
+          if (isGuilty) {
+            const lostCash = Math.floor(s.cash * 0.5);
+            if (s.marriage.spouseId && s.marriage.spouseId.indexOf('test_') === -1) {
+              await db.collection("users").doc(s.marriage.spouseId).update({
+                cash: firebase.firestore.FieldValue.increment(lostCash),
+                marriage: { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 }
+              }).catch(function(e){});
+            }
+            updateUser({ cash: s.cash - lostCash, marriage: { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 } });
+            setCourtResult({ guilty: true, lostCash: lostCash, msg: 'Guilty! The Judge ordered you to give ' + s.marriage.spouseName + ' 50% of your cash!' });
+            addFeed('⚖️ COURT ORDER: ' + (s.name || 'You') + ' is guilty of cheating! He lost ' + fmt(lostCash));
+          } else {
+            if (s.marriage.spouseId && s.marriage.spouseId.indexOf('test_') === -1) {
+              await db.collection("users").doc(s.marriage.spouseId).update({
+                marriage: { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 }
+              }).catch(function(e){});
+            }
+            updateUser({ marriage: { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 } });
+            setCourtResult({ guilty: false, lostCash: 0, msg: 'Not Guilty! The Judge believed your lies. ' + s.marriage.spouseName + ' got nothing!' });
+            AudioEngine.coin();
+            addFeed('⚖️ ' + (s.name || 'You') + ' was found NOT GUILTY of cheating.');
+          }
+        }, 1500);
+      };
+
+      if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
+
+      const NAV = [
+        { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
+        { id: 'hustle', label: 'Hustle', icon: '👊', href: 'hustle.html' },
+        { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
+        { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
+        { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
+      ];
+
+      const spouse = s.marriage.spouseName;
+      const inCourt = s.marriage.status === 'inCourt';
+      const jointBal = s.marriage.jointAccount || 0;
+
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-pink-500 selection:text-black' },
+        h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
+          
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+            h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
+              h('div', { className: 'flex items-center gap-2 min-w-0' },
+                h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-pink-400 to-pink-600 grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(236,72,153,0.7)] font-display' }, 'L'),
+                h('div', { className: 'min-w-0' },
+                  h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-pink-400/80 leading-none font-display' }, 'Marriage & Divorce'),
+                  h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + fmt(s.cash))
+                )
+              ),
+              h('div', { className: 'flex items-center gap-1.5 shrink-0' },
+                h('div', { className: 'px-2 py-1 rounded-lg bg-pink-500/15 border border-pink-500/30 text-pink-400 text-[10px] font-extrabold tabular-nums' }, '🔥 ' + (s.clout || 0))
+              )
+            )
+          ),
+
+          h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
+            
+            h('div', { className: 'mt-3 flex gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06]' },
+              ['dashboard', 'datingPool', 'proposals'].map(tab => 
+                h('button', {
+                  key: tab,
+                  onClick: () => { setActiveTab(tab); AudioEngine.tap(); },
+                  className: 'flex-1 rounded py-2 text-[10px] font-black uppercase tracking-wider transition-all ' + 
+                    (activeTab === tab ? 'bg-gradient-to-b from-pink-400 to-pink-600 text-white shadow-md' : 'text-white/50')
+                }, tab === 'dashboard' ? '💍 Dashboard' : tab === 'datingPool' ? '❤️ Dating Pool' : '✉️ Proposals (' + incomingProposals.length + ')')
+              )
+            ),
+
+            activeTab === 'dashboard' && h('div', null,
+              h(Card, { className: 'relative overflow-hidden p-5 mt-3 text-center', pink: true },
+                h('div', { className: 'absolute -top-16 -right-12 w-48 h-48 rounded-full bg-pink-500/20 blur-3xl pointer-events-none' }),
+                h('div', { className: 'relative' },
+                  h('div', { className: 'text-6xl mb-3' }, spouse ? '💍' : '💔'),
+                  h('div', { className: 'text-[11px] uppercase tracking-widest text-pink-400/80 font-bold mb-1' }, 'Marital Status'),
+                  h('div', { className: 'text-2xl font-black text-white font-display' }, spouse ? 'Married to ' + spouse : 'Single & Ready'),
+                  !spouse && h('div', { className: 'mt-4 text-[11px] text-white/50' }, 'Go to the Dating Pool to find a real partner!')
+                )
+              ),
+
+              // JOINT ACCOUNT
+              spouse && h('div', { className: 'mt-4' },
+                h(Card, { className: 'p-4 border border-green-500/30' },
+                  h('div', { className: 'flex justify-between items-center mb-2' },
+                    h('div', { className: 'text-[11px] font-black text-green-400' }, '🏦 Joint Account'),
+                    h('div', { className: 'text-[15px] font-black text-white' }, fmt(jointBal))
+                  ),
+                  h('div', { className: 'grid grid-cols-2 gap-2' },
+                    h('button', { onClick: depositJoint, className: 'py-2 rounded-lg bg-green-500/20 text-green-400 font-bold text-[10px] active:scale-95 transition' }, 'Deposit ₦1M'),
+                    h('button', { onClick: runAwayJoint, className: 'py-2 rounded-lg bg-red-500/20 text-red-400 font-bold text-[10px] active:scale-95 transition' }, '🚨 Run Away!')
+                  )
+                )
+              ),
+
+              // MARRIAGE ACTIONS
+              spouse && !inCourt && h('div', { className: 'mt-4' },
+                h(SectionTitle, null, 'Marriage Actions'),
+                h('div', { className: 'grid grid-cols-2 gap-2' },
+                  h('button', { onClick: cheat, className: 'p-3 rounded-xl bg-red-500/10 border border-red-500/30 flex flex-col items-center text-center active:scale-95 transition' },
+                    h('div', { className: 'text-2xl mb-1' }, '😈'),
+                    h('div', { className: 'text-[11px] font-black text-red-400' }, 'Cheat')
+                  ),
+                  h('button', { onClick: catchSpouse, className: 'p-3 rounded-xl bg-white/[0.04] border border-white/10 flex flex-col items-center text-center active:scale-95 transition' },
+                    h('div', { className: 'text-2xl mb-1' }, '🕵🏾‍♂️'),
+                    h('div', { className: 'text-[11px] font-black text-white/70' }, 'Catch Spouse')
+                  ),
+                  h('button', { onClick: mamaG, className: 'p-3 rounded-xl bg-white/[0.04] border border-white/10 flex flex-col items-center text-center active:scale-95 transition' },
+                    h('div', { className: 'text-2xl mb-1' }, '👩🏾‍🦳'),
+                    h('div', { className: 'text-[11px] font-black text-white/70' }, 'Pay Mama G')
+                  ),
+                  h('button', { onClick: babyMama, className: 'p-3 rounded-xl bg-white/[0.04] border border-white/10 flex flex-col items-center text-center active:scale-95 transition' },
+                    h('div', { className: 'text-2xl mb-1' }, '👶🏾'),
+                    h('div', { className: 'text-[11px] font-black text-white/70' }, 'Baby Mama')
+                  ),
+                  h('button', { onClick: anniversary, className: 'p-3 rounded-xl bg-white/[0.04] border border-white/10 flex flex-col items-center text-center active:scale-95 transition' },
+                    h('div', { className: 'text-2xl mb-1' }, '🚙'),
+                    h('div', { className: 'text-[11px] font-black text-white/70' }, 'Anniversary')
+                  )
+                )
+              ),
+
+              inCourt && h('div', { className: 'mt-4 court-bg border border-red-500/30 rounded-2xl p-4' },
+                h('div', { className: 'text-center' },
+                  h('div', { className: 'text-5xl mb-2 animate-bounce' }, '⚖️'),
+                  h('div', { className: 'text-[14px] font-black text-red-400 font-display mb-1' }, 'DIVORCE COURT'),
+                  h('p', { className: 'text-[11px] text-white/70 mb-4' }, spouse + ' has dragged you to court for cheating. The Judge is ready to rule.'),
+                  
+                  h('div', { className: 'space-y-2' },
+                    h('button', { onClick: settleOutOfCourt, className: 'w-full py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white font-bold text-[12px] active:scale-95 transition' }, 'Settle Out of Court (₦5M)'),
+                    h('button', { onClick: faceTheJudge, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-red-500 to-red-700 text-white font-black text-[12px] active:scale-95 transition' }, 'Face the Judge (Risk 50% of Wealth)')
+                  )
+                )
+              )
+            ),
+
+            activeTab === 'datingPool' && h('div', null,
+              h(Card, { className: 'p-4 mt-3 text-center', pink: true },
+                h('div', { className: 'text-4xl mb-1' }, '❤️'),
+                h('div', { className: 'text-[15px] font-black text-white font-display' }, 'FIND A PARTNER'),
+                h('div', { className: 'text-[10px] text-white/50 mt-1' }, 'Chat with them first, then propose!')
+              ),
+
+              h(SectionTitle, { right: h('button', { onClick: spawnTestPartner, className: 'text-[9px] bg-white/10 px-2 py-1 rounded text-white/50' }, 'Spawn Test Partner') }, 'Available Players'),
+              datingPool.length === 0 ? h('div', { className: 'text-center text-white/40 text-[11px] py-6' }, 'No single players online right now. Click "Spawn Test Partner" above to test!') :
+              h('div', { className: 'space-y-3' },
+                datingPool.map(u => 
+                  h(Card, { key: u.id, className: 'p-4' },
+                    h('div', { className: 'flex items-center gap-3 mb-3' },
+                      h('img', { 
+                        src: 'https://api.dicebear.com/7.x/adventurer/svg?seed=' + u.name + '&backgroundColor=ffdfbf', 
+                        className: 'w-12 h-12 rounded-full bg-white/10' 
+                      }),
+                      h('div', null,
+                        h('div', { className: 'text-[14px] font-extrabold font-display' }, u.name),
+                        h('div', { className: 'text-[10px] text-white/40' }, s.gender === 'boy' ? 'Single Girl' : 'Single Boy')
+                      )
+                    ),
+                    h('div', { className: 'grid grid-cols-2 gap-2' },
+                      h('button', { onClick: () => setActiveChatUser(u), className: 'py-3 rounded-xl bg-blue-500 border border-blue-400 text-white text-[13px] font-black active:scale-95 transition flex items-center justify-center gap-1 shadow-[0_4px_12px_-4px_rgba(59,130,246,0.6)]' }, 
+                        h('span', null, '💬'), ' Chat'
+                      ),
+                      h('button', { onClick: () => sendProposal(u), className: 'py-3 rounded-xl bg-pink-500 border border-pink-400 text-white text-[13px] font-black active:scale-95 transition flex items-center justify-center gap-1 shadow-[0_4px_12px_-4px_rgba(236,72,153,0.6)]' }, 
+                        h('span', null, '💍'), ' Propose'
+                      )
+                    )
+                  )
+                )
+              )
+            ),
+
+            activeTab === 'proposals' && h('div', null,
+              h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-pink-400' }, incomingProposals.length + ' Pending') }, 'Incoming Proposals'),
+              incomingProposals.length === 0 ? h('div', { className: 'text-center text-white/40 text-[11px] py-6' }, 'No proposals yet. Go and hustle!') :
+              h('div', { className: 'space-y-2' },
+                incomingProposals.map(p => 
+                  h(Card, { key: p.id, className: 'p-4' },
+                    h('div', { className: 'text-[13px] font-bold text-white mb-3' }, p.fromName + ' wants to marry you! 💍'),
+                    h('div', { className: 'flex gap-2' },
+                      h('button', { onClick: () => acceptProposal(p), className: 'flex-1 py-3 rounded-lg bg-green-500/20 text-green-400 text-[11px] font-black active:scale-95 transition' }, 'Accept'),
+                      h('button', { onClick: () => rejectProposal(p), className: 'flex-1 py-3 rounded-lg bg-red-500/20 text-red-400 text-[11px] font-black active:scale-95 transition' }, 'Reject')
+                    )
+                  )
+                )
+              )
+            ),
+
+            courtResult && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+              h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md' }),
+              h('div', { className: 'relative w-full max-w-sm bg-[#121218] border ' + (courtResult.guilty ? 'border-red-500/30' : 'border-green-500/30') + ' rounded-3xl p-5 shadow-2xl animate-popIn text-center' },
+                h('div', { className: 'text-6xl mb-2' }, courtResult.guilty ? '😭' : '🕺🏾'),
+                h('div', { className: 'text-[15px] font-black ' + (courtResult.guilty ? 'text-red-400' : 'text-green-400') + ' font-display mb-2' }, 
+                  courtResult.guilty ? 'GUILTY AS CHARGED' : 'NOT GUILTY!'
+                ),
+                h('p', { className: 'text-[12px] text-white/80 leading-relaxed mb-4' }, courtResult.msg),
+                courtResult.lostCash > 0 && h('div', { className: 'text-[18px] font-black text-red-400 tabular-nums mb-4' }, '-' + fmt(courtResult.lostCash)),
+                h('button', { onClick: () => setCourtResult(null), className: 'w-full py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white font-bold text-[12px] active:scale-95 transition' }, 'Leave the Court')
+              )
+            ),
+
+            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-pink-400 flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse glow-dot' }), 'LIVE') }, 'Court Feed'),
+            h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden min-h-[100px]' },
+              feed.length === 0 ? h('div', { className: 'px-4 py-6 text-center text-[11px] text-white/30' }, 'No relationship drama yet.') :
+              feed.map(f => h('div', { key: f.id, className: 'px-4 py-3 text-[11px] text-white/70 animate-slideDown' }, f.msg))
+            )
+          ),
+
+          activeChatUser && h('div', { className: 'fixed inset-0 z-50 flex flex-col bg-[#08080B]' },
+            h('div', { className: 'flex items-center gap-2 px-4 py-3 border-b border-white/[0.06] bg-[#08080B]' },
+              h('button', { onClick: () => setActiveChatUser(null), className: 'text-white/50 text-xl px-2' }, '←'),
+              h('img', { 
+                src: 'https://api.dicebear.com/7.x/adventurer/svg?seed=' + activeChatUser.name + '&backgroundColor=ffdfbf', 
+                className: 'w-8 h-8 rounded-full bg-white/10' 
+              }),
+              h('div', { className: 'flex-1 min-w-0' },
+                h('div', { className: 'text-[13px] font-black font-display' }, activeChatUser.name),
+                h('div', { className: 'text-[9px] text-green-400' }, 'Online')
+              ),
+              h('button', { onClick: sendGift, className: 'px-3 py-1.5 rounded-lg bg-pink-500/20 text-pink-400 text-[10px] font-black border border-pink-500/30 active:scale-95 transition' }, '🎁 Gift')
+            ),
+            
+            h('div', { className: 'flex-1 overflow-y-auto p-4 space-y-3' },
+              chatMessages.map((msg, i) => {
+                const isMe = msg.senderId === uid;
+                const isSystem = msg.senderId === 'SYSTEM';
+                
+                if (isSystem) {
+                  return h('div', { key: i, className: 'bg-[#FFD60A]/10 border border-[#FFD60A]/30 text-[#FFD60A] font-bold italic text-center w-full rounded-xl px-3 py-2 text-[11px]' }, msg.text);
+                }
+                
+                const bubbleClass = isMe ? 'bg-pink-600 text-white chat-bubble-right' : 'bg-white/[0.1] text-white chat-bubble-left';
+                return h('div', { key: i, className: 'flex ' + (isMe ? 'justify-end' : 'justify-start') },
+                  h('div', { className: 'max-w-[80%] px-3 py-2 text-[12px] leading-relaxed ' + bubbleClass }, msg.text)
+                );
+              }),
+              h('div', { ref: chatEndRef })
+            ),
+
+            h('div', { className: 'p-3 border-t border-white/[0.06] flex gap-2 bg-[#101016]' },
+              h('input', {
+                value: chatInput,
+                onChange: (e) => setChatInput(e.target.value),
+                onKeyDown: (e) => { if (e.key === 'Enter') sendMessage(); },
+                placeholder: 'Say something nice...',
+                className: 'flex-1 rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2 text-[12px] text-white focus:border-pink-500/50'
+              }),
+              h('button', { onClick: sendMessage, className: 'px-4 rounded-xl bg-pink-500 text-white font-black text-[11px] active:scale-95 transition' }, 'Send')
+            )
+          ),
+
+          h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
+            h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
+              NAV.map((n) => {
+                const active = n.id === 'more';
+                return h('a', {
+                  key: n.id, href: n.href,
+                  className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-pink-400 nav-active-pill' : 'text-white/35')
+                },
+                  h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
+                  h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
+                );
+              })
+            )
+          ),
+
+          toast && h('div', {
+            className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
+              (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-pink-400 to-pink-600 text-white')
+          }, toast.msg)
+        )
+      );
+    }
+
+    class ErrorBoundary extends React.Component {
+      constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+      static getDerivedStateFromError(error) { return { hasError: true, error: error }; }
+      componentDidCatch(error, info) { console.error('ErrorBoundary caught:', error, info); }
+      render() {
+        if (this.state.hasError) {
+          return h('div', { style: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', padding: '24px', textAlign: 'center', background: '#08080B', color: '#F87171', fontFamily: 'monospace', fontSize: '12px' } },
+            h('div', { style: { fontSize: '32px' } }, '⚠️'),
+            h('div', { style: { fontWeight: 'bold' } }, 'Something went wrong'),
+            h('div', { style: { opacity: 0.6, wordBreak: 'break-word' } }, String((this.state.error && this.state.error.message) || 'Unknown error')),
+            h('button', { style: { marginTop: '12px', padding: '8px 16px', background: '#FFD60A', color: '#000', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }, onClick: () => window.location.reload() }, 'Reload')
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(ErrorBoundary, null, h(App)));
+  </script>
+</body>
+</html>
