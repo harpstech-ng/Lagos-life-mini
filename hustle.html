@@ -19,6 +19,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
+  <!-- ADSGRAM SDK ADDED HERE -->
+  <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
@@ -497,25 +500,48 @@
         setEvent(EVENTS[Math.floor(Math.random() * EVENTS.length)]);
       };
 
-      const watchAd = () => {
+      // ⚡ ADSGRAM INTEGRATED WATCHAD FUNCTION ⚡
+      const watchAd = async () => {
         if (isWatchingAd) return;
         setIsWatchingAd(true);
-        setAdTimer(5);
         AudioEngine.tap();
-        
-        let timer = 5;
-        const iv = setInterval(() => {
-          timer--;
-          setAdTimer(timer);
-          if (timer <= 0) {
-            clearInterval(iv);
+
+        if (window.Adsgram) {
+          try {
+            const AdController = window.Adsgram.init({ blockId: "55961" });
+            const result = await AdController.show();
+            
+            if (result.done) {
+              updateUser({ cash: s.cash + 300000 });
+              AudioEngine.coin();
+              notify('Ad watched! +₦300,000 💰');
+              try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+            } else {
+              notify('You skipped the ad. No reward.', 'bad');
+            }
+          } catch (error) {
+            console.error("Ad error:", error);
+            notify('Ad failed to load. Try again later.', 'bad');
+          } finally {
             setIsWatchingAd(false);
-            updateUser({ cash: s.cash + 300000 });
-            AudioEngine.coin();
-            notify('Ad watched! +₦300,000 💰');
-            try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
           }
-        }, 1000);
+        } else {
+          // Fallback for local testing
+          setAdTimer(5);
+          let timer = 5;
+          const iv = setInterval(() => {
+            timer--;
+            setAdTimer(timer);
+            if (timer <= 0) {
+              clearInterval(iv);
+              setIsWatchingAd(false);
+              updateUser({ cash: s.cash + 300000 });
+              AudioEngine.coin();
+              notify('Ad watched! +₦300,000 💰 (Test Mode)');
+              try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+            }
+          }, 1000);
+        }
       };
 
       const joinWA = () => {
