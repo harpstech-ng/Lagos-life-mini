@@ -12,11 +12,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  
-  <!-- PINNED BABEL VERSION 7.23.5 -->
-  <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
 
-  <!-- FIREBASE CLIENT SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -27,35 +23,24 @@
 
   <script>
     tailwind.config = {
-      theme: {
-        extend: {
-          colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
-          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
-        },
-      },
+      theme: { extend: {
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+      }},
     };
   </script>
 
   <style>
     * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-    html, body {
-      margin: 0; padding: 0;
-      background: #08080B; color: #fff;
-      overflow-x: hidden; overscroll-behavior-y: none;
-      font-family: 'Inter', system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
-    body {
-      background-image:
-        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent),
-        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent);
-    }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent); }
     ::-webkit-scrollbar { width: 0; height: 0; }
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
     .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
     .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
     .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); box-shadow: 0 8px 30px -10px rgba(255,214,10,0.3); }
+    .card-passport { background: linear-gradient(135deg, #0a192f 0%, #020c1b 100%); border: 2px dashed rgba(255,214,10,0.3); box-shadow: inset 0 0 20px rgba(0,0,0,0.8); }
     .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -65,13 +50,13 @@
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    
     @keyframes flyIn { 0% { opacity: 0; transform: translateX(-40px) rotate(-15deg) scale(0.7); } 60% { opacity: 1; transform: translateX(0) rotate(0deg) scale(1.15); } 100% { opacity: 1; transform: translateX(0) rotate(0deg) scale(1); } }
     .fly-in { animation: flyIn 0.5s cubic-bezier(0.34,1.56,0.64,1); }
     @keyframes stamp { 0% { opacity: 0; transform: scale(2) rotate(-30deg); } 100% { opacity: 1; transform: scale(1) rotate(-12deg); } }
     .stamp-visit { animation: stamp 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards; }
     .hero-grid { background-image: linear-gradient(rgba(255,214,10,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,214,10,0.04) 1px, transparent 1px); background-size: 22px 22px; -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); }
     
-    /* JAPA ANIMATIONS */
     @keyframes flyAcross {
       0% { transform: translateX(-20vw) translateY(20px) rotate(-10deg); opacity: 0; }
       10% { opacity: 1; }
@@ -86,22 +71,20 @@
     }
     .animate-fly { animation: flyAcross 2.5s cubic-bezier(0.4,0,0.2,1) forwards; }
     .animate-drive { animation: driveAcross 2.5s linear forwards; }
-    
-    .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
   </style>
 </head>
 <body>
-  <div id="root">
-    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;">
-      <div style="font-size:48px;">🇳🇬</div>
-      <div style="font-family:Sora;font-weight:800;font-size:14px;color:#FFD60A;">Loading Travel...</div>
-    </div>
-  </div>
+  <div id="root"></div>
 
-  <script type="text/babel" data-presets="react">
-    const { useState, useEffect, useMemo } = React;
+  <script>
+    window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { console.error('Unhandled rejection:', e.reason); });
+  </script>
 
-    /* ═══ FIREBASE INITIALIZATION ═══ */
+  <script>
+    const { useState, useEffect } = React;
+    const h = React.createElement;
+
     const firebaseConfig = {
       apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
       authDomain: "lagos-life-a8706.firebaseapp.com",
@@ -134,6 +117,14 @@
       { id: 'space',   name: 'Mushin → Space',  short: 'Space',  emoji: '🚀', cost: 1_000_000_000_000, bonus: 25_000, tier: 'Legendary',     color: 'from-fuchsia-400/20 to-purple-700/10', desc: 'Leave the planet entirely.' },
     ];
 
+    const TRAVEL_EVENTS = [
+      { type: 'good', msg: 'You met a billionaire on the plane. He tipped you ₦10M!', cash: 10_000_000, energy: 0 },
+      { type: 'bad', msg: 'Customs seized your bag. You paid ₦5M bribe.', cash: -5_000_000, energy: 0 },
+      { type: 'funny', msg: 'The pilot was drunk. You arrived safely but lost 20 energy.', cash: 0, energy: -20 },
+      { type: 'good', msg: 'You won the in-flight lottery! +₦2M', cash: 2_000_000, energy: 0 },
+      { type: 'bad', msg: 'Your luggage went to Ghana instead of your destination. -₦1M to retrieve it.', cash: -1_000_000, energy: 0 },
+    ];
+
     const BIZ_PRICES = { water: 10_000, suya: 250_000, keke: 500_000, phone: 2_000_000, danfo: 5_000_000, wash: 25_000_000, bet9ja: 50_000_000, lounge: 500_000_000, oil: 5_000_000_000 };
     const BIZ_PER_HR = { water: 2000, suya: 40000, keke: 75000, phone: 350000, danfo: 800000, wash: 4000000, bet9ja: 9000000, lounge: 90000000, oil: 1000000000 };
     const ASSET_PRICES = { chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000, gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000, mansion: 1_000_000_000_000 };
@@ -143,11 +134,11 @@
         const cached = localStorage.getItem("lagos_user_data");
         if (cached) return JSON.parse(cached);
       } catch (e) {}
-      const tg = window?.Telegram?.WebApp;
+      const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
-        name: tg?.initDataUnsafe?.user?.first_name || 'Hustler', 
+        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
-        lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
+        lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], isVip: false,
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
         transactions: []
       };
@@ -165,77 +156,50 @@
     };
     const fmtReal = (n) => '₦' + (n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    /* ═══ AUDIO ENGINE ═══ */
     const AudioEngine = (() => {
-      let ctx = null; let musicGain, sfxGain, musicPlaying = false, musicTimer, step = 0;
-      const STEP_MS = 300;
-      const bassPattern = [65.41, null, 65.41, null, 73.42, null, 87.31, null];
-      function init() {
-        if (ctx) return;
-        ctx = new (window.AudioContext || window.webkitAudioContext)();
-        let master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination);
-        musicGain = ctx.createGain(); musicGain.gain.value = 0.15; musicGain.connect(master);
-        sfxGain = ctx.createGain(); sfxGain.gain.value = 0.5; sfxGain.connect(master);
-      }
-      function tone(f, d, t, dest, w=0, g=0.3) {
+      let ctx = null;
+      function init() { if (ctx) return; ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      function tone(f, d, t, w=0, g=0.3) {
         if (!ctx) return; const start = ctx.currentTime + w;
         const o = ctx.createOscillator(), gain = ctx.createGain();
         o.type = t; o.frequency.value = f;
         gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(g, start+0.01);
         gain.gain.exponentialRampToValueAtTime(0.0001, start+d);
-        o.connect(gain); gain.connect(dest); o.start(start); o.stop(start+d+0.05);
+        o.connect(gain); gain.connect(ctx.destination); o.start(start); o.stop(start+d+0.05);
       }
-      function kick() { if(!ctx) return; const t=ctx.currentTime; const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(40,t+0.14); g.gain.setValueAtTime(0.8,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2); o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+0.22); }
-      function hat() { if(!ctx) return; const t=ctx.currentTime; const b=ctx.createBuffer(1, ctx.sampleRate*0.04, ctx.sampleRate); const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const s=ctx.createBufferSource(); s.buffer=b; const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=6000; const g=ctx.createGain(); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04); s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); }
-      
-      function tick() {
-        if (!musicPlaying) return;
-        const s = step % 8;
-        if (s===0||s===3||s===4) kick();
-        hat();
-        if (bassPattern[s]) tone(bassPattern[s], 0.3, "sine", musicGain, 0, 0.4);
-        if (s===2||s===6) [329.63,415.3,493.88].forEach(f => tone(f, 0.3, "triangle", musicGain, 0, 0.06));
-        step++;
-      }
-
       return {
-        startMusic: () => { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); },
-        stopMusic: () => { musicPlaying=false; clearInterval(musicTimer); },
-        toggle: () => { musicPlaying ? AudioEngine.stopMusic() : AudioEngine.startMusic(); return musicPlaying; },
-        coin: () => { init(); tone(1046, 0.08, "square", sfxGain, 0, 0.15); tone(1318, 0.15, "square", sfxGain, 0.07, 0.15); },
-        error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
-        purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); }
+        tap: () => { init(); tone(880, 0.09, "triangle", 0, 0.28); },
+        coin: () => { init(); tone(1046, 0.08, "square", 0, 0.15); tone(1318, 0.15, "square", 0.07, 0.15); },
+        error: () => { init(); tone(220, 0.15, "sawtooth", 0, 0.25); tone(165, 0.25, "sawtooth", 0.1, 0.25); },
+        purchase: () => { init(); tone(523, 0.1, "triangle", 0, 0.2); tone(659, 0.1, "triangle", 0.07, 0.2); tone(783, 0.2, "triangle", 0.14, 0.2); }
       };
     })();
 
-    const Card = ({ children, className = '', gold = false }) => (
-      <div className={'rounded-2xl ' + (gold ? 'card-gold' : 'card-gradient') + ' ' + className}>{children}</div>
-    );
-    const SectionTitle = ({ children, right }) => (
-      <div className="flex items-end justify-between mb-2.5 mt-6">
-        <h2 className="text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display">{children}</h2>
-        {right}
-      </div>
-    );
+    const Card = ({ children, className = '', gold = false, passport = false }) =>
+      h('div', { className: 'rounded-2xl ' + (passport ? 'card-passport' : gold ? 'card-gold' : 'card-gradient') + ' ' + className }, children);
+
+    const SectionTitle = ({ children, right }) =>
+      h('div', { className: 'flex items-end justify-between mb-2.5 mt-6' },
+        h('h2', { className: 'text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display' }, children),
+        right
+      );
 
     function App() {
-      const [s, setS] = useState(getCachedData); 
+      const [s, setS] = useState(getCachedData);
       const [uid, setUid] = useState(null);
       const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
       const [justBooked, setJustBooked] = useState(null);
-      const [musicOn, setMusicOn] = useState(false);
-      
-      // Animation State
       const [travelingTo, setTravelingTo] = useState(null);
+      const [travelEvent, setTravelEvent] = useState(null);
 
-      /* Initialize Firebase Auth & Sync */
       useEffect(() => {
-        const tg = window?.Telegram?.WebApp;
-        if (tg) { tg.ready(); tg.expand(); }
+        const tg = window && window.Telegram && window.Telegram.WebApp;
+        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
 
         auth.signInAnonymously().then((cred) => {
-          const userId = tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : cred.user.uid;
+          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
           setUid(userId);
           
           const userRef = db.collection("users").doc(userId);
@@ -243,36 +207,32 @@
             if (doc.exists) {
               setS(prev => {
                 const dbData = doc.data();
-                const newData = {
-                  ...dbData,
+                const newData = Object.assign({}, prev, dbData, {
+                  businesses: dbData.businesses || prev.businesses || {},
+                  assets: dbData.assets || prev.assets || {},
+                  travels: dbData.travels || prev.travels || [],
                   transactions: dbData.transactions || [],
-                };
-                localStorage.setItem("lagos_user_data", JSON.stringify(newData));
+                  isVip: dbData.isVip || false
+                });
+                try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
                 return newData;
               });
             } else {
               const defaultData = {
-                name: tg?.initDataUnsafe?.user?.first_name || 'Hustler',
+                name: (tgUser && tgUser.first_name) || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
-                lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
+                lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], isVip: false,
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
                 transactions: []
               };
-              userRef.set(defaultData);
+              userRef.set(defaultData).catch(() => {});
               setS(defaultData);
-              localStorage.setItem("lagos_user_data", JSON.stringify(defaultData));
+              try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
-          });
+          }, (error) => console.error("Snapshot error:", error));
           return unsubscribe;
         }).catch(e => setAuthError(e.message));
       }, []);
-
-      /* Start music */
-      useEffect(() => {
-        const unlock = () => { if (!musicOn) { AudioEngine.startMusic(); setMusicOn(true); } };
-        window.addEventListener("pointerdown", unlock, { once: true });
-        return () => window.removeEventListener("pointerdown", unlock);
-      }, [musicOn]);
 
       useEffect(() => {
         if (!toast) return;
@@ -282,71 +242,110 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      /* Tick: energy + income */
       useEffect(() => {
-        if (!s) return;
+        if (!uid) return;
         const iv = setInterval(() => {
-          const now = Date.now();
-          let energy = s.energy;
-          let lastEnergy = s.lastEnergy;
-          if (energy < MAX_E) {
-            const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
-            if (gained > 0) {
-              energy = Math.min(MAX_E, energy + gained);
-              lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
+          setS(prev => {
+            if (!prev) return prev;
+            const now = Date.now();
+            let energy = prev.energy;
+            let lastEnergy = prev.lastEnergy;
+            if (energy < MAX_E) {
+              const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
+              if (gained > 0) {
+                energy = Math.min(MAX_E, energy + gained);
+                lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
+              }
             }
-          }
-          const perHr = Object.entries(s.businesses || {}).reduce((a, [id, cnt]) => a + cnt * (BIZ_PER_HR[id] || 0), 0);
-          const newCash = s.cash + perHr / 3600;
-          
-          if (energy !== s.energy || perHr > 0) {
-            setS(prev => ({ ...prev, energy, lastEnergy, cash: newCash }));
-            if (uid && perHr > 0) {
-              db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600), energy, lastEnergy });
+            const perHr = Object.entries(prev.businesses || {}).reduce((a, kv) => a + kv[1] * (BIZ_PER_HR[kv[0]] || 0), 0);
+            const newCash = (prev.cash || 0) + perHr / 3600;
+            
+            if (energy !== prev.energy || perHr > 0) {
+              if (perHr > 0) {
+                db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600), energy, lastEnergy }).catch(() => {});
+              } else if (energy !== prev.energy) {
+                db.collection("users").doc(uid).update({ energy, lastEnergy }).catch(() => {});
+              }
+              return Object.assign({}, prev, { energy: energy, lastEnergy: lastEnergy, cash: newCash });
             }
-          }
+            return prev;
+          });
         }, 1000);
         return () => clearInterval(iv);
-      }, [s, uid]);
+      }, [uid]);
 
-      if (authError) return <div className="min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500"><div className="text-4xl">⚠️</div><div className="font-bold">Auth Error</div><div className="text-sm">{authError}</div></div>;
+      if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
 
-      const bizValue = Object.entries(s.businesses || {}).reduce((a, [id, c]) => a + c * (BIZ_PRICES[id] || 0), 0);
-      const assetValue = Object.entries(s.assets || {}).reduce((a, [id, c]) => a + c * (ASSET_PRICES[id] || 0), 0);
+      const safeTravels = s.travels || [];
+      const bizValue = Object.entries(s.businesses || {}).reduce((a, kv) => a + kv[1] * (BIZ_PRICES[kv[0]] || 0), 0);
+      const assetValue = Object.entries(s.assets || {}).reduce((a, kv) => a + kv[1] * (ASSET_PRICES[kv[0]] || 0), 0);
       const netWorth = Math.floor((s.cash || 0) + bizValue + assetValue);
 
-      const totalBonus = (s.travels || []).reduce((a, id) => a + (DESTINATIONS.find((d) => d.id === id)?.bonus || 0), 0);
-      const tapValue = BASE_TAP + totalBonus;
-      const visitedCount = (s.travels || []).length;
+      const totalBonus = safeTravels.reduce((a, id) => a + (DESTINATIONS.find((d) => d.id === id)?.bonus || 0), 0);
+      const vipMultiplier = s.isVip ? 1.5 : 1;
+      const tapValue = Math.floor((BASE_TAP + totalBonus) * vipMultiplier);
+      const visitedCount = safeTravels.length;
       const totalPossibleBonus = DESTINATIONS.reduce((a, d) => a + d.bonus, 0);
       const progressPct = Math.round((visitedCount / DESTINATIONS.length) * 100);
 
       const book = async (d) => {
-        if ((s.travels || []).includes(d.id)) { AudioEngine.error(); return notify('You already japa\'d there ✅', 'bad'); }
+        if (safeTravels.includes(d.id)) { AudioEngine.error(); return notify('You already japa\'d there ✅', 'bad'); }
         if (s.cash < d.cost) { AudioEngine.error(); return notify('Not enough Lagos Cash 💸', 'bad'); }
 
-        // Start Animation
+        if (s.isVip) {
+          // VIP INSTANT TRAVEL & EVENT
+          const event = TRAVEL_EVENTS[Math.floor(Math.random() * TRAVEL_EVENTS.length)];
+          const vipBonus = Math.floor(d.bonus * 1.5);
+          
+          setS(p => (Object.assign({}, p, {
+            cash: (p.cash || 0) - d.cost + (event.cash || 0),
+            energy: Math.max(0, Math.min(MAX_E, (p.energy || 0) + (event.energy || 0))),
+            travels: [...(p.travels || []), d.id]
+          })));
+          
+          setTravelEvent(event);
+          AudioEngine.purchase();
+          setJustBooked(d.id);
+          setTimeout(() => setJustBooked(null), 2000);
+
+          if (uid) {
+            await db.collection("users").doc(uid).update({
+              cash: firebase.firestore.FieldValue.increment(-d.cost + (event.cash || 0)),
+              energy: firebase.firestore.FieldValue.increment(event.energy || 0),
+              travels: firebase.firestore.FieldValue.arrayUnion(d.id),
+              lastSeen: Date.now()
+            }).catch(() => {});
+          }
+          return;
+        }
+
         setTravelingTo(d);
         AudioEngine.purchase();
 
-        // Wait for animation to finish (2.5 seconds)
         setTimeout(async () => {
-          // Optimistic Update
-          setS((p) => ({ ...p, cash: p.cash - d.cost, travels: [...(p.travels || []), d.id] }));
+          const event = TRAVEL_EVENTS[Math.floor(Math.random() * TRAVEL_EVENTS.length)];
+          
+          setS(p => (Object.assign({}, p, {
+            cash: (p.cash || 0) - d.cost + (event.cash || 0),
+            energy: Math.max(0, Math.min(MAX_E, (p.energy || 0) + (event.energy || 0))),
+            travels: [...(p.travels || []), d.id]
+          })));
+          
           setTravelingTo(null);
+          setTravelEvent(event);
           setJustBooked(d.id);
           setTimeout(() => setJustBooked(null), 2000);
           
-          notify(d.emoji + ' Japa to ' + d.short + ' successful! +' + fmt(d.bonus) + '/tap');
-          try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('heavy'); } catch {}
+          notify(d.emoji + ' Japa to ' + d.short + ' successful!');
+          try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
 
-          // Firestore update
           if (uid) {
             await db.collection("users").doc(uid).update({
-              cash: firebase.firestore.FieldValue.increment(-d.cost),
+              cash: firebase.firestore.FieldValue.increment(-d.cost + (event.cash || 0)),
+              energy: firebase.firestore.FieldValue.increment(event.energy || 0),
               travels: firebase.firestore.FieldValue.arrayUnion(d.id),
               lastSeen: Date.now()
-            });
+            }).catch(() => {});
           }
         }, 2500);
       };
@@ -364,228 +363,212 @@
         { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
         { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
         { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
-        { id: 'more', label: 'More', icon: '⋯', href: '#' },
-      ];
-      const MORE_PAGES = [
-        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
-        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
-        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
 
-      return (
-        <div className="min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black">
-          <div className="mx-auto max-w-md min-h-screen flex flex-col pb-24 relative">
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
+        h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
+          
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+            h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
+              h('div', { className: 'flex items-center gap-2 min-w-0' },
+                h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display' }, 'L'),
+                h('div', { className: 'min-w-0' },
+                  h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display' }, 'Travel'),
+                  h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + fmt(s.cash))
+                )
+              ),
+              h('div', { className: 'flex items-center gap-1.5 shrink-0' },
+                h('div', { className: 'px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums' }, '⚡ ' + (s.energy || 0)),
+                s.isVip && h('div', { className: 'px-2 py-1 rounded-lg bg-[#FFD60A]/15 border border-[#FFD60A]/30 text-[#FFD60A] text-[10px] font-extrabold tabular-nums' }, '👑 VIP')
+              )
+            )
+          ),
+
+          h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
             
-            <button onClick={() => { const on = AudioEngine.toggle(); setMusicOn(on); }} className="music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition backdrop-blur">
-              <span className="text-base">{musicOn ? "🔊" : "🔇"}</span>
-            </button>
+            h(Card, { className: 'relative overflow-hidden p-4 mt-3 hero-grid', gold: true },
+              h('div', { className: 'absolute -top-16 -right-12 w-48 h-48 rounded-full bg-[#FFD60A]/25 blur-3xl pointer-events-none' }),
+              h('div', { className: 'relative' },
+                h('div', { className: 'flex items-center justify-between' },
+                  h('div', { className: 'text-[9px] uppercase tracking-widest text-white/45 font-bold' }, 'Tap Bonus Collected'),
+                  h('div', { className: 'text-2xl' }, '✈️')
+                ),
+                h('div', { className: 'mt-1 flex items-baseline gap-1' },
+                  h('span', { className: 'text-3xl font-black tabular-nums font-display text-gradient-gold' }, '+' + fmt(totalBonus)),
+                  h('span', { className: 'text-[11px] font-bold text-white/40' }, '/ tap')
+                ),
+                h('div', { className: 'mt-1.5 text-[10.5px] font-bold text-white/55' },
+                  'Current tap value: ',
+                  h('span', { className: 'text-[#FFD60A] font-black tabular-nums' }, fmt(tapValue)),
+                  s.isVip && h('span', { className: 'text-[#FFD60A] ml-1' }, '(VIP 1.5x)'),
+                  h('span', { className: 'text-white/30 ml-1' }, '(base ' + fmt(BASE_TAP) + ')')
+                ),
+                h('div', { className: 'mt-3 pt-3 border-t border-white/[0.08]' },
+                  h('div', { className: 'flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1.5' },
+                    h('span', null, visitedCount + ' / ' + DESTINATIONS.length + ' destinations'),
+                    h('span', { className: 'tabular-nums text-[#FFD60A]' }, progressPct + '%')
+                  ),
+                  h('div', { className: 'h-1.5 rounded-full bg-white/10 overflow-hidden' },
+                    h('div', { className: 'h-full bg-gradient-to-r from-[#FFD60A] to-[#FFB800] rounded-full transition-all duration-500', style: { width: progressPct + '%' } })
+                  )
+                )
+              )
+            ),
 
-            <header className="sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]">
-              <div className="px-4 py-2.5 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display">L</div>
-                  <div className="min-w-0">
-                    <div className="text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display">Travel</div>
-                    <div className="text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5">{s.name || 'Hustler'} · {fmt(s.cash)}</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <div className="px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums">⚡ {s.energy}</div>
-                  <div className="px-2 py-1 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] text-[10px] font-extrabold tabular-nums">{fmtReal(s.real)}</div>
-                </div>
-              </div>
-            </header>
+            visitedCount > 0 && h('div', null,
+              h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#22C55E] flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse glow-dot' }), 'STAMPED') }, 'Your Passport'),
+              h(Card, { className: 'p-4', passport: true },
+                h('div', { className: 'flex items-center justify-between mb-3 border-b border-white/10 pb-2' },
+                  h('div', { className: 'text-[10px] font-black text-white/40 uppercase tracking-widest' }, 'Federal Republic of Lagos Life'),
+                  h('div', { className: 'text-lg' }, '🌍')
+                ),
+                h('div', { className: 'flex flex-wrap gap-2' },
+                  DESTINATIONS.filter((d) => safeTravels.includes(d.id)).map((d) => 
+                    h('div', { key: d.id, className: 'fly-in relative flex items-center gap-1.5 bg-white/[0.06] border border-[#FFD60A]/30 rounded-lg px-2.5 py-1.5' },
+                      h('span', { className: 'text-base' }, d.emoji),
+                      h('span', { className: 'text-[10.5px] font-extrabold font-display' }, d.short),
+                      h('span', { className: 'text-[9px] font-black text-[#22C55E] tabular-nums' }, '+' + fmt(d.bonus))
+                    )
+                  )
+                )
+              )
+            ),
 
-            <main className="flex-1 px-4 pb-4 animate-slideDown">
-              <Card className="relative overflow-hidden p-4 mt-3 hero-grid" gold>
-                <div className="absolute -top-16 -right-12 w-48 h-48 rounded-full bg-[#FFD60A]/25 blur-3xl pointer-events-none" />
-                <div className="relative">
-                  <div className="flex items-center justify-between">
-                    <div className="text-[9px] uppercase tracking-widest text-white/45 font-bold">Tap Bonus Collected</div>
-                    <div className="text-2xl">✈️</div>
-                  </div>
-                  <div className="mt-1 flex items-baseline gap-1">
-                    <span className="text-3xl font-black tabular-nums font-display text-gradient-gold">+{fmt(totalBonus)}</span>
-                    <span className="text-[11px] font-bold text-white/40">/ tap</span>
-                  </div>
-                  <div className="mt-1.5 text-[10.5px] font-bold text-white/55">
-                    Current tap value: <span className="text-[#FFD60A] font-black tabular-nums">{fmt(tapValue)}</span>
-                    <span className="text-white/30 ml-1">(base {fmt(BASE_TAP)})</span>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-white/[0.08]">
-                    <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1.5">
-                      <span>{visitedCount} / {DESTINATIONS.length} destinations</span>
-                      <span className="tabular-nums text-[#FFD60A]">{progressPct}%</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-[#FFD60A] to-[#FFB800] rounded-full transition-all duration-500" style={{ width: progressPct + '%' }} />
-                    </div>
-                    <div className="mt-2 text-[9.5px] text-white/35 font-bold">
-                      Max possible: <span className="text-[#FFD60A] font-black">+{fmt(totalPossibleBonus)}</span> per tap
-                    </div>
-                  </div>
-                </div>
-              </Card>
+            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-white/30' }, DESTINATIONS.length + ' routes') }, 'Japa Routes'),
 
-              {visitedCount > 0 && (
-                <>
-                  <SectionTitle right={<span className="text-[10px] font-bold text-[#22C55E] flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse glow-dot" />STAMPED</span>}>
-                    Your Passport
-                  </SectionTitle>
-                  <Card className="p-3.5">
-                    <div className="flex flex-wrap gap-2">
-                      {DESTINATIONS.filter((d) => (s.travels || []).includes(d.id)).map((d) => (
-                        <div key={d.id} className="fly-in relative flex items-center gap-1.5 bg-white/[0.06] border border-[#FFD60A]/30 rounded-lg px-2.5 py-1.5">
-                          <span className="text-base">{d.emoji}</span>
-                          <span className="text-[10.5px] font-extrabold font-display">{d.short}</span>
-                          <span className="text-[9px] font-black text-[#22C55E] tabular-nums">+{fmt(d.bonus)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </Card>
-                </>
-              )}
+            h('div', { className: 'space-y-2.5' },
+              DESTINATIONS.map((d) => {
+                const done = safeTravels.includes(d.id);
+                const canAfford = s.cash >= d.cost;
+                const justBookedThis = justBooked === d.id;
+                const isLegendary = d.id === 'space';
+                
+                return h(Card, {
+                  key: d.id,
+                  className: 'relative overflow-hidden p-3 flex items-center gap-3 transition-all duration-300 ' +
+                    (done ? 'border-[#22C55E]/40 ' : '') +
+                    (justBookedThis ? 'ring-2 ring-[#FFD60A] shadow-[0_0_30px_rgba(255,214,10,0.5)] scale-[1.01] ' : '')
+                },
+                  h('div', { className: 'absolute inset-0 bg-gradient-to-br ' + d.color + ' pointer-events-none opacity-60' }),
+                  h('div', { className: 'relative w-14 h-14 rounded-xl bg-gradient-to-br from-white/[0.1] to-white/[0.02] border border-white/[0.08] grid place-items-center text-3xl shrink-0' },
+                    d.emoji,
+                    done && h('div', { className: 'absolute -top-1.5 -right-1.5 bg-[#22C55E] rounded-full w-5 h-5 grid place-items-center shadow-lg stamp-visit' },
+                      h('span', { className: 'text-black text-[10px] font-black' }, '✓')
+                    )
+                  ),
+                  h('div', { className: 'relative flex-1 min-w-0' },
+                    h('div', { className: 'flex items-center gap-1.5' },
+                      h('div', { className: 'text-[13px] font-extrabold truncate font-display' }, d.name),
+                      isLegendary && h('span', { className: 'text-[10px]' }, '🚀')
+                    ),
+                    h('div', { className: 'text-[9px] text-white/40 truncate mb-1' }, d.desc),
+                    h('div', { className: 'flex items-center gap-2 mt-1 flex-wrap' },
+                      h('span', {
+                        className: 'text-[8.5px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ' +
+                          (d.tier === 'Legendary' ? 'bg-fuchsia-500/20 text-fuchsia-300' :
+                           d.tier === 'Superpower' ? 'bg-indigo-500/20 text-indigo-300' :
+                           d.tier === 'North America' ? 'bg-red-500/20 text-red-300' :
+                           d.tier === 'Europe' ? 'bg-blue-500/20 text-blue-300' :
+                           d.tier === 'Middle East' ? 'bg-amber-400/20 text-amber-300' :
+                           d.tier === 'West Africa' ? 'bg-orange-500/20 text-orange-300' :
+                           'bg-slate-400/20 text-slate-300')
+                      }, d.tier)
+                    ),
+                    h('div', { className: 'flex items-center gap-2 mt-1.5 text-[10px] font-black tabular-nums' },
+                      h('span', { className: 'text-white/55' }, fmt(d.cost)),
+                      h('span', { className: 'text-white/20' }, '·'),
+                      h('span', { className: 'text-[#22C55E]' }, '+' + fmt(d.bonus) + '/tap')
+                    )
+                  ),
+                  h('button', {
+                    onClick: () => book(d),
+                    disabled: done || !canAfford,
+                    className: 'relative shrink-0 rounded-lg text-[10.5px] font-black px-3 py-2.5 active:scale-95 transition-all ' +
+                      (done
+                        ? 'bg-[#22C55E]/20 text-[#22C55E] border border-[#22C55E]/30'
+                        : canAfford
+                          ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_14px_-4px_rgba(255,214,10,0.7)]'
+                          : 'bg-white/[0.06] text-white/25 border border-white/[0.06]')
+                  }, done ? '✅ JAPA\'D' : canAfford ? 'BOOK' : 'LOCKED')
+                );
+              })
+            ),
 
-              <SectionTitle right={<span className="text-[10px] font-bold text-white/30">{DESTINATIONS.length} routes</span>}>
-                Japa Routes
-              </SectionTitle>
+            h(Card, { className: 'p-3.5 mt-4' },
+              h('div', { className: 'flex items-start gap-2' },
+                h('span', { className: 'text-base' }, '🌍'),
+                h('p', { className: 'text-[10.5px] text-white/50 leading-relaxed' },
+                  'Every destination you visit ',
+                  h('span', { className: 'text-[#FFD60A] font-bold' }, 'permanently boosts your tap earnings'),
+                  '. Space na the ultimate flex — ₦1 Trillion and you go +₦25,000 every tap. Japa tire! ✈️'
+                )
+              )
+            )
+          ),
 
-              <div className="space-y-2.5">
-                {DESTINATIONS.map((d) => {
-                  const done = (s.travels || []).includes(d.id);
-                  const canAfford = s.cash >= d.cost;
-                  const justBookedThis = justBooked === d.id;
-                  const isLegendary = d.id === 'space';
-                  return (
-                    <Card key={d.id}
-                          className={'relative overflow-hidden p-3 flex items-center gap-3 transition-all duration-300 ' +
-                            (done ? 'border-[#22C55E]/40 ' : '') +
-                            (justBookedThis ? 'ring-2 ring-[#FFD60A] shadow-[0_0_30px_rgba(255,214,10,0.5)] scale-[1.01] ' : '')}>
-                      <div className={'absolute inset-0 bg-gradient-to-br ' + d.color + ' pointer-events-none opacity-60'} />
-                      <div className="relative w-14 h-14 rounded-xl bg-gradient-to-br from-white/[0.1] to-white/[0.02] border border-white/[0.08] grid place-items-center text-3xl shrink-0">
-                        {d.emoji}
-                        {done && (
-                          <div className="absolute -top-1.5 -right-1.5 bg-[#22C55E] rounded-full w-5 h-5 grid place-items-center shadow-lg stamp-visit">
-                            <span className="text-black text-[10px] font-black">✓</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="relative flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <div className="text-[13px] font-extrabold truncate font-display">{d.name}</div>
-                          {isLegendary && <span className="text-[10px]">🚀</span>}
-                        </div>
-                        <div className="text-[9px] text-white/40 truncate mb-1">{d.desc}</div>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className={'text-[8.5px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ' +
-                            (d.tier === 'Legendary' ? 'bg-fuchsia-500/20 text-fuchsia-300' :
-                             d.tier === 'Superpower' ? 'bg-indigo-500/20 text-indigo-300' :
-                             d.tier === 'North America' ? 'bg-red-500/20 text-red-300' :
-                             d.tier === 'Europe' ? 'bg-blue-500/20 text-blue-300' :
-                             d.tier === 'Middle East' ? 'bg-amber-400/20 text-amber-300' :
-                             d.tier === 'West Africa' ? 'bg-orange-500/20 text-orange-300' :
-                             'bg-slate-400/20 text-slate-300')}>
-                            {d.tier}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-1.5 text-[10px] font-black tabular-nums">
-                          <span className="text-white/55">{fmt(d.cost)}</span>
-                          <span className="text-white/20">·</span>
-                          <span className="text-[#22C55E]">+{fmt(d.bonus)}/tap</span>
-                        </div>
-                      </div>
-                      <button onClick={() => book(d)} disabled={done || !canAfford}
-                              className={'relative shrink-0 rounded-lg text-[10.5px] font-black px-3 py-2.5 active:scale-95 transition-all ' +
-                                (done
-                                  ? 'bg-[#22C55E]/20 text-[#22C55E] border border-[#22C55E]/30'
-                                  : canAfford
-                                    ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_14px_-4px_rgba(255,214,10,0.7)]'
-                                    : 'bg-white/[0.06] text-white/25 border border-white/[0.06]')}>
-                        {done ? '✅ JAPA\'D' : canAfford ? 'BOOK' : 'LOCKED'}
-                      </button>
-                    </Card>
-                  );
-                })}
-              </div>
+          travelingTo && h('div', { className: 'fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md' },
+            h('div', { className: 'text-6xl mb-4 animate-bounce' }, travelingTo.emoji),
+            h('h2', { className: 'text-2xl font-black text-[#FFD60A] mb-1 font-display text-center px-4' }, 'JAPA TO ' + travelingTo.short.toUpperCase() + '...'),
+            h('p', { className: 'text-white/60 text-xs mb-8' }, travelingTo.desc),
+            h('div', { className: 'relative w-full h-32 flex items-center overflow-hidden' },
+              h('div', { className: 'absolute text-6xl ' + getVehicle(travelingTo.id).anim }, getVehicle(travelingTo.id).icon)
+            ),
+            h('div', { className: 'text-white/40 text-[10px] font-bold mt-4 uppercase tracking-widest animate-pulse' }, 'Booking your ticket...')
+          ),
 
-              <Card className="p-3.5 mt-4">
-                <div className="flex items-start gap-2">
-                  <span className="text-base">🌍</span>
-                  <p className="text-[10.5px] text-white/50 leading-relaxed">
-                    Every destination you visit <span className="text-[#FFD60A] font-bold">permanently boosts your tap earnings</span>. Ikeja na free upgrade (no bonus but story). Space na the ultimate flex — ₦1 Trillion and you go +₦25,000 every tap. Japa tire! ✈️
-                  </p>
-                </div>
-              </Card>
-            </main>
+          travelEvent && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md' }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 animate-popIn text-center' },
+              h('div', { className: 'text-6xl mb-2' }, travelEvent.type === 'good' ? '🤑' : travelEvent.type === 'bad' ? '😭' : '😂'),
+              h('div', { className: 'text-[15px] font-black text-[#FFD60A] font-display mb-2' }, 'TRAVEL EVENT!'),
+              h('p', { className: 'text-[12px] text-white/80 leading-relaxed mb-4' }, travelEvent.msg),
+              travelEvent.cash !== 0 && h('div', { className: 'text-[18px] font-black ' + (travelEvent.cash > 0 ? 'text-green-400' : 'text-red-400') + ' mb-4' }, (travelEvent.cash > 0 ? '+' : '') + fmt(travelEvent.cash)),
+              h('button', { onClick: () => setTravelEvent(null), className: 'w-full py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white font-bold text-[12px] active:scale-95 transition' }, 'Continue')
+            )
+          ),
 
-            {/* ANIMATION MODAL */}
-            {travelingTo && (() => {
-              const vehicle = getVehicle(travelingTo.id);
-              return (
-                <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/95 backdrop-blur-md">
-                  <div className="text-6xl mb-4 animate-bounce">{travelingTo.emoji}</div>
-                  <h2 className="text-2xl font-black text-[#FFD60A] mb-1 font-display text-center px-4">
-                    JAPA TO {travelingTo.short.toUpperCase()}...
-                  </h2>
-                  <p className="text-white/60 text-xs mb-8">{travelingTo.desc}</p>
-                  
-                  {/* Animation Area */}
-                  <div className="relative w-full h-32 flex items-center overflow-hidden">
-                    <div className={`absolute text-6xl ${vehicle.anim}`}>{vehicle.icon}</div>
-                  </div>
-                  
-                  <div className="text-white/40 text-[10px] font-bold mt-4 uppercase tracking-widest animate-pulse">
-                    Booking your ticket...
-                  </div>
-                </div>
-              );
-            })()}
+          h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
+            h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
+              NAV.map((n) => {
+                const active = n.id === 'more';
+                return h('a', {
+                  key: n.id, href: n.href,
+                  className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')
+                },
+                  h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
+                  h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
+                );
+              })
+            )
+          ),
 
-            <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]">
-              <div className="grid grid-cols-6 px-1 pt-1.5 safe-bottom">
-                {NAV.map((n) => {
-                  const active = n.id === 'more';
-                  return (
-                    <a key={n.id} href={n.href}
-                       onClick={(e) => { if (n.id === 'more') { e.preventDefault(); document.getElementById('more-sheet')?.classList.remove('hidden'); } }}
-                       className={'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')}>
-                      <span className={'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '')}>{n.icon}</span>
-                      <span className="text-[8.5px] font-extrabold tracking-wide font-display">{n.label}</span>
-                    </a>
-                  );
-                })}
-              </div>
-            </nav>
-
-            <div id="more-sheet" className="hidden fixed inset-0 z-50 flex items-end justify-center">
-              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => document.getElementById('more-sheet')?.classList.add('hidden')} />
-              <div className="relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp" onClick={(e) => e.stopPropagation()}>
-                <div className="w-10 h-1 rounded-full bg-white/15 mx-auto mb-4" />
-                <div className="space-y-2">
-                  {MORE_PAGES.map((m) => (
-                    <a key={m.id} href={m.href} className="w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left">
-                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0">{m.icon}</div>
-                      <div className="min-w-0">
-                        <div className="text-[13px] font-extrabold font-display">{m.label}</div>
-                        <div className="text-[10px] text-white/40 font-bold mt-0.5">{m.desc}</div>
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {toast && (
-              <div className={'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' + (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')}>
-                {toast.msg}
-              </div>
-            )}
-          </div>
-        </div>
+          toast && h('div', {
+            className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
+              (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')
+          }, toast.msg)
+        )
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    class ErrorBoundary extends React.Component {
+      constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+      static getDerivedStateFromError(error) { return { hasError: true, error: error }; }
+      componentDidCatch(error, info) { console.error('ErrorBoundary caught:', error, info); }
+      render() {
+        if (this.state.hasError) {
+          return h('div', { style: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', padding: '24px', textAlign: 'center', background: '#08080B', color: '#F87171', fontFamily: 'monospace', fontSize: '12px' } },
+            h('div', { style: { fontSize: '32px' } }, '⚠️'),
+            h('div', { style: { fontWeight: 'bold' } }, 'Something went wrong'),
+            h('div', { style: { opacity: 0.6, wordBreak: 'break-word' } }, String((this.state.error && this.state.error.message) || 'Unknown error')),
+            h('button', { style: { marginTop: '12px', padding: '8px 16px', background: '#FFD60A', color: '#000', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }, onClick: () => window.location.reload() }, 'Reload')
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(ErrorBoundary, null, h(App)));
   </script>
 </body>
 </html>
