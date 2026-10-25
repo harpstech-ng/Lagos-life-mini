@@ -53,6 +53,11 @@ const MESSAGES = [
     text: "💖 *BABE WAHALA!*\n\nYour babe is waiting for you in the app. Don't let her down. She wants to go shopping! 🛍️",
     button: "💖 Check Babe",
     page: "babe.html"
+  },
+  {
+    text: "🩸 *RITUAL ALERT!*\n\nSomebody just used you for money ritual in the game! You lost ₦1M fake cash. Open the Madness page to retaliate. 😈",
+    button: "🩸 Go to Madness",
+    page: "madness.html"
   }
 ];
 
@@ -75,6 +80,8 @@ export default async function handler(req, res) {
     const authData = await authRes.json();
     const token = authData.idToken;
 
+    if (!token) throw new Error("Could not get Firebase auth token.");
+
     // 2. Fetch 100 users
     const usersRes = await fetch(`${BASE_URL}/users?pageSize=100`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -88,29 +95,32 @@ export default async function handler(req, res) {
     const now = Date.now();
     const twoHours = 2 * 60 * 60 * 1000;
 
-    // 3. Filter users
+    // 3. Filter users: Has TG ID, Finished Onboarding, and hasn't been notified in 2 hours
     const validUsers = usersData.documents.filter(user => {
       const tgId = user.fields?.telegramId?.integerValue || user.fields?.telegramId?.stringValue;
       const step = user.fields?.onboardingStep?.integerValue;
       const lastNotified = Number(user.fields?.lastNotified?.integerValue || 0);
       
+      // We check step === "6" because the gender step is now step 5, making 6 the finish line
       return tgId && step === "6" && (now - lastNotified > twoHours);
     }).map(user => ({
-      id: user.name.split("/").pop(),
+      id: user.name.split("/").pop(), // Document ID
       tgId: user.fields.telegramId.integerValue || user.fields.telegramId.stringValue
     }));
 
+    // If no valid users need notifying right now, exit early
     if (validUsers.length === 0) {
       return res.status(200).json({ success: true, messagesSent: 0, note: "No users due for a notification yet." });
     }
 
     // 4. Batch and Send
     let sentCount = 0;
-    const batches = chunkArray(validUsers, 28);
+    const batches = chunkArray(validUsers, 28); // Telegram allows 30/sec. We use 28 to be safe.
 
     for (const batch of batches) {
       const promises = batch.map(u => {
         const msgObj = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
+        
         return bot.telegram.sendMessage(u.tgId, msgObj.text, { 
           parse_mode: "Markdown",
           reply_markup: {
@@ -119,20 +129,30 @@ export default async function handler(req, res) {
         })
           .then(() => { 
             sentCount++; 
+            // Update the lastNotified timestamp so we don't spam them
             return fetch(`${BASE_URL}/users/${u.id}?updateMask.fieldPaths=lastNotified`, {
               method: 'PATCH',
               headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
               body: JSON.stringify({ fields: { lastNotified: { integerValue: String(now) } } })
             });
           })
-          .catch(err => { console.log(`Failed to send to ${u.tgId}:`, err.message); });
+          .catch(err => { 
+            // If they blocked the bot, this will catch the error and the cron won't crash
+            console.log(`Failed to send to ${u.tgId}:`, err.message); 
+          });
       });
 
-      await Promise.all(promises);
-      await new Promise(r => setTimeout(r, 1000));
+      await Promise.all(promises); 
+      await new Promise(r => setTimeout(r, 1000)); // Wait 1 second before processing the next batch
     }
 
-    res.status(200).json({ success: true, totalUsersFetched: usersData.documents.length, dueForNotification: validUsers.length, messagesSent: sentCount });
+    res.status(200).json({ 
+      success: true, 
+      totalUsersFetched: usersData.documents.length, 
+      dueForNotification: validUsers.length, 
+      messagesSent: sentCount 
+    });
+
   } catch (error) {
     console.error("CRON ERROR:", error);
     res.status(500).json({ error: error.message });
