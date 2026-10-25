@@ -19,6 +19,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
+  <!-- PAYSTACK SDK ADDED HERE -->
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
@@ -88,7 +91,7 @@
     const ENERGY_MS = 5 * 60 * 1000;
     const TOTAL_USERS = 256890;
     
-    // NEW WITHDRAWAL RATE: 10 Trillion Fake = 10,000 Real
+    // WITHDRAWAL RATE: 10 Trillion Fake = 10,000 Real
     const MIN_WITHDRAW = 10_000_000_000_000; 
     const REAL_PER_WITHDRAW = 10_000;
 
@@ -197,9 +200,19 @@
       const [fakeUsers, setFakeUsers] = useState(() => generateDynamicLeaderboard());
       const [feedMsg, setFeedMsg] = useState(FEED_MESSAGES[0]);
 
+      // PAYSTACK STATES
+      const [paystackKey, setPaystackKey] = useState("");
+      const [topUpAmount, setTopUpAmount] = useState(1000);
+
       useEffect(() => {
         const tg = window && window.Telegram && window.Telegram.WebApp;
         if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+
+        // FETCH PAYSTACK PUBLIC KEY SECURELY
+        fetch('/api/config')
+          .then(res => res.json())
+          .then(data => setPaystackKey(data.publicKey))
+          .catch(err => console.error("Could not load Paystack config", err));
 
         auth.signInAnonymously().then((cred) => {
           const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
@@ -368,16 +381,46 @@
         }
       };
 
-      const topUpDemo = async () => {
-        setS((p) => (Object.assign({}, p, { real: (p.real || 0) + 1000 })));
-        notify('Demo top-up: +₦1,000.00 real 💳');
-        AudioEngine.coin();
-        if (uid) {
-          await db.collection("users").doc(uid).update({
-            real: firebase.firestore.FieldValue.increment(1000),
-            lastSeen: Date.now()
-          }).catch(() => {});
-        }
+      // REAL PAYSTACK TOP UP
+      const topUpReal = () => {
+        if (!paystackKey) return notify("Payment system loading. Try again.", 'bad');
+        if (topUpAmount < 100) return notify("Minimum top up is ₦100", 'bad');
+
+        const handler = PaystackPop.setup({
+          key: paystackKey,
+          email: `user_${uid}@lagoslife.com`,
+          amount: topUpAmount * 100, // Paystack uses kobo
+          currency: 'NGN',
+          ref: 'LGM_' + Date.now() + '_' + Math.floor(Math.random() * 1000), 
+          callback: function(response) {
+            notify('Verifying payment...', 'good');
+            
+            fetch('/api/paystack', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                reference: response.reference, 
+                userId: uid, 
+                amount: topUpAmount 
+              })
+            })
+            .then(res => res.json())
+            .then(data => {
+              if (data.success) {
+                setS((p) => (Object.assign({}, p, { real: (p.real || 0) + topUpAmount })));
+                notify(`Payment Successful! +₦${topUpAmount.toLocaleString()} real 💳`);
+                AudioEngine.coin();
+              } else {
+                notify('Payment verification failed.', 'bad');
+              }
+            })
+            .catch(err => notify('Network error during verification.', 'bad'));
+          },
+          onClose: function() {
+            notify('Payment cancelled.', 'bad');
+          }
+        });
+        handler.openIframe();
       };
 
       const NAV = [
@@ -464,8 +507,8 @@
               )
             ),
 
-            // WITHDRAWAL CARD
-            h(SectionTitle, null, 'Withdraw to Real'),
+            // WITHDRAWAL & TOP UP CARD
+            h(SectionTitle, null, 'Wallet & Withdrawals'),
             h(Card, { className: 'p-4' },
               h('div', { className: 'text-[11px] text-white/55 leading-relaxed' },
                 'Rate: ', h('span', { className: 'text-[#FFD60A] font-bold' }, '₦10T fake = ₦10,000 real'), h('br'),
@@ -485,8 +528,23 @@
                 className: 'w-full mt-3 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] py-3.5 text-[13px] font-black text-black active:scale-[0.97] transition disabled:from-white/[0.06] disabled:to-white/[0.06] disabled:text-white/30 font-display shadow-[0_8px_24px_-8px_rgba(34,197,94,0.6)] disabled:shadow-none' },
                 'Withdraw ₦10,000.00 Real'
               ),
-              h('button', { onClick: topUpDemo, className: 'w-full mt-2 rounded-xl bg-white/[0.06] border border-white/10 py-2.5 text-[11px] font-extrabold text-white/65 active:scale-[0.97] transition' },
-                '💳 Top Up ₦1,000 Real (Demo)'
+
+              // DYNAMIC TOP UP SECTION
+              h('div', { className: 'mt-5 pt-4 border-t border-white/[0.08]' },
+                h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2' }, 'Top Up Real Cash'),
+                h('div', { className: 'flex gap-2' },
+                  h('div', { className: 'flex-1 flex items-center bg-white/[0.05] border border-white/10 rounded-xl px-3' },
+                    h('span', { className: 'text-[14px] text-white/50 font-bold' }, '₦'),
+                    h('input', {
+                      type: 'number',
+                      value: topUpAmount || '',
+                      onChange: (e) => setTopUpAmount(Math.floor(Number(e.target.value))),
+                      placeholder: 'Enter amount',
+                      className: 'w-full bg-transparent py-3 text-[14px] font-black text-white focus:outline-none ml-1'
+                    })
+                  ),
+                  h('button', { onClick: topUpReal, className: 'px-4 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[12px] active:scale-95 transition' }, 'Pay Now')
+                )
               )
             ),
 
