@@ -24,7 +24,7 @@
   <script>
     tailwind.config = {
       theme: { extend: {
-        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B', red: '#EF4444' },
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B', red: '#EF4444', green: '#22C55E' },
         fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
       }},
     };
@@ -32,18 +32,8 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-    html, body {
-      margin: 0; padding: 0;
-      background: #08080B; color: #fff;
-      overflow-x: hidden; overscroll-behavior-y: none;
-      font-family: 'Inter', system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
-    body {
-      background-image:
-        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(239,68,68,0.08), transparent),
-        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,214,10,0.05), transparent);
-    }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(239,68,68,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,214,10,0.05), transparent); }
     ::-webkit-scrollbar { width: 0; height: 0; }
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
     .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
@@ -65,6 +55,19 @@
     /* Smoke Effect */
     .smoke-blur { filter: blur(6px); transition: filter 1s ease; pointer-events: none; }
     .smoke-bg { background: radial-gradient(circle, rgba(34,197,94,0.2) 0%, transparent 70%); }
+    
+    @keyframes floatEmoji {
+      0% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-200px) scale(2) rotate(45deg); opacity: 0; }
+    }
+    .hallucination { position: absolute; animation: floatEmoji 3s ease-out forwards; pointer-events: none; z-index: 9999; }
+    
+    @keyframes screenShake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+      20%, 40%, 60%, 80% { transform: translateX(2px); }
+    }
+    .shake { animation: screenShake 0.5s; }
   </style>
 </head>
 <body>
@@ -97,7 +100,10 @@
     const getCachedData = () => {
       try {
         const cached = localStorage.getItem("lagos_user_data");
-        if (cached) return JSON.parse(cached);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return Object.assign({}, parsed, { madnessScore: parsed.madnessScore || 0 });
+        }
       } catch (e) {}
       const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
@@ -105,7 +111,7 @@
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
         taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
-        transactions: []
+        transactions: [], madnessScore: 0
       };
     };
 
@@ -120,7 +126,6 @@
       return s + '₦' + n.toLocaleString();
     };
 
-    /* ═══ AUDIO ENGINE ═══ */
     const AudioEngine = (() => {
       let ctx = null;
       function init() { if (ctx) return; ctx = new (window.AudioContext || window.webkitAudioContext)(); }
@@ -156,19 +161,22 @@
       const [toast, setToast] = useState(null);
       const [feed, setFeed] = useState([]);
       
-      // Modals
       const [kidnapModal, setKidnapModal] = useState(false);
       const [ritualModal, setRitualModal] = useState(false);
       const [smokeModal, setSmokeModal] = useState(false);
+      const [fightModal, setFightModal] = useState(false);
 
-      // Timers
+      const [victims, setVictims] = useState([]);
+      const [selectedVictim, setSelectedVictim] = useState(null);
+
       const [kidnapTimer, setKidnapTimer] = useState(15);
       const [smokeTimer, setSmokeTimer] = useState(30);
+      const [hallucinations, setHallucinations] = useState([]);
+      const [isShaking, setIsShaking] = useState(false);
       
       const timerRef = useRef(null);
       const smokeInterval = useRef(null);
 
-      // Firebase Sync
       useEffect(() => {
         const tg = window && window.Telegram && window.Telegram.WebApp;
         if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
@@ -184,7 +192,8 @@
               setS(prev => {
                 const dbData = doc.data();
                 const newData = Object.assign({}, prev, dbData, {
-                  transactions: dbData.transactions || []
+                  transactions: dbData.transactions || [],
+                  madnessScore: dbData.madnessScore || 0
                 });
                 try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
                 return newData;
@@ -195,7 +204,7 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
-                transactions: []
+                transactions: [], madnessScore: 0
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
@@ -205,6 +214,20 @@
           return unsubscribe;
         }).catch(e => setAuthError(e.message));
       }, []);
+
+      useEffect(() => {
+        if (!uid || !ritualModal) return;
+        const unsub = db.collection("users").limit(10).onSnapshot((snap) => {
+          const v = [];
+          snap.forEach(doc => {
+            if (doc.id !== uid) {
+              v.push({ id: doc.id, name: doc.data().name || 'Hustler' });
+            }
+          });
+          setVictims(v);
+        });
+        return () => unsub();
+      }, [uid, ritualModal]);
 
       useEffect(() => {
         if (!toast) return;
@@ -222,15 +245,20 @@
         }
       };
 
-      // --- ONE CHANCE / KIDNAP ---
+      const triggerShake = () => {
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 500);
+      };
+
       const enterDanfo = () => {
         if (s.cash < 1000) { AudioEngine.error(); return notify('You need ₦1k for Danfo 🚐', 'bad'); }
         
         updateUser({ cash: s.cash - 1000 });
         AudioEngine.tap();
 
-        const isKidnap = Math.random() < 0.10; // 10% chance
+        const isKidnap = Math.random() < 0.10; 
         if (isKidnap) {
+          triggerShake();
           setKidnapModal(true);
           setKidnapTimer(15);
           timerRef.current = setInterval(() => {
@@ -256,42 +284,80 @@
         if (s.cash < 2000000) { AudioEngine.error(); return notify('You don\'t have ₦2M for ransom 💸', 'bad'); }
         clearInterval(timerRef.current);
         setKidnapModal(false);
-        updateUser({ cash: s.cash - 2000000 });
+        updateUser({ cash: s.cash - 2000000, madnessScore: (s.madnessScore || 0) + 1 });
         AudioEngine.coin();
         notify('Ransom paid. They released you 🚐');
         addFeed('🚐 ' + (s.name || 'You') + ' paid ₦2M ransom to kidnappers and escaped!');
       };
 
-      // --- MONEY RITUAL ---
-      const doRitual = () => {
-        if (s.cash < 50000) { AudioEngine.error(); return notify('You need ₦50k for ritual materials 🩸', 'bad'); }
+      const fightKidnappers = () => {
+        clearInterval(timerRef.current);
+        setKidnapModal(false);
+        const win = Math.random() < 0.3;
         
-        const friendNames = ['Tolu', 'Emeka', 'Bisi', 'Chidi', 'Amaka'];
-        const victim = friendNames[Math.floor(Math.random() * friendNames.length)];
-
-        updateUser({ cash: s.cash + 10000000 - 50000 });
-        setRitualModal(false);
-        AudioEngine.ritual();
-        notify('RITUAL SUCCESSFUL! +₦10,000,000 🩸');
-        addFeed('🩸 ' + (s.name || 'You') + ' just used ' + victim + ' for money ritual! ' + victim + ' lost ₦1M!');
-        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+        if (win) {
+          AudioEngine.coin();
+          updateUser({ cash: s.cash + 1000000, clout: (s.clout || 0) + 200, madnessScore: (s.madnessScore || 0) + 2 });
+          notify('You fought them and won! +₦1M and +200 Clout 🥊');
+          addFeed('🚐 ' + (s.name || 'You') + ' fought the kidnappers, collected their money, and escaped!');
+        } else {
+          AudioEngine.error();
+          updateUser({ cash: s.cash - 1000000, energy: 0 });
+          notify('They beat you and threw you out. -₦1M and -100 Energy 😭', 'bad');
+          addFeed('🚐 ' + (s.name || 'You') + ' tried to fight kidnappers and got beaten mercilessly.');
+        }
       };
 
-      // --- SMOKE LOUD ---
+      const doRitual = async () => {
+        if (!selectedVictim) return notify('Pick a victim first', 'bad');
+        if (s.cash < 50000) { AudioEngine.error(); return notify('You need ₦50k for ritual materials 🩸', 'bad'); }
+        
+        triggerShake();
+        setRitualModal(false);
+        AudioEngine.ritual();
+        
+        if (selectedVictim.id.indexOf('test_') === -1) {
+          await db.collection("users").doc(selectedVictim.id).update({
+            cash: firebase.firestore.FieldValue.increment(-1000000)
+          }).catch(() => {});
+        }
+
+        updateUser({ cash: s.cash + 10000000 - 50000, madnessScore: (s.madnessScore || 0) + 5 });
+        
+        notify('RITUAL SUCCESSFUL! +₦10M 🩸');
+        addFeed('🩸 ' + (s.name || 'You') + ' just used ' + selectedVictim.name + ' for money ritual! ' + selectedVictim.name + ' lost ₦1M!');
+        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+        setSelectedVictim(null);
+      };
+
       const buyLoud = () => {
         if (s.cash < 10000) { AudioEngine.error(); return notify('You need ₦10k for loud 🍃', 'bad'); }
         
-        updateUser({ cash: s.cash - 10000 });
+        updateUser({ cash: s.cash - 10000, madnessScore: (s.madnessScore || 0) + 1 });
         setSmokeModal(true);
         setSmokeTimer(30);
         AudioEngine.tap();
+        triggerShake();
+
+        const emojis = ['🦋', '👽', '🐐', '🦍', '🍕', '🏎️', '🚁'];
+        const texts = ['Is that a flying goat?', 'Area boys are aliens', 'I can see sound', 'Why is my phone melting?', 'Lagooooos!'];
 
         smokeInterval.current = setInterval(() => {
+          if (Math.random() < 0.3) {
+            const isEmoji = Math.random() > 0.5;
+            const content = isEmoji ? emojis[Math.floor(Math.random() * emojis.length)] : texts[Math.floor(Math.random() * texts.length)];
+            const x = Math.random() * 80 + 10;
+            const y = Math.random() * 80 + 10;
+            const id = Date.now();
+            setHallucinations(prev => [...prev, { id, content, x, y, isEmoji }]);
+            setTimeout(() => setHallucinations(prev => prev.filter(hx => hx.id !== id)), 3000);
+          }
+
           setSmokeTimer(prev => {
             if (prev <= 1) {
               clearInterval(smokeInterval.current);
               setSmokeModal(false);
-              updateUser({ cash: s.cash - 100000 });
+              updateUser({ cash: s.cash - 100000, energy: 10 });
               AudioEngine.error();
               notify('You fainted! Hospital bill is ₦100k 😭', 'bad');
               addFeed('🍃 ' + (s.name || 'You') + ' fainted after smoking loud and paid ₦100k hospital bill!');
@@ -302,23 +368,36 @@
         }, 1000);
       };
 
-      // --- PASTOR SEED ---
-      const sowSeed = () => {
-        if (s.cash < 100000) { AudioEngine.error(); return notify('Seed na ₦100k 💸', 'bad'); }
+      const startFight = () => {
+        if (s.cash < 50000) return notify('You need ₦50k to bet on the fight', 'bad');
+        updateUser({ cash: s.cash - 50000 });
+        setFightModal(true);
+        AudioEngine.tap();
+        triggerShake();
         
-        const isScam = Math.random() < 0.90; // 90% scam
-        updateUser({ cash: s.cash - 100000 });
+        setTimeout(() => {
+          setFightModal(false);
+          const win = Math.random() < 0.5;
+          if (win) {
+            AudioEngine.coin();
+            updateUser({ cash: s.cash + 500000, clout: (s.clout || 0) + 100, madnessScore: (s.madnessScore || 0) + 2 });
+            notify('You won the street fight! +₦500k 🥊');
+            addFeed('🥊 ' + (s.name || 'You') + ' just knocked out an Area Boy in a street fight and won ₦500k!');
+          } else {
+            AudioEngine.error();
+            updateUser({ energy: 0 });
+            notify('You lost the fight and got hospitalized. -100 Energy 😭', 'bad');
+            addFeed('🥊 ' + (s.name || 'You') + ' got beaten by an Area Boy in a street fight.');
+          }
+        }, 2000);
+      };
 
-        if (isScam) {
-          AudioEngine.error();
-          notify('Pastor ran away with your seed! 😭', 'bad');
-          addFeed('🙏 Pastor don use ' + (s.name || 'You') + ' seed take buy Benz for game 😭 Thanks for your seed!');
-        } else {
-          AudioEngine.coin();
-          updateUser({ cash: s.cash + 500000 });
-          notify('God blessed you! +₦500k 🙏');
-          addFeed('🙏 God blessed ' + (s.name || 'You') + ' with ₦500k after sowing a seed!');
-        }
+      const villagePeople = () => {
+        if (s.cash < 200000) return notify('You need ₦200k for deliverance', 'bad');
+        updateUser({ cash: s.cash - 200000, clout: (s.clout || 0) + 50 });
+        AudioEngine.ritual();
+        notify('Pastor prayed for you. Deliverance successful! 🧙🏾‍♂️');
+        addFeed('🧙🏾‍♂️ ' + (s.name || 'You') + ' paid ₦200k for deliverance from village people.');
       };
 
       if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
@@ -329,25 +408,28 @@
         { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
         { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
         { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
-        { id: 'more', label: 'More', icon: '⋯', href: '#' },
-      ];
-      const MORE_PAGES = [
-        { id: 'bet', label: 'Bet Center', icon: '🎰', desc: 'Aviator, Bet9ja, Whot', href: 'bet.html' },
-        { id: 'babe', label: 'Babe Wahala', icon: '👩🏾‍❤️‍👨🏾', desc: 'Billing, DNA Test, Breakup', href: 'babe.html' },
-        { id: 'vip', label: 'Big Boys Lounge', icon: '👑', desc: 'VIP, Geh Geh, Gold Name', href: 'vip.html' },
-        { id: 'politics', label: 'Politics & BBN', icon: '🎩', desc: 'Elections, Big Brother', href: 'politics.html' },
-        { id: 'madness', label: 'Madness & Ritual', icon: '🍃', desc: 'Smoke Loud, Ritual, Kidnap', href: 'madness.html' },
-        { id: 'travel', label: 'Travel', icon: '✈️', desc: 'Japa from Mushin', href: 'travel.html' },
-        { id: 'street', label: 'Street', icon: '🥷', desc: 'Rob, beg, tax, spray', href: 'street.html' },
-        { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100 + withdraw', href: 'leaderboard.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
 
-      // --- SMOKE BLUR OVERLAY ---
+      let madnessTitle = "Normal Human";
+      if ((s.madnessScore || 0) > 5) madnessTitle = "Crazy Guy";
+      if ((s.madnessScore || 0) > 15) madnessTitle = "Certified Madman";
+      if ((s.madnessScore || 0) > 30) madnessTitle = "Area Boy King";
+
       const isHigh = smokeModal;
+      const kidnapWidth = String((kidnapTimer / 15) * 100) + '%';
 
-      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-red-500 selection:text-black' },
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-red-500 selection:text-black ' + (isShaking ? 'shake' : '') },
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative ' + (isHigh ? 'smoke-blur' : '') },
           
+          hallucinations.map(hx => 
+            h('div', { 
+              key: hx.id, 
+              className: 'hallucination text-4xl font-black', 
+              style: { left: String(hx.x) + '%', top: String(hx.y) + '%', color: hx.isEmoji ? '#fff' : '#22C55E' } 
+            }, hx.content)
+          ),
+
           isHigh && h('div', { className: 'fixed inset-0 z-[100] smoke-bg flex flex-col items-center justify-center text-center pointer-events-none' },
             h('div', { className: 'text-7xl mb-4 animate-bounce' }, '🍃'),
             h('div', { className: 'text-3xl font-black text-green-400 font-display' }, 'YOU ARE HIGH!'),
@@ -364,8 +446,9 @@
                   h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + fmt(s.cash))
                 )
               ),
-              h('div', { className: 'flex items-center gap-1.5 shrink-0' },
-                h('div', { className: 'px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums' }, '⚡ ' + (s.energy || 0))
+              h('div', { className: 'flex flex-col items-end shrink-0' },
+                h('div', { className: 'text-[9px] font-black text-red-400' }, madnessTitle),
+                h('div', { className: 'px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums mt-1' }, '⚡ ' + (s.energy || 0))
               )
             )
           ),
@@ -375,7 +458,6 @@
             h(SectionTitle, null, 'Crazy Actions'),
             
             h('div', { className: 'space-y-3' },
-              // ONE CHANCE
               h(Card, { className: 'p-4 flex items-center gap-3' },
                 h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-2xl shrink-0' }, '🚐'),
                 h('div', { className: 'flex-1 min-w-0' },
@@ -385,33 +467,39 @@
                 )
               ),
 
-              // MONEY RITUAL
               h(Card, { className: 'p-4 flex items-center gap-3' },
                 h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-2xl shrink-0' }, '🩸'),
                 h('div', { className: 'flex-1 min-w-0' },
-                  h('div', { className: 'text-[13px] font-extrabold font-display' }, 'Money Ritual'),
-                  h('div', { className: 'text-[9px] text-white/40 mb-1' }, 'Use a friend, get ₦10M.'),
+                  h('div', { className: 'text-[13px] font-extrabold font-display' }, 'Real Money Ritual'),
+                  h('div', { className: 'text-[9px] text-white/40 mb-1' }, 'Use a REAL player. Steal their ₦1M.'),
                   h('button', { onClick: () => setRitualModal(true), className: 'px-4 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-[10px] font-black border border-red-500/30 active:scale-95 transition' }, 'Do Ritual (₦50K)')
                 )
               ),
 
-              // SMOKE LOUD
               h(Card, { className: 'p-4 flex items-center gap-3' },
                 h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-2xl shrink-0' }, '🍃'),
                 h('div', { className: 'flex-1 min-w-0' },
                   h('div', { className: 'text-[13px] font-extrabold font-display' }, 'Smoke Loud'),
-                  h('div', { className: 'text-[9px] text-white/40 mb-1' }, 'Get high. Faint. Pay hospital bill.'),
+                  h('div', { className: 'text-[9px] text-white/40 mb-1' }, 'Get high. Hallucinate. Pay hospital bill.'),
                   h('button', { onClick: buyLoud, className: 'px-4 py-1.5 rounded-lg bg-green-500/20 text-green-400 text-[10px] font-black border border-green-500/30 active:scale-95 transition' }, 'Buy Loud (₦10K)')
                 )
               ),
 
-              // PASTOR SEED
               h(Card, { className: 'p-4 flex items-center gap-3' },
-                h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-2xl shrink-0' }, '🙏'),
+                h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-2xl shrink-0' }, '🥊'),
                 h('div', { className: 'flex-1 min-w-0' },
-                  h('div', { className: 'text-[13px] font-extrabold font-display' }, 'Pastor Seed'),
-                  h('div', { className: 'text-[9px] text-white/40 mb-1' }, 'Sow a seed. 90% chance pastor runs away.'),
-                  h('button', { onClick: sowSeed, className: 'px-4 py-1.5 rounded-lg bg-[#FFD60A]/20 text-[#FFD60A] text-[10px] font-black border border-[#FFD60A]/30 active:scale-95 transition' }, 'Sow Seed (₦100K)')
+                  h('div', { className: 'text-[13px] font-extrabold font-display' }, 'Street Fight'),
+                  h('div', { className: 'text-[9px] text-white/40 mb-1' }, 'Fight an area boy for ₦500k.'),
+                  h('button', { onClick: startFight, className: 'px-4 py-1.5 rounded-lg bg-orange-500/20 text-orange-400 text-[10px] font-black border border-orange-500/30 active:scale-95 transition' }, 'Start Fight (₦50K)')
+                )
+              ),
+
+              h(Card, { className: 'p-4 flex items-center gap-3' },
+                h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-2xl shrink-0' }, '🧙🏾‍♂️'),
+                h('div', { className: 'flex-1 min-w-0' },
+                  h('div', { className: 'text-[13px] font-extrabold font-display' }, 'Village People'),
+                  h('div', { className: 'text-[9px] text-white/40 mb-1' }, 'They are attacking your hustle.'),
+                  h('button', { onClick: villagePeople, className: 'px-4 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 text-[10px] font-black border border-purple-500/30 active:scale-95 transition' }, 'Deliverance (₦200K)')
                 )
               )
             ),
@@ -423,14 +511,12 @@
             )
           ),
 
-          // Navigation
           h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
               NAV.map((n) => {
                 const active = n.id === 'more';
                 return h('a', {
                   key: n.id, href: n.href,
-                  onClick: (e) => { if (n.id === 'more') { e.preventDefault(); const el = document.getElementById('more-sheet'); if (el) el.classList.remove('hidden'); } },
                   className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-red-400 nav-active-pill' : 'text-white/35')
                 },
                   h('span', { className: 'text-[17px] leading-none transition-transform ' + (active ? 'scale-110' : '') }, n.icon),
@@ -439,27 +525,7 @@
               })
             )
           ),
-          h('div', { id: 'more-sheet', className: 'hidden fixed inset-0 z-50 flex items-end justify-center' },
-            h('div', { className: 'absolute inset-0 bg-black/70 backdrop-blur-sm', onClick: () => { const el = document.getElementById('more-sheet'); if (el) el.classList.add('hidden'); } }),
-            h('div', { className: 'relative w-full max-w-md bg-[#101016] border-t border-white/10 rounded-t-3xl p-4 pb-8 animate-slideUp', onClick: (e) => e.stopPropagation() },
-              h('div', { className: 'w-10 h-1 rounded-full bg-white/15 mx-auto mb-4' }),
-              h('div', { className: 'space-y-2 max-h-[70vh] overflow-y-auto' },
-                MORE_PAGES.map((m) =>
-                  h('a', { key: m.id, href: m.href, className: 'w-full flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.07] p-3 active:scale-[0.98] transition text-left' },
-                    h('div', { className: 'w-11 h-11 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-lg shrink-0' }, m.icon),
-                    h('div', { className: 'min-w-0' },
-                      h('div', { className: 'text-[13px] font-extrabold font-display' }, m.label),
-                      h('div', { className: 'text-[10px] text-white/40 font-bold mt-0.5' }, m.desc)
-                    )
-                  )
-                )
-              )
-            )
-          ),
 
-          // --- MODALS ---
-          
-          // KIDNAP MODAL
           kidnapModal && h('div', { className: 'fixed inset-0 z-[110] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md' }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-red-500/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(239,68,68,0.4)] animate-popIn text-center' },
@@ -468,28 +534,47 @@
               h('p', { className: 'text-[12px] text-white/70 mt-2 mb-4' }, 'You don enter kidnappers Danfo. Dem dey demand ₦2M ransom or dem go dump you for bush.'),
               
               h('div', { className: 'w-full bg-white/10 rounded-full h-2 mb-4' },
-                h('div', { className: 'bg-red-500 h-full rounded-full transition-all', style: { width: (kidnapTimer / 15 * 100) + '%' } })
+                h('div', { className: 'bg-red-500 h-full rounded-full transition-all', style: { width: kidnapWidth } })
               ),
               h('div', { className: 'text-[10px] text-red-400 font-bold mb-4' }, 'Time left: ' + kidnapTimer + 's'),
               
               h('div', { className: 'space-y-2' },
                 h('button', { onClick: payRansom, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[13px] active:scale-95 transition' }, 'Pay ₦2M Ransom'),
+                h('button', { onClick: fightKidnappers, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-red-500 to-red-700 text-white font-black text-[13px] active:scale-95 transition' }, 'Fight Them! (30% Win)'),
                 h('button', { onClick: () => { clearInterval(timerRef.current); setKidnapModal(false); updateUser({ cash: s.cash - 500000 }); notify('You escaped but lost ₦500k!', 'bad'); }, className: 'w-full py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/50 font-bold text-[11px]' }, 'Struggle and jump out (Lose ₦500k)')
               )
             )
           ),
 
-          // RITUAL MODAL
           ritualModal && h('div', { className: 'fixed inset-0 z-[110] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setRitualModal(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-red-500/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(239,68,68,0.4)] animate-popIn text-center' },
               h('div', { className: 'text-6xl mb-2' }, '🩸'),
-              h('div', { className: 'text-[15px] font-black text-red-500 font-display' }, 'MONEY RITUAL'),
-              h('p', { className: 'text-[12px] text-white/70 mt-2 mb-4' }, 'Do you want to use a friend for money ritual? You will get ₦10M, but your friend will lose ₦1M and get a notification.'),
+              h('div', { className: 'text-[15px] font-black text-red-500 font-display mb-4' }, 'SELECT A VICTIM'),
+              h('p', { className: 'text-[11px] text-white/50 mb-4' }, 'Using them for ritual will steal ₦1M from their real account.'),
+              
+              h('div', { className: 'space-y-2 mb-4 max-h-40 overflow-y-auto' },
+                victims.length === 0 ? h('div', { className: 'text-[11px] text-white/30' }, 'No real players found.') :
+                victims.map(v => 
+                  h('button', { key: v.id, onClick: () => setSelectedVictim(v), className: 'w-full py-2 rounded-lg text-[12px] font-bold ' + (selectedVictim && selectedVictim.id === v.id ? 'bg-red-500 text-white' : 'bg-white/5 text-white/60') }, v.name)
+                )
+              ),
               
               h('div', { className: 'space-y-2' },
-                h('button', { onClick: doRitual, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-red-500 to-red-700 text-white font-black text-[13px] active:scale-95 transition' }, 'Yes, Do It (₦50K)'),
+                h('button', { onClick: doRitual, disabled: !selectedVictim, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-red-500 to-red-700 text-white font-black text-[13px] active:scale-95 transition disabled:opacity-50' }, 'Confirm Ritual (₦50K)'),
                 h('button', { onClick: () => setRitualModal(false), className: 'w-full py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/50 font-bold text-[11px]' }, 'Cancel')
+              )
+            )
+          ),
+
+          fightModal && h('div', { className: 'fixed inset-0 z-[110] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md' }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-orange-500/30 rounded-3xl p-5 animate-popIn text-center' },
+              h('div', { className: 'text-6xl mb-2 animate-pulse' }, '🥊'),
+              h('div', { className: 'text-[15px] font-black text-orange-400 font-display' }, 'FIGHT IN PROGRESS'),
+              h('p', { className: 'text-[12px] text-white/70 mt-2' }, 'You are throwing punches with an Area Boy...'),
+              h('div', { className: 'mt-4 h-2 w-full bg-white/10 rounded-full overflow-hidden' },
+                h('div', { className: 'h-full w-full bg-orange-500 rounded-full animate-pulse' })
               )
             )
           ),
