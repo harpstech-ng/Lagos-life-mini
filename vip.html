@@ -19,6 +19,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
+  <!-- PAYSTACK SDK ADDED HERE -->
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
@@ -162,7 +165,7 @@
       }
       return {
         tap: () => { init(); tone(880, 0.09, "triangle", 0, 0.28); },
-        coin: () => { init(); tone(1046, 0.08, "square", 0, 0.15); tone(1318, 0.15, "square", 0.07, 0.15); },
+        coin: () => { init(); tone(1046, 0.08, "square", 0, 0.15); tone(1318, 0.15, "square", 0, 0.07); },
         error: () => { init(); tone(220, 0.15, "sawtooth", 0, 0.25); tone(165, 0.25, "sawtooth", 0.1, 0.25); },
         vip: () => { init(); tone(523, 0.2, "sine", 0, 0.2); tone(659, 0.2, "sine", 0.15, 0.2); tone(783, 0.3, "sine", 0.3, 0.2); tone(1046, 0.4, "sine", 0.45, 0.2); }
       };
@@ -197,12 +200,21 @@
       const [activeKings, setActiveKings] = useState(50);
       const [customTitle, setCustomTitle] = useState('');
       const [flashScreen, setFlashScreen] = useState(false);
+
+      // PAYSTACK STATES
+      const [paystackKey, setPaystackKey] = useState("");
+      const [topUpAmount, setTopUpAmount] = useState(5000);
       
       const chatEndRef = useRef(null);
 
       useEffect(() => {
         const tg = window && window.Telegram && window.Telegram.WebApp;
         if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+
+        fetch('/api/config')
+          .then(res => res.json())
+          .then(data => setPaystackKey(data.publicKey))
+          .catch(err => console.error("Could not load Paystack config", err));
 
         auth.signInAnonymously().then((cred) => {
           const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
@@ -287,10 +299,46 @@
         }
       };
 
-      const topUpDemo = () => {
-        updateUser({ real: (s.real || 0) + 5000 });
-        notify('Demo top-up: +₦5,000.00 real 💳');
-        AudioEngine.coin();
+      // REAL PAYSTACK TOP UP
+      const topUpReal = () => {
+        if (!paystackKey) return notify("Payment system loading. Try again.", 'bad');
+        if (topUpAmount < 100) return notify("Minimum top up is ₦100", 'bad');
+
+        const handler = PaystackPop.setup({
+          key: paystackKey,
+          email: `user_${uid}@lagoslife.com`,
+          amount: topUpAmount * 100, // Paystack uses kobo
+          currency: 'NGN',
+          ref: 'LGM_' + Date.now() + '_' + Math.floor(Math.random() * 1000), 
+          callback: function(response) {
+            notify('Verifying payment...', 'good');
+            
+            fetch('/api/paystack', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                reference: response.reference, 
+                userId: uid, 
+                amount: topUpAmount 
+              })
+            })
+            .then(res => res.json())
+            .then(data => {
+              if (data.success) {
+                setS((p) => (Object.assign({}, p, { real: (p.real || 0) + topUpAmount })));
+                notify(`Payment Successful! +₦${topUpAmount.toLocaleString()} real 💳`);
+                AudioEngine.coin();
+              } else {
+                notify('Payment verification failed.', 'bad');
+              }
+            })
+            .catch(err => notify('Network error during verification.', 'bad'));
+          },
+          onClose: function() {
+            notify('Payment cancelled.', 'bad');
+          }
+        });
+        handler.openIframe();
       };
 
       const enterVip = () => {
@@ -454,11 +502,26 @@
                 )
               ),
 
+              // TOP UP UI (Replaces Demo Button)
+              h('div', { className: 'w-full bg-white/[0.04] border border-white/[0.07] rounded-2xl p-3 mb-3' },
+                h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2 text-left' }, 'Top Up Real Cash'),
+                h('div', { className: 'flex gap-2' },
+                  h('div', { className: 'flex-1 flex items-center bg-white/[0.05] border border-white/10 rounded-xl px-3' },
+                    h('span', { className: 'text-[14px] text-white/50 font-bold' }, '₦'),
+                    h('input', {
+                      type: 'number',
+                      value: topUpAmount || '',
+                      onChange: (e) => setTopUpAmount(Math.floor(Number(e.target.value))),
+                      placeholder: 'Amount',
+                      className: 'w-full bg-transparent py-2.5 text-[14px] font-black text-white focus:outline-none ml-1'
+                    })
+                  ),
+                  h('button', { onClick: topUpReal, className: 'px-4 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black font-black text-[12px] active:scale-95 transition' }, 'Pay Now')
+                )
+              ),
+
               h('button', { onClick: enterVip, className: 'w-full py-4 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[15px] shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)] active:scale-95 transition mb-3' }, 
                 'Pay ₦5,000 Real to Enter'
-              ),
-              h('button', { onClick: topUpDemo, className: 'w-full py-3 rounded-xl bg-white/[0.06] border border-white/10 text-[11px] font-extrabold text-white/65 active:scale-[0.97] transition' }, 
-                '💳 Top Up ₦5,000 Real (Demo)'
               )
             ),
             // Navigation
@@ -529,6 +592,24 @@
                 h('div', { className: 'bg-black/30 rounded-xl p-2 border border-[#FFD60A]/20' },
                   h('div', { className: 'text-[9px] text-[#FFD60A] uppercase font-bold' }, 'No Agbero Tax'),
                   h('div', { className: 'text-[11px] font-black text-white' }, 'ACTIVE 🛡️')
+                )
+              ),
+
+              // TOP UP INSIDE VIP
+              h('div', { className: 'mt-4 pt-4 border-t border-[#FFD60A]/20' },
+                h('div', { className: 'text-[10px] uppercase tracking-widest text-[#FFD60A]/70 font-bold mb-2' }, 'Top Up Real Cash for Flexes'),
+                h('div', { className: 'flex gap-2' },
+                  h('div', { className: 'flex-1 flex items-center bg-white/[0.05] border border-white/10 rounded-xl px-3' },
+                    h('span', { className: 'text-[14px] text-white/50 font-bold' }, '₦'),
+                    h('input', {
+                      type: 'number',
+                      value: topUpAmount || '',
+                      onChange: (e) => setTopUpAmount(Math.floor(Number(e.target.value))),
+                      placeholder: 'Amount',
+                      className: 'w-full bg-transparent py-2.5 text-[14px] font-black text-white focus:outline-none ml-1'
+                    })
+                  ),
+                  h('button', { onClick: topUpReal, className: 'px-4 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black font-black text-[12px] active:scale-95 transition' }, 'Pay Now')
                 )
               )
             ),
