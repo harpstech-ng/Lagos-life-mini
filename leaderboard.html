@@ -19,7 +19,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
-  <!-- PAYSTACK SDK ADDED HERE -->
+  <!-- PAYSTACK SDK -->
   <script src="https://js.paystack.co/v1/inline.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -48,8 +48,10 @@
     .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
     .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
     .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
@@ -204,11 +206,16 @@
       const [paystackKey, setPaystackKey] = useState("");
       const [topUpAmount, setTopUpAmount] = useState(1000);
 
+      // WITHDRAWAL STATES
+      const [withdrawModal, setWithdrawModal] = useState(false);
+      const [bankName, setBankName] = useState("");
+      const [accountNumber, setAccountNumber] = useState("");
+      const [accountName, setAccountName] = useState("");
+
       useEffect(() => {
         const tg = window && window.Telegram && window.Telegram.WebApp;
         if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
 
-        // FETCH PAYSTACK PUBLIC KEY SECURELY
         fetch('/api/config')
           .then(res => res.json())
           .then(data => setPaystackKey(data.publicKey))
@@ -360,25 +367,49 @@
       const rank = myIndex >= 0 ? myIndex + 1 : TOTAL_USERS;
       const board = allUsers.slice(0, 100);
 
-      // WITHDRAWAL LOGIC
-      const withdraw = async () => {
+      // WITHDRAWAL LOGIC (MANUAL PAYOUT)
+      const submitWithdrawal = async () => {
         if ((s.cash || 0) < MIN_WITHDRAW) { 
           AudioEngine.error(); 
           return notify('Oga, you need ₦10T to withdraw. Go back to Mushin and hustle! 😭', 'bad'); 
         }
+        if (!bankName.trim() || !accountNumber.trim() || !accountName.trim()) {
+          return notify('Please fill all bank details', 'bad');
+        }
+        if (accountNumber.length < 10) {
+          return notify('Invalid account number', 'bad');
+        }
 
-        setS((p) => (Object.assign({}, p, { cash: p.cash - MIN_WITHDRAW, real: (p.real || 0) + REAL_PER_WITHDRAW })));
-        AudioEngine.coin();
-        notify('Withdrawn! +₦10,000.00 real 💰');
-        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
-
+        // Deduct fake cash
+        setS((p) => (Object.assign({}, p, { cash: p.cash - MIN_WITHDRAW })));
+        
+        // Save withdrawal request to Firebase
         if (uid) {
+          await db.collection("withdrawals").add({
+            userId: uid,
+            name: s.name || 'Hustler',
+            bankName: bankName,
+            accountNumber: accountNumber,
+            accountName: accountName,
+            amountReal: REAL_PER_WITHDRAW,
+            status: 'pending',
+            createdAt: Date.now()
+          }).catch(() => {});
+
           await db.collection("users").doc(uid).update({
             cash: firebase.firestore.FieldValue.increment(-MIN_WITHDRAW),
-            real: firebase.firestore.FieldValue.increment(REAL_PER_WITHDRAW),
             lastSeen: Date.now()
           }).catch(() => {});
         }
+
+        setWithdrawModal(false);
+        setBankName('');
+        setAccountNumber('');
+        setAccountName('');
+        
+        AudioEngine.coin();
+        notify('Withdrawal Request Submitted! You will be paid shortly. 💰');
+        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
       };
 
       // REAL PAYSTACK TOP UP
@@ -524,7 +555,7 @@
               h('div', { className: 'text-[9px] text-[#FFD60A] mt-1 font-bold italic' },
                 (s.cash || 0) < MIN_WITHDRAW ? '"Sapa dey hold you, keep hustling!"' : '"Almost don blow! Withdraw now!"'
               ),
-              h('button', { onClick: withdraw, disabled: (s.cash || 0) < MIN_WITHDRAW,
+              h('button', { onClick: () => { if ((s.cash || 0) >= MIN_WITHDRAW) setWithdrawModal(true); else notify('Oga, you need ₦10T to withdraw', 'bad'); }, disabled: (s.cash || 0) < MIN_WITHDRAW,
                 className: 'w-full mt-3 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] py-3.5 text-[13px] font-black text-black active:scale-[0.97] transition disabled:from-white/[0.06] disabled:to-white/[0.06] disabled:text-white/30 font-display shadow-[0_8px_24px_-8px_rgba(34,197,94,0.6)] disabled:shadow-none' },
                 'Withdraw ₦10,000.00 Real'
               ),
@@ -576,6 +607,36 @@
                   h('span', { className: 'text-[#FFD60A] font-bold' }, sapaTitle),
                   '.'
                 )
+              )
+            )
+          ),
+
+          // WITHDRAWAL MODAL
+          withdrawModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setWithdrawModal(false) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-2xl animate-popIn' },
+              h('div', { className: 'text-3xl text-center mb-2' }, '🏦'),
+              h('div', { className: 'text-center text-[14px] font-black tracking-widest text-[#FFD60A] font-display' }, 'WITHDRAWAL DETAILS'),
+              h('p', { className: 'text-center text-[10.5px] text-white/50 mt-1 mb-4' }, 'Enter your real bank details to receive ₦10,000.'),
+              
+              h('div', { className: 'space-y-3' },
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Bank Name'),
+                  h('input', { value: bankName, onChange: (e) => setBankName(e.target.value), placeholder: 'e.g. GTBank, Opay', className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[12px] font-bold text-white placeholder-white/25' })
+                ),
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Account Number'),
+                  h('input', { type: 'number', value: accountNumber, onChange: (e) => setAccountNumber(e.target.value), placeholder: '10 digits', className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[12px] font-bold text-white placeholder-white/25' })
+                ),
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Account Name'),
+                  h('input', { value: accountName, onChange: (e) => setAccountName(e.target.value), placeholder: 'Your real name', className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[12px] font-bold text-white placeholder-white/25' })
+                )
+              ),
+              
+              h('div', { className: 'mt-5 flex gap-2' },
+                h('button', { onClick: () => setWithdrawModal(false), className: 'flex-1 py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 text-[12px] font-bold' }, 'Cancel'),
+                h('button', { onClick: submitWithdrawal, className: 'flex-1 py-3 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black text-[12px] font-black' }, 'Submit')
               )
             )
           ),
