@@ -83,28 +83,11 @@
   </style>
 </head>
 <body>
-  <div id="root">
-    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;">
-      <div style="font-size:48px;">🇳🇬</div>
-      <div style="font-family:Sora;font-weight:800;font-size:14px;color:#FFD60A;">Loading Business...</div>
-    </div>
-  </div>
+  <div id="root"></div>
 
   <script>
-    window.addEventListener('error', function (e) {
-      var msg = (e.error && e.error.message) || e.message || 'Unknown error';
-      console.error('Global error:', e.error || e.message);
-      var root = document.getElementById('root');
-      if (root && root.textContent && root.textContent.indexOf('Loading Business') !== -1) {
-        root.innerHTML = '<div style="padding:24px;color:#F87171;font-family:monospace;font-size:12px;text-align:center;line-height:1.5">'
-          + '<div style="font-size:28px;margin-bottom:8px">⚠️</div>'
-          + '<div>Failed to load. Error:</div>'
-          + '<div style="margin-top:8px;opacity:.7;word-break:break-word">' + msg + '</div></div>';
-      }
-    });
-    window.addEventListener('unhandledrejection', function (e) {
-      console.error('Unhandled rejection:', e.reason);
-    });
+    window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { console.error('Unhandled rejection:', e.reason); });
   </script>
 
   <script>
@@ -126,6 +109,7 @@
 
     const MAX_E = 100;
     const ENERGY_MS = 5 * 60 * 1000;
+    const MAX_OFFLINE_HOURS = 24; // Max offline earnings cap
 
     const CATEGORIES = ["All", "Street", "Small", "Mid", "High", "Cartel"];
 
@@ -200,7 +184,10 @@
     const getCachedData = () => {
       try {
         const cached = localStorage.getItem("lagos_user_data");
-        if (cached) return JSON.parse(cached);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return Object.assign({}, parsed, { lastCollected: parsed.lastCollected || Date.now() });
+        }
       } catch (e) {}
       const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
@@ -208,7 +195,7 @@
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-        transactions: []
+        transactions: [], lastCollected: Date.now()
       };
     };
 
@@ -292,9 +279,7 @@
 
       useEffect(() => {
         const tg = window && window.Telegram && window.Telegram.WebApp;
-        if (tg) {
-          try { tg.ready(); tg.expand(); } catch(e) {}
-        }
+        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
 
         const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
           if (doc.exists && doc.data().maintenance === true) setIsMaintenance(true);
@@ -319,7 +304,8 @@
                   assets: dbData.assets || prev.assets || {},
                   telegramId: dbData.telegramId || (tgUser && tgUser.id),
                   transactions: dbData.transactions || [],
-                  cash: dbData.cash !== undefined ? dbData.cash : prev.cash
+                  cash: dbData.cash !== undefined ? dbData.cash : prev.cash,
+                  lastCollected: dbData.lastCollected || prev.lastCollected || Date.now()
                 });
                 try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
                 return newData;
@@ -331,7 +317,7 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-                transactions: []
+                transactions: [], lastCollected: Date.now()
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
@@ -366,44 +352,60 @@
         return () => clearInterval(iv);
       }, []);
 
-      // Vault Accumulator (Replaces direct cash injection)
+      // 🕒 OFFLINE VAULT ACCUMULATOR
       useEffect(() => {
-        if (!uid) return;
-        const iv = setInterval(() => {
-          setS(prev => {
-            if (!prev) return prev;
+        if (!s) return;
+        
+        const calculateVault = () => {
+          const perHr = Object.entries(s.businesses || {}).reduce((a, kv) => {
+            const biz = BUSINESSES.find((b) => b.id === kv[0]);
+            return a + kv[1] * (biz ? biz.perHr : 0);
+          }, 0);
+          
+          if (perHr > 0) {
+            const lastCollected = s.lastCollected || Date.now();
+            const now = Date.now();
+            const elapsedMs = Math.max(0, now - lastCollected);
             
-            const perHr = Object.entries(prev.businesses || {}).reduce((a, kv) => {
-              const biz = BUSINESSES.find((b) => b.id === kv[0]);
-              return a + kv[1] * (biz ? biz.perHr : 0);
-            }, 0);
+            // Cap offline earnings at MAX_OFFLINE_HOURS
+            const maxMs = MAX_OFFLINE_HOURS * 60 * 60 * 1000;
+            const effectiveMs = Math.min(elapsedMs, maxMs);
             
-            const earnedThisSec = perHr / 3600;
-            if (earnedThisSec > 0) {
-               setVault(v => v + earnedThisSec);
-            }
-            
-            return prev; // Don't update cash directly here anymore
-          });
-        }, 1000);
+            const accumulated = Math.floor((effectiveMs / 3600000) * perHr);
+            setVault(accumulated);
+          } else {
+            setVault(0);
+          }
+        };
+
+        // Calculate immediately on load
+        calculateVault();
+
+        // Then update every second
+        const iv = setInterval(calculateVault, 1000);
         return () => clearInterval(iv);
-      }, [uid]);
+      }, [s.businesses, s.lastCollected]);
 
       const collectVault = async () => {
-        const amount = Math.floor(vault);
+        const amount = vault;
         if (amount < 1) { AudioEngine.error(); return notify('Vault is empty. Wait small! ⏳', 'bad'); }
         
         setIsCollecting(true);
         AudioEngine.collect();
         try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
 
-        setS(prev => Object.assign({}, prev, { cash: (prev.cash || 0) + amount }));
+        const now = Date.now();
+        setS(prev => Object.assign({}, prev, { 
+          cash: (prev.cash || 0) + amount,
+          lastCollected: now
+        }));
         setVault(0);
         notify('Collected ' + fmt(amount) + ' from your businesses! 💰');
         
         if (uid) {
           await db.collection("users").doc(uid).update({
             cash: firebase.firestore.FieldValue.increment(amount),
+            lastCollected: now,
             lastSeen: Date.now()
           }).catch(() => {});
         }
@@ -443,26 +445,39 @@
       if (ownedCount > 15) bizRank = "Business Mogul";
       if (ownedCount > 30) bizRank = "Dangote of Lagos";
 
-      const buyBusiness = (b) => {
-        if (s.cash < b.price) {
+      const buyBusiness = async (b) => {
+        // Auto-collect vault if buying a business
+        const currentVault = vault;
+        if ((s.cash + currentVault) < b.price) {
           AudioEngine.error();
           return notify('Not enough Lagos Cash 💸', 'bad');
         }
 
+        const now = Date.now();
+        
         setS(prev => {
           const newBiz = Object.assign({}, prev.businesses || {});
           newBiz[b.id] = (newBiz[b.id] || 0) + 1;
-          return Object.assign({}, prev, { cash: prev.cash - b.price, businesses: newBiz });
+          return Object.assign({}, prev, { 
+            cash: (prev.cash || 0) + currentVault - b.price, 
+            businesses: newBiz,
+            lastCollected: now
+          });
         });
+        setVault(0);
 
         AudioEngine.purchase();
         notify(b.emoji + ' ' + b.name + ' bought! +' + fmt(b.perHr) + '/hr');
         try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('medium'); } catch(e) {}
 
         if (uid) {
-          const updates = { cash: firebase.firestore.FieldValue.increment(-b.price), lastSeen: Date.now() };
+          const updates = { 
+            cash: firebase.firestore.FieldValue.increment(currentVault - b.price), 
+            lastCollected: now,
+            lastSeen: Date.now() 
+          };
           updates['businesses.' + b.id] = firebase.firestore.FieldValue.increment(1);
-          db.collection("users").doc(uid).update(updates).catch(() => {});
+          await db.collection("users").doc(uid).update(updates).catch(() => {});
         }
       };
 
@@ -511,7 +526,7 @@
               h('div', { className: 'text-center relative z-10' },
                 h('div', { className: 'text-[10px] uppercase tracking-widest text-[#FFD60A]/70 font-bold mb-1' }, 'Business Vault'),
                 h('div', { className: 'text-4xl font-black text-gradient-gold tabular-nums font-display drop-shadow-md mb-2' }, fmt(vault)),
-                h('div', { className: 'text-[10px] text-white/50 mb-4' }, 'Your businesses are making money. Collect am!'),
+                h('div', { className: 'text-[10px] text-white/50 mb-4' }, 'Your businesses make money 24/7. Collect am!'),
                 
                 h('button', { 
                   onClick: collectVault, 
@@ -591,7 +606,7 @@
             h('div', { className: 'space-y-2' },
               filteredBusinesses.map((b) => {
                 const owned = safeBiz[b.id] || 0;
-                const canAfford = (s.cash || 0) >= b.price;
+                const canAfford = (s.cash + vault) >= b.price;
                 const roiHours = (b.price / b.perHr).toFixed(1);
                 return h(Card, {
                   key: b.id,
@@ -625,9 +640,7 @@
               h('div', { className: 'flex items-start gap-2' },
                 h('span', { className: 'text-base' }, '💡'),
                 h('p', { className: 'text-[10.5px] text-white/50 leading-relaxed' },
-                  'Your businesses no dey sleep. Money dey enter your vault every second. Collect am often so Sapa no go catch you. Every business you buy go add to your ',
-                  h('span', { className: 'text-[#FFD60A] font-bold' }, 'Net Worth'),
-                  '.'
+                  'Your businesses no dey sleep. Money dey enter your vault 24/7, even when you close the app! (Max: 24 hours). Collect am often so Sapa no go catch you.'
                 )
               )
             )
