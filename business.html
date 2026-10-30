@@ -8,7 +8,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Lagos Life Mini — Business</title>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
@@ -36,18 +35,8 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-    html, body {
-      margin: 0; padding: 0;
-      background: #08080B; color: #fff;
-      overflow-x: hidden; overscroll-behavior-y: none;
-      font-family: 'Inter', system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
-    body {
-      background-image:
-        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent),
-        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent);
-    }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent); }
     ::-webkit-scrollbar { width: 0; height: 0; }
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
     .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
@@ -55,30 +44,25 @@
     .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
     .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); box-shadow: 0 8px 30px -10px rgba(255,214,10,0.3); }
     .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
-    
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
     .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
-    .nav-backdrop { background: #08080B; border-top: 1px solid rgba(255,255,255,0.08); }
+    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
-    
     @keyframes badgePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
     .badge-owned { animation: badgePulse 2s ease-in-out infinite; }
-    
     @keyframes collectPulse {
       0%, 100% { box-shadow: 0 0 0 0 rgba(255,214,10,0.7); }
       50% { box-shadow: 0 0 0 15px rgba(255,214,10,0); }
     }
-    .collect-btn {
-      animation: collectPulse 2s infinite;
-    }
-    
+    .collect-btn { animation: collectPulse 2s infinite; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     .marquee { animation: marquee 15s linear infinite; white-space: nowrap; }
     @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-    
     .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
   </style>
 </head>
@@ -91,7 +75,7 @@
   </script>
 
   <script>
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect, useRef, useMemo } = React;
     const h = React.createElement;
 
     const firebaseConfig = {
@@ -109,7 +93,7 @@
 
     const MAX_E = 100;
     const ENERGY_MS = 5 * 60 * 1000;
-    const MAX_OFFLINE_HOURS = 24; // Max offline earnings cap
+    const MAX_OFFLINE_HOURS = 24;
 
     const CATEGORIES = ["All", "Street", "Small", "Mid", "High", "Cartel"];
 
@@ -189,9 +173,8 @@
           return Object.assign({}, parsed, { lastCollected: parsed.lastCollected || Date.now() });
         }
       } catch (e) {}
-      const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
-        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        name: localStorage.getItem("lagos_user_name") || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -232,7 +215,6 @@
       }
       function kick() { if(!ctx) return; const t=ctx.currentTime; const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(40,t+0.14); g.gain.setValueAtTime(0.8,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2); o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+0.22); }
       function hat() { if(!ctx) return; const t=ctx.currentTime; const b=ctx.createBuffer(1, ctx.sampleRate*0.04, ctx.sampleRate); const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const s=ctx.createBufferSource(); s.buffer=b; const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=6000; const g=ctx.createGain(); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04); s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); }
-
       function tick() {
         if (!musicPlaying) return;
         const s = step % 8;
@@ -242,7 +224,6 @@
         if (s===2||s===6) [329.63,415.3,493.88].forEach(f => tone(f, 0.3, "triangle", musicGain, 0, 0.06));
         step++;
       }
-
       return {
         startMusic: () => { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); },
         stopMusic: () => { musicPlaying=false; clearInterval(musicTimer); },
@@ -271,38 +252,38 @@
       const [musicOn, setMusicOn] = useState(false);
       const [activeTab, setActiveTab] = useState("Street");
       const [isMaintenance, setIsMaintenance] = useState(false);
-
-      // LIVE FEATURES
-      const [vault, setVault] = useState(0); 
       const [feedMsg, setFeedMsg] = useState("Welcome to your business empire! Buy a business to start making passive income.");
       const [isCollecting, setIsCollecting] = useState(false);
 
+      // ✅ Ticker for vault recalculation
+      const [now, setNow] = useState(Date.now());
       useEffect(() => {
-        const tg = window && window.Telegram && window.Telegram.WebApp;
-        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+        const iv = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(iv);
+      }, []);
 
+      useEffect(() => {
         const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
           if (doc.exists && doc.data().maintenance === true) setIsMaintenance(true);
           else setIsMaintenance(false);
         }, () => {});
 
-        const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+        let userUnsub = null;
+        const authUnsub = auth.onAuthStateChanged((user) => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          if (userUnsub) userUnsub();
 
-        auth.signInAnonymously().then((cred) => {
-          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+          const userId = user.uid;
           setUid(userId);
-
           const userRef = db.collection("users").doc(userId);
-          const unsubscribe = userRef.onSnapshot((doc) => {
+
+          userUnsub = userRef.onSnapshot((doc) => {
             if (doc.exists) {
               const dbData = doc.data();
-              if (!dbData.telegramId && tgUser && tgUser.id) userRef.update({ telegramId: tgUser.id }).catch(() => {});
-
               setS(prev => {
                 const newData = Object.assign({}, prev, dbData, {
                   businesses: dbData.businesses || prev.businesses || {},
                   assets: dbData.assets || prev.assets || {},
-                  telegramId: dbData.telegramId || (tgUser && tgUser.id),
                   transactions: dbData.transactions || [],
                   cash: dbData.cash !== undefined ? dbData.cash : prev.cash,
                   lastCollected: dbData.lastCollected || prev.lastCollected || Date.now()
@@ -312,8 +293,7 @@
               });
             } else {
               const defaultData = {
-                name: (tgUser && tgUser.first_name) || 'Hustler',
-                telegramId: (tgUser && tgUser.id) || null,
+                name: user.displayName || localStorage.getItem("lagos_user_name") || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -324,10 +304,9 @@
               try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
           }, (error) => console.error("Snapshot error:", error));
-          return unsubscribe;
-        }).catch(e => setAuthError(e.message));
+        });
 
-        return () => unsubSettings();
+        return () => { authUnsub(); if (userUnsub) userUnsub(); unsubSettings(); };
       }, []);
 
       useEffect(() => {
@@ -342,9 +321,6 @@
         return () => clearTimeout(t);
       }, [toast]);
 
-      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
-
-      // Live Feed Ticker
       useEffect(() => {
         const iv = setInterval(() => {
           setFeedMsg(BUSINESS_FEED[Math.floor(Math.random() * BUSINESS_FEED.length)]);
@@ -352,64 +328,68 @@
         return () => clearInterval(iv);
       }, []);
 
-      // 🕒 OFFLINE VAULT ACCUMULATOR
+      // Energy regen only — cash does NOT auto-increase
       useEffect(() => {
-        if (!s) return;
-        
-        const calculateVault = () => {
-          const perHr = Object.entries(s.businesses || {}).reduce((a, kv) => {
-            const biz = BUSINESSES.find((b) => b.id === kv[0]);
-            return a + kv[1] * (biz ? biz.perHr : 0);
-          }, 0);
-          
-          if (perHr > 0) {
-            const lastCollected = s.lastCollected || Date.now();
-            const now = Date.now();
-            const elapsedMs = Math.max(0, now - lastCollected);
-            
-            // Cap offline earnings at MAX_OFFLINE_HOURS
-            const maxMs = MAX_OFFLINE_HOURS * 60 * 60 * 1000;
-            const effectiveMs = Math.min(elapsedMs, maxMs);
-            
-            const accumulated = Math.floor((effectiveMs / 3600000) * perHr);
-            setVault(accumulated);
-          } else {
-            setVault(0);
-          }
-        };
-
-        // Calculate immediately on load
-        calculateVault();
-
-        // Then update every second
-        const iv = setInterval(calculateVault, 1000);
+        if (!uid) return;
+        const iv = setInterval(() => {
+          setS(prev => {
+            if (!prev || prev.energy >= MAX_E) return prev;
+            const tickNow = Date.now();
+            const gained = Math.floor((tickNow - prev.lastEnergy) / ENERGY_MS);
+            if (gained <= 0) return prev;
+            const energy = Math.min(MAX_E, prev.energy + gained);
+            const lastEnergy = energy >= MAX_E ? tickNow : prev.lastEnergy + gained * ENERGY_MS;
+            db.collection("users").doc(uid).update({ energy, lastEnergy }).catch(() => {});
+            return Object.assign({}, prev, { energy, lastEnergy });
+          });
+        }, 1000);
         return () => clearInterval(iv);
-      }, [s.businesses, s.lastCollected]);
+      }, [uid]);
+
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+
+      // ✅ VAULT — derived, recalculates every tick
+      const vault = useMemo(() => {
+        const safeBiz = s.businesses || {};
+        const perHr = Object.entries(safeBiz).reduce((a, kv) => {
+          const biz = BUSINESSES.find((b) => b.id === kv[0]);
+          return a + kv[1] * (biz ? biz.perHr : 0);
+        }, 0);
+        if (perHr <= 0) return 0;
+        const lastCollected = s.lastCollected || now;
+        const elapsedMs = Math.max(0, now - lastCollected);
+        const maxMs = MAX_OFFLINE_HOURS * 60 * 60 * 1000;
+        const effectiveMs = Math.min(elapsedMs, maxMs);
+        return Math.floor((effectiveMs / 3600000) * perHr);
+      }, [s.businesses, s.lastCollected, now]);
 
       const collectVault = async () => {
         const amount = vault;
         if (amount < 1) { AudioEngine.error(); return notify('Vault is empty. Wait small! ⏳', 'bad'); }
-        
+
         setIsCollecting(true);
         AudioEngine.collect();
-        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+        try { if (navigator.vibrate) navigator.vibrate(30); } catch(e) {}
 
-        const now = Date.now();
-        setS(prev => Object.assign({}, prev, { 
-          cash: (prev.cash || 0) + amount,
-          lastCollected: now
-        }));
-        setVault(0);
+        const collectNow = Date.now();
+        setS(prev => {
+          const next = Object.assign({}, prev, {
+            cash: (prev.cash || 0) + amount,
+            lastCollected: collectNow
+          });
+          try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+          return next;
+        });
         notify('Collected ' + fmt(amount) + ' from your businesses! 💰');
-        
+
         if (uid) {
           await db.collection("users").doc(uid).update({
             cash: firebase.firestore.FieldValue.increment(amount),
-            lastCollected: now,
+            lastCollected: collectNow,
             lastSeen: Date.now()
           }).catch(() => {});
         }
-        
+
         setTimeout(() => setIsCollecting(false), 800);
       };
 
@@ -446,35 +426,35 @@
       if (ownedCount > 30) bizRank = "Dangote of Lagos";
 
       const buyBusiness = async (b) => {
-        // Auto-collect vault if buying a business
         const currentVault = vault;
         if ((s.cash + currentVault) < b.price) {
           AudioEngine.error();
           return notify('Not enough Lagos Cash 💸', 'bad');
         }
 
-        const now = Date.now();
-        
+        const buyNow = Date.now();
+
         setS(prev => {
           const newBiz = Object.assign({}, prev.businesses || {});
           newBiz[b.id] = (newBiz[b.id] || 0) + 1;
-          return Object.assign({}, prev, { 
-            cash: (prev.cash || 0) + currentVault - b.price, 
+          const next = Object.assign({}, prev, {
+            cash: (prev.cash || 0) + currentVault - b.price,
             businesses: newBiz,
-            lastCollected: now
+            lastCollected: buyNow
           });
+          try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+          return next;
         });
-        setVault(0);
 
         AudioEngine.purchase();
         notify(b.emoji + ' ' + b.name + ' bought! +' + fmt(b.perHr) + '/hr');
-        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('medium'); } catch(e) {}
+        try { if (navigator.vibrate) navigator.vibrate(25); } catch(e) {}
 
         if (uid) {
-          const updates = { 
-            cash: firebase.firestore.FieldValue.increment(currentVault - b.price), 
-            lastCollected: now,
-            lastSeen: Date.now() 
+          const updates = {
+            cash: firebase.firestore.FieldValue.increment(currentVault - b.price),
+            lastCollected: buyNow,
+            lastSeen: Date.now()
           };
           updates['businesses.' + b.id] = firebase.firestore.FieldValue.increment(1);
           await db.collection("users").doc(uid).update(updates).catch(() => {});
@@ -502,7 +482,7 @@
             className: 'music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition'
           }, h('span', { className: 'text-base' }, musicOn ? '🔊' : '🔇')),
 
-          h('header', { className: 'sticky top-0 z-30 bg-[#08080B] border-b border-white/[0.06]' },
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
             h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
               h('div', { className: 'flex items-center gap-2 min-w-0' },
                 h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display' }, 'L'),
@@ -519,26 +499,24 @@
           ),
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
-            
-            // VAULT CARD
+
             h(Card, { className: 'p-5 mt-3 relative overflow-hidden', gold: true },
               h('div', { className: 'absolute -top-10 -right-10 w-32 h-32 rounded-full bg-[#FFD60A]/20 blur-2xl pointer-events-none' }),
               h('div', { className: 'text-center relative z-10' },
                 h('div', { className: 'text-[10px] uppercase tracking-widest text-[#FFD60A]/70 font-bold mb-1' }, 'Business Vault'),
                 h('div', { className: 'text-4xl font-black text-gradient-gold tabular-nums font-display drop-shadow-md mb-2' }, fmt(vault)),
                 h('div', { className: 'text-[10px] text-white/50 mb-4' }, 'Your businesses make money 24/7. Collect am!'),
-                
-                h('button', { 
-                  onClick: collectVault, 
+
+                h('button', {
+                  onClick: collectVault,
                   disabled: isCollecting || vault < 1,
                   className: 'w-full py-4 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black font-black text-[15px] shadow-[0_8px_24px_-8px_rgba(34,197,94,0.7)] active:scale-95 transition disabled:opacity-50 disabled:shadow-none ' + (vault >= 1 ? 'collect-btn' : '')
-                }, 
+                },
                   isCollecting ? 'Collecting...' : 'COLLECT ' + fmt(vault)
                 )
               )
             ),
 
-            // STATS GRID
             h('div', { className: 'grid grid-cols-3 gap-2 mt-3' },
               h(Card, { className: 'p-2.5 text-center' },
                 h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Per Hour'),
@@ -554,7 +532,6 @@
               )
             ),
 
-            // LIVE FEED
             h('div', { className: 'mt-4 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center gap-2 overflow-hidden' },
               h('span', { className: 'text-sm shrink-0 animate-pulse' }, '📡'),
               h('div', { className: 'flex-1 overflow-hidden relative h-5' },
@@ -562,7 +539,6 @@
               )
             ),
 
-            // TABS
             h('div', { className: 'mt-4 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar' },
               CATEGORIES.map(cat =>
                 h('button', {
@@ -576,7 +552,6 @@
               )
             ),
 
-            // YOUR BUSINESSES
             ownedCount > 0 && activeTab === 'All' && h(React.Fragment, null,
               h(SectionTitle, {
                 right: h('span', { className: 'text-[10px] font-bold text-[#22C55E] flex items-center gap-1.5' },
@@ -646,8 +621,7 @@
             )
           ),
 
-          // BOTTOM NAV
-          h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop' },
+          h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
               NAV.map((n) => {
                 const active = n.id === 'biz';
@@ -692,9 +666,7 @@
       }
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(
-      h(ErrorBoundary, null, h(App))
-    );
+    ReactDOM.createRoot(document.getElementById('root')).render(h(ErrorBoundary, null, h(App)));
   </script>
 </body>
 </html>
