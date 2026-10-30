@@ -8,7 +8,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Lagos Life Mini — Bet Center</title>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
@@ -95,9 +94,6 @@
     const auth = firebase.auth();
 
     const MAX_E = 100;
-    const ENERGY_MS = 5 * 60 * 1000;
-    const BIZ_PER_HR = { water: 2_000, suya: 40_000, keke: 75_000, phone: 350_000, danfo: 800_000, wash: 4_000_000, bet9ja: 9_000_000, lounge: 90_000_000, oil: 1_000_000_000 };
-
     const CRASH_MESSAGES = [
       "Omo plane don crash for Murtala Muhammed 😭",
       "Pilot na drunk man, e crash 😂",
@@ -128,9 +124,8 @@
         const cached = localStorage.getItem("lagos_user_data");
         if (cached) return JSON.parse(cached);
       } catch (e) {}
-      const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
-        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        name: localStorage.getItem("lagos_user_name") || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -148,7 +143,6 @@
       if (n >= 1e3) return s + '₦' + (n / 1e3).toFixed(1) + 'K';
       return s + '₦' + n.toLocaleString();
     };
-    const fmtReal = (n) => '₦' + (n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const AudioEngine = (() => {
       let ctx = null;
@@ -206,16 +200,16 @@
       const crashPoint = useRef(0);
 
       useEffect(() => {
-        const tg = window && window.Telegram && window.Telegram.WebApp;
-        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+        let userUnsub = null;
+        const authUnsub = auth.onAuthStateChanged((user) => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          if (userUnsub) userUnsub();
 
-        auth.signInAnonymously().then((cred) => {
-          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+          const userId = user.uid;
           setUid(userId);
           
           const userRef = db.collection("users").doc(userId);
-          const unsubscribe = userRef.onSnapshot((doc) => {
+          userUnsub = userRef.onSnapshot((doc) => {
             if (doc.exists) {
               setS(prev => {
                 const dbData = doc.data();
@@ -230,7 +224,7 @@
               });
             } else {
               const defaultData = {
-                name: (tgUser && tgUser.first_name) || 'Hustler',
+                name: user.displayName || localStorage.getItem("lagos_user_name") || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -241,8 +235,13 @@
               try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
           }, (error) => console.error("Snapshot error:", error));
-          return unsubscribe;
-        }).catch(e => setAuthError(e.message));
+        });
+
+        return () => { 
+          authUnsub(); 
+          if (userUnsub) userUnsub();
+          if (aviatorInterval.current) clearInterval(aviatorInterval.current);
+        };
       }, []);
 
       useEffect(() => {
@@ -297,7 +296,7 @@
             setAviatorState("crashed");
             setCrashMsg(CRASH_MESSAGES[Math.floor(Math.random() * CRASH_MESSAGES.length)]);
             AudioEngine.crash();
-            try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.notificationOccurred('error'); } catch(e) {}
+            try { if (navigator.vibrate) navigator.vibrate([50, 50, 50]); } catch(e) {}
             
             setHistory(prev => [Number(crashPoint.current.toFixed(2)), ...prev].slice(0, 10));
             
@@ -319,7 +318,7 @@
         const winAmount = Math.floor(aviatorBet * multiplier);
         updateCash(winAmount);
         AudioEngine.cashout();
-        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+        try { if (navigator.vibrate) navigator.vibrate(40); } catch(e) {}
         
         const msg = WIN_MESSAGES[Math.floor(Math.random() * WIN_MESSAGES.length)];
         notify(msg + ' +' + fmt(winAmount));
@@ -699,7 +698,7 @@
           h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
               NAV.map((n) => {
-                const active = n.id === 'more';
+                const active = n.id === 'more'; // Make it show on More as it's accessed from More
                 return h('a', {
                   key: n.id, href: n.href,
                   className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')
