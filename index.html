@@ -8,7 +8,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Lagos Life Mini — Home</title>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
@@ -127,9 +126,8 @@
           return Object.assign({}, parsed, { transactions: parsed.transactions || [] });
         }
       } catch (e) {}
-      const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
-        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        name: localStorage.getItem("lagos_user_name") || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -219,7 +217,6 @@
       const [shareOpen, setShareOpen] = useState(false);
       const [shareUrl, setShareUrl] = useState(null);
       
-      // Bank & Send Money State
       const [bankModalOpen, setBankModalOpen] = useState(false);
       const [sendOpen, setSendOpen] = useState(false);
       const [sendTo, setSendTo] = useState('');
@@ -238,33 +235,32 @@
       const pendingTaps = useRef({ cash: 0, energy: 0, taps: 0 });
 
       useEffect(() => {
-        const tg = window && window.Telegram && window.Telegram.WebApp;
-        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
-
         const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
           if (doc.exists && doc.data().maintenance === true) setIsMaintenance(true);
           else setIsMaintenance(false);
         }, () => {});
 
-        const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-        
-        auth.signInAnonymously().then((cred) => {
-          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+        let userUnsub = null;
+        const authUnsub = auth.onAuthStateChanged((user) => {
+          if (!user) {
+            window.location.href = '/login.html';
+            return;
+          }
+          if (userUnsub) userUnsub();
+
+          const userId = user.uid;
           setUid(userId);
-          
           const userRef = db.collection("users").doc(userId);
-          const unsubscribe = userRef.onSnapshot((doc) => {
+
+          userUnsub = userRef.onSnapshot((doc) => {
             if (doc.exists) {
               const dbData = doc.data();
-              if (!dbData.telegramId && tgUser && tgUser.id) userRef.update({ telegramId: tgUser.id }).catch(() => {});
-
               setS(prev => {
                 const newData = Object.assign({}, prev, dbData, {
                   businesses: dbData.businesses || prev.businesses || {},
                   assets: dbData.assets || prev.assets || {},
                   travels: dbData.travels || prev.travels || [],
-                  telegramId: dbData.telegramId || (tgUser && tgUser.id),
-                  transactions: dbData.transactions || [], 
+                  transactions: dbData.transactions || [],
                   bankName: dbData.bankName || prev.bankName || null,
                   cash: (dbData.cash || 0) + pendingTaps.current.cash,
                   energy: (dbData.energy || 0) + pendingTaps.current.energy,
@@ -275,8 +271,7 @@
               });
             } else {
               const defaultData = {
-                name: (tgUser && tgUser.first_name) || 'Hustler',
-                telegramId: (tgUser && tgUser.id) || null, 
+                name: user.displayName || localStorage.getItem("lagos_user_name") || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -287,13 +282,15 @@
               try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
           }, (error) => console.error("Firestore snapshot error:", error));
-          return unsubscribe;
-        }).catch(e => setAuthError(e.message));
+        });
 
-        return () => unsubSettings();
+        return () => {
+          authUnsub();
+          if (userUnsub) userUnsub();
+          unsubSettings();
+        };
       }, []);
 
-      // Bank Popup Trigger
       useEffect(() => {
         if (s && !s.bankName && !isMaintenance && !authError) {
           setBankModalOpen(true);
@@ -339,7 +336,6 @@
         return () => clearTimeout(t);
       }, [fakeAlert]);
 
-      // Rotating Quotes
       useEffect(() => {
         const iv = setInterval(() => {
           setQuoteIndex(prev => (prev + 1) % FUNNY_QUOTES.length);
@@ -433,7 +429,6 @@
       const rank = netWorth <= 0 ? TOTAL_USERS : Math.max(1, Math.floor(TOTAL_USERS - Math.min(1, Math.log10(netWorth + 1) / 13) * (TOTAL_USERS - 1)));
       const energyNextIn = s.energy >= MAX_E ? 0 : ENERGY_MS - ((Date.now() - s.lastEnergy) % ENERGY_MS);
 
-      // Dynamic Status for Share Card
       let playerStatus = "Chairman of Mushin Under Bridge Tenants Association";
       if (netWorth > 100_000_000_000) playerStatus = "Odogwu of Lekki 🇳🇬";
       else if (netWorth > 10_000_000_000) playerStatus = "Billionaire Boy";
@@ -444,7 +439,7 @@
       const doTap = () => {
         if (s.energy < 1) { AudioEngine.error(); return notify('No energy! Wait or refill ⚡', 'bad'); }
         AudioEngine.tap();
-        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('light'); } catch(e) {}
+        try { if (navigator.vibrate) navigator.vibrate(8); } catch(e) {}
         
         const newEnergy = Math.max(0, s.energy - 1);
         setS(prev => (Object.assign({}, prev, { cash: prev.cash + TAP_VALUE, energy: newEnergy, taps: prev.taps + 1 })));
@@ -463,28 +458,23 @@
         c.width = 1080; c.height = 1080;
         const ctx = c.getContext('2d');
         
-        // Background
         const bg = ctx.createLinearGradient(0, 0, 1080, 1080);
         bg.addColorStop(0, '#0A0A10'); bg.addColorStop(1, '#1a1a22');
         ctx.fillStyle = bg; ctx.fillRect(0, 0, 1080, 1080);
         
-        // Glow
         const rad = ctx.createRadialGradient(540, 420, 0, 540, 420, 720);
         rad.addColorStop(0, 'rgba(255,214,10,0.28)'); rad.addColorStop(1, 'rgba(255,214,10,0)');
         ctx.fillStyle = rad; ctx.fillRect(0, 0, 1080, 1080);
         
-        // Grid lines
         ctx.strokeStyle = 'rgba(255,214,10,0.05)'; ctx.lineWidth = 2;
         for (let i = 0; i < 1080; i += 60) {
           ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1080); ctx.stroke();
           ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(1080, i); ctx.stroke();
         }
         
-        // Gold Border
         ctx.strokeStyle = 'rgba(255,214,10,0.35)'; ctx.lineWidth = 4;
         roundRect(ctx, 40, 40, 1000, 1000, 40); ctx.stroke();
         
-        // Texts
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FFD60A'; ctx.font = 'bold 34px Sora, Inter, sans-serif';
         ctx.fillText('🌴 LAGOS LIFE MINI', 540, 130);
@@ -495,21 +485,17 @@
         ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = 'bold 26px Inter, sans-serif';
         ctx.fillText('TOTAL NET WORTH', 540, 400);
         
-        // Big Net Worth
         const goldGrad = ctx.createLinearGradient(180, 460, 900, 580);
         goldGrad.addColorStop(0, '#FFE566'); goldGrad.addColorStop(0.5, '#FFD60A'); goldGrad.addColorStop(1, '#FFB800');
         ctx.fillStyle = goldGrad; ctx.font = 'bold 130px Sora, Inter, sans-serif';
         ctx.fillText(fmt(netWorth), 540, 530);
         
-        // Rank
         ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.font = 'bold 30px Inter, sans-serif';
         ctx.fillText('Rank #' + rank.toLocaleString() + ' of ' + TOTAL_USERS.toLocaleString() + ' hustlers', 540, 610);
         
-        // Dynamic Roast Status
         ctx.fillStyle = 'rgba(239, 68, 68, 0.9)'; ctx.font = 'bold 28px Inter, sans-serif';
         ctx.fillText('STATUS: ' + playerStatus, 540, 660);
 
-        // Stats Box
         ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(120, 700); ctx.lineTo(960, 700); ctx.stroke();
         [{ label: 'CASH', value: fmt(s.cash) }, { label: 'BUSINESS', value: fmt(bizValue) }, { label: 'ASSETS', value: fmt(assetValue) }].forEach((st, i) => {
@@ -520,17 +506,14 @@
         
         ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.font = 'bold 26px Inter, sans-serif'; ctx.fillText('Hustle or Nothing 🇳🇬', 540, 890);
         
-        // CTA Button
         ctx.fillStyle = 'rgba(255,214,10,0.15)'; roundRect(ctx, 190, 940, 700, 70, 35); ctx.fill();
         ctx.strokeStyle = 'rgba(255,214,10,0.55)'; ctx.lineWidth = 2; ctx.stroke();
         ctx.fillStyle = '#FFD60A'; ctx.font = 'bold 28px Sora, Inter, sans-serif'; ctx.fillText('🔥 SHOW THIS TO YOUR FRIENDS & PEPPER THEM', 540, 986);
         
-        // Watermark Background Pill
         ctx.fillStyle = '#1C1C24'; roundRect(ctx, 340, 1025, 400, 40, 20); ctx.fill();
         
-        // Watermark Text
         ctx.fillStyle = '#FFD60A'; ctx.font = 'bold 22px Inter, sans-serif'; 
-        ctx.fillText('@lagoslifemini_bot', 540, 1053);
+        ctx.fillText('lagos-life-mini.vercel.app', 540, 1053);
         
         return c;
       };
@@ -563,8 +546,7 @@
         const text = `I'm worth ${fmt(netWorth)} on Lagos Life Mini 🇳🇬🔥 Rank #${rank.toLocaleString()}. Can you beat me?`;
         try { if (navigator.clipboard) { await navigator.clipboard.writeText(text); notify('Caption copied! Paste am on TikTok 🎵'); } } catch(e) {}
         const url = 'https://www.tiktok.com/';
-        const tg = window && window.Telegram && window.Telegram.WebApp;
-        try { if (tg && tg.openLink) tg.openLink(url); else window.open(url, '_blank'); } catch(e) {}
+        try { window.open(url, '_blank'); } catch(e) {}
       };
 
       const sendMoney = async () => {
@@ -603,7 +585,6 @@
           setSendAmt('');
           setVerifiedBank(null);
           
-          // SHOW FAKE BANK ALERT
           setFakeAlert({ sender: s.name, amount: amt, bank: recipientData.bankName || 'Opay', ref: txId.slice(-8) });
           
         } catch (e) {
@@ -647,7 +628,6 @@
             )
           ),
 
-          // SAPA / BALLER ALERTS
           s.cash < 5000 && h('div', { className: 'mx-4 mt-3 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center gap-2' },
             h('span', { className: 'text-lg animate-bounce' }, '😭'),
             h('div', { className: 'text-[10px] font-bold text-red-400' }, 'SAPA ALERT: Your account don dry. Go hustle or tap fast!')
@@ -734,7 +714,6 @@
               )
             ),
 
-            // FUNNY ROTATING QUOTE
             h('div', { className: 'mt-8 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.05] text-center overflow-hidden relative h-10' },
               h('div', { className: 'text-[11px] font-bold text-white/50 italic absolute w-full left-0 animate-slideDown', key: quoteIndex },
                 '"' + FUNNY_QUOTES[quoteIndex] + '"'
@@ -753,7 +732,6 @@
             )
           ),
 
-          // BANK SELECTION MODAL
           bankModalOpen && h('div', { className: 'fixed inset-0 z-[70] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md' }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn' },
@@ -773,7 +751,6 @@
             )
           ),
 
-          // SEND MONEY MODAL
           sendOpen && h('div', { className: 'fixed inset-0 z-50 grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/80 backdrop-blur-sm', onClick: () => !isSending && setSendOpen(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn' },
@@ -822,7 +799,6 @@
             )
           ),
 
-          // FAKE BANK ALERT OVERLAY
           fakeAlert && h('div', { className: 'fixed top-4 left-0 right-0 z-[100] px-4 animate-slideDown flex justify-center' },
             h('div', { className: 'w-full max-w-sm bg-[#1C1C24] rounded-2xl p-4 shadow-2xl border border-white/20 flex items-start gap-3' },
               h('div', { className: 'w-10 h-10 rounded-full bg-[#22C55E]/20 grid place-items-center shrink-0' },
