@@ -8,10 +8,14 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Lagos Life Mini — Explore</title>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js'"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -28,18 +32,8 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-    html, body {
-      margin: 0; padding: 0;
-      background: #08080B; color: #fff;
-      overflow-x: hidden; overscroll-behavior-y: none;
-      font-family: 'Inter', system-ui, sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
-    body {
-      background-image:
-        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent),
-        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent);
-    }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent); }
     ::-webkit-scrollbar { width: 0; height: 0; }
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
     .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
@@ -66,15 +60,25 @@
     const { useState, useEffect } = React;
     const h = React.createElement;
 
-    // Pull cached data just for the header stats
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
     const getCachedData = () => {
       try {
         const cached = localStorage.getItem("lagos_user_data");
         if (cached) return JSON.parse(cached);
       } catch (e) {}
-      const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
-        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        name: localStorage.getItem("lagos_user_name") || 'Hustler',
         cash: 25000, real: 0, clout: 0, energy: 100
       };
     };
@@ -99,6 +103,32 @@
 
     function App() {
       const [s] = useState(getCachedData);
+      const [logoutOpen, setLogoutOpen] = useState(false);
+      const [loggingOut, setLoggingOut] = useState(false);
+      const [userEmail, setUserEmail] = useState('');
+
+      useEffect(() => {
+        const unsub = auth.onAuthStateChanged((user) => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          setUserEmail(user.email || user.displayName || '');
+        });
+        return () => unsub();
+      }, []);
+
+      const handleLogout = async () => {
+        setLoggingOut(true);
+        try {
+          localStorage.removeItem('lagos_user_data');
+          localStorage.removeItem('lagos_user_name');
+          localStorage.removeItem('lagos_user_id');
+          await auth.signOut();
+          window.location.href = '/login.html';
+        } catch (e) {
+          setLoggingOut(false);
+          setLogoutOpen(false);
+          alert('Logout failed: ' + e.message);
+        }
+      };
 
       const NAV = [
         { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
@@ -191,12 +221,25 @@
               )
             ),
 
+            h(SectionTitle, null, 'Account'),
+            h(Card, { className: 'p-4' },
+              h('div', { className: 'flex items-center justify-between' },
+                h('div', { className: 'min-w-0' },
+                  h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Signed in as'),
+                  h('div', { className: 'text-[12px] font-black text-white truncate mt-0.5' }, userEmail || s.name || 'Hustler')
+                )
+              ),
+              h('button', {
+                onClick: () => setLogoutOpen(true),
+                className: 'mt-3 w-full rounded-xl bg-red-500/10 border border-red-500/30 py-3 text-[12px] font-black text-red-400 active:scale-[0.97] transition'
+              }, '🚪 LOG OUT')
+            ),
+
             h('div', { className: 'mt-8 mb-4 text-center' },
               h('div', { className: 'text-[10px] font-bold text-white/20' }, 'Lagos Life Mini v2.0 — Hustle or Nothing')
             )
           ),
 
-          // Navigation
           h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
               NAV.map((n) => {
@@ -209,6 +252,27 @@
                   h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
                 );
               })
+            )
+          ),
+
+          logoutOpen && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/85 backdrop-blur-sm', onClick: () => !loggingOut && setLogoutOpen(false) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-red-500/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(239,68,68,0.4)] animate-popIn text-center' },
+              h('div', { className: 'text-5xl mb-2' }, '🚪'),
+              h('div', { className: 'text-[15px] font-black text-white font-display' }, 'You wan comot?'),
+              h('p', { className: 'text-[11.5px] text-white/50 mt-2 leading-relaxed' }, 'Your hustle progress is saved. When you come back, just log in again and continue.'),
+              h('div', { className: 'mt-5 flex gap-2' },
+                h('button', {
+                  onClick: () => setLogoutOpen(false),
+                  disabled: loggingOut,
+                  className: 'flex-1 rounded-xl bg-white/[0.06] border border-white/10 py-3 text-[12px] font-extrabold text-white/70 active:scale-95 transition disabled:opacity-50'
+                }, 'Stay'),
+                h('button', {
+                  onClick: handleLogout,
+                  disabled: loggingOut,
+                  className: 'flex-1 rounded-xl bg-gradient-to-b from-[#F87171] to-[#EF4444] py-3 text-[12px] font-black text-white active:scale-95 transition shadow-[0_8px_24px_-8px_rgba(239,68,68,0.6)] disabled:opacity-50'
+                }, loggingOut ? 'Logging out...' : 'Log Out')
+              )
             )
           )
         )
