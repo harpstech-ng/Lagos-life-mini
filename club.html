@@ -8,7 +8,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Lagos Life Mini — Club</title>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
@@ -19,7 +18,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
-  <!-- PAYSTACK SDK ADDED HERE -->
   <script src="https://js.paystack.co/v1/inline.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -57,7 +55,6 @@
     .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
     .hero-grid { background-image: linear-gradient(rgba(255,214,10,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,214,10,0.04) 1px, transparent 1px); background-size: 22px 22px; -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); }
-    
     .neon-text { text-shadow: 0 0 5px #FFD60A, 0 0 10px #FFD60A, 0 0 20px #FFD60A; }
     .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
   </style>
@@ -89,8 +86,6 @@
 
     const MAX_E = 100;
     const ENERGY_MS = 5 * 60 * 1000;
-
-    const BIZ_PER_HR = { water: 2000, suya: 40000, keke: 75000, phone: 350000, danfo: 800000, wash: 4000000, bet9ja: 9000000, lounge: 90000000, oil: 1000000000 };
 
     const REGULAR_ACTIONS = [
       { id: 'bail',   label: 'Bail a Hustler', price: 100, emoji: '⛓️', desc: 'Free your guy from cell. He go owe you.', multiplier: 5_000_000, color: 'from-slate-400/25 to-slate-700/10' },
@@ -141,9 +136,8 @@
         const cached = localStorage.getItem("lagos_user_data");
         if (cached) return JSON.parse(cached);
       } catch (e) {}
-      const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
-        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        name: localStorage.getItem("lagos_user_name") || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -184,7 +178,6 @@
       }
       function kick() { if(!ctx) return; const t=ctx.currentTime; const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(40,t+0.14); g.gain.setValueAtTime(0.8,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2); o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+0.22); }
       function hat() { if(!ctx) return; const t=ctx.currentTime; const b=ctx.createBuffer(1, ctx.sampleRate*0.04, ctx.sampleRate); const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const s=ctx.createBufferSource(); s.buffer=b; const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=6000; const g=ctx.createGain(); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04); s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); }
-
       function tick() {
         if (!musicPlaying) return;
         const s = step % 8;
@@ -194,7 +187,6 @@
         if (s===2||s===6) [329.63,415.3,493.88].forEach(f => tone(f, 0.3, "triangle", musicGain, 0, 0.06));
         step++;
       }
-
       return {
         startMusic: () => { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); },
         stopMusic: () => { musicPlaying=false; clearInterval(musicTimer); },
@@ -222,26 +214,25 @@
       const [feed, setFeed] = useState(() => Array.from({ length: 8 }, makeFeed));
       const [musicOn, setMusicOn] = useState(false);
 
-      // PAYSTACK STATES
       const [paystackKey, setPaystackKey] = useState("");
       const [topUpAmount, setTopUpAmount] = useState(1000);
 
       useEffect(() => {
-        const tg = window && window.Telegram && window.Telegram.WebApp;
-        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
-
         fetch('/api/config')
           .then(res => res.json())
           .then(data => setPaystackKey(data.publicKey))
           .catch(err => console.error("Could not load Paystack config", err));
 
-        auth.signInAnonymously().then((cred) => {
-          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+        let userUnsub = null;
+        const authUnsub = auth.onAuthStateChanged((user) => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          if (userUnsub) userUnsub();
+
+          const userId = user.uid;
           setUid(userId);
 
           const userRef = db.collection("users").doc(userId);
-          const unsubscribe = userRef.onSnapshot((doc) => {
+          userUnsub = userRef.onSnapshot((doc) => {
             if (doc.exists) {
               setS(prev => {
                 const dbData = doc.data();
@@ -253,7 +244,7 @@
               });
             } else {
               const defaultData = {
-                name: (tgUser && tgUser.first_name) || 'Hustler',
+                name: user.displayName || localStorage.getItem("lagos_user_name") || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -264,8 +255,9 @@
               try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
           }, (err) => console.error(err));
-          return unsubscribe;
-        }).catch(e => setAuthError(e.message));
+        });
+
+        return () => { authUnsub(); if (userUnsub) userUnsub(); };
       }, []);
 
       useEffect(() => {
@@ -282,33 +274,23 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
+      // ⚡ Energy regen ONLY — cash is NOT auto-added here (business.html vault handles income)
       useEffect(() => {
-        if (!s) return;
+        if (!uid) return;
         const iv = setInterval(() => {
           setS((p) => {
+            if (!p || p.energy >= MAX_E) return p;
             const nowT = Date.now();
-            let energy = p.energy;
-            let lastEnergy = p.lastEnergy;
-            if (energy < MAX_E) {
-              const gained = Math.floor((nowT - lastEnergy) / ENERGY_MS);
-              if (gained > 0) {
-                energy = Math.min(MAX_E, energy + gained);
-                lastEnergy = energy >= MAX_E ? nowT : lastEnergy + gained * ENERGY_MS;
-              }
-            }
-            const perHr = Object.entries(p.businesses || {}).reduce((a, kv) => a + kv[1] * (BIZ_PER_HR[kv[0]] || 0), 0);
-            const newCash = p.cash + perHr / 3600;
-            if (energy !== p.energy || perHr > 0) {
-              if (uid && perHr > 0) {
-                db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600), energy, lastEnergy }).catch(() => {});
-              }
-              return Object.assign({}, p, { energy: energy, lastEnergy: lastEnergy, cash: newCash });
-            }
-            return p;
+            const gained = Math.floor((nowT - p.lastEnergy) / ENERGY_MS);
+            if (gained <= 0) return p;
+            const energy = Math.min(MAX_E, p.energy + gained);
+            const lastEnergy = energy >= MAX_E ? nowT : p.lastEnergy + gained * ENERGY_MS;
+            db.collection("users").doc(uid).update({ energy, lastEnergy }).catch(() => {});
+            return Object.assign({}, p, { energy, lastEnergy });
           });
         }, 1000);
         return () => clearInterval(iv);
-      }, [s, uid]);
+      }, [uid]);
 
       useEffect(() => {
         const iv = setInterval(() => {
@@ -327,13 +309,17 @@
 
         const fakeGain = item.price * item.multiplier;
 
-        setS((p) => (Object.assign({}, p, {
-          real: p.real - item.price,
-          cash: p.cash + fakeGain,
-          clout: (p.clout || 0) + item.price,
-          goldName: item.id === 'gold' ? true : p.goldName,
-        })));
-        
+        setS((p) => {
+          const next = Object.assign({}, p, {
+            real: p.real - item.price,
+            cash: p.cash + fakeGain,
+            clout: (p.clout || 0) + item.price,
+            goldName: item.id === 'gold' ? true : p.goldName,
+          });
+          try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+          return next;
+        });
+
         setFeed((f) => [{
           id: ++feedSeq,
           text: 'YOU paid ₦' + item.price + ' real for ' + item.label + ' ' + item.emoji,
@@ -343,7 +329,7 @@
         
         AudioEngine.purchase();
         notify(item.label + ' activated! +' + fmt(fakeGain) + ' fake 🔥');
-        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+        try { if (navigator.vibrate) navigator.vibrate(30); } catch(e) {}
 
         if (uid) {
           const updates = {
@@ -358,7 +344,6 @@
         }
       };
 
-      // REAL PAYSTACK TOP UP
       const topUpReal = () => {
         if (!paystackKey) return notify("Payment system loading. Try again.", 'bad');
         if (topUpAmount < 100) return notify("Minimum top up is ₦100", 'bad');
@@ -366,19 +351,19 @@
         const handler = PaystackPop.setup({
           key: paystackKey,
           email: `user_${uid}@lagoslife.com`,
-          amount: topUpAmount * 100, // Paystack uses kobo
+          amount: topUpAmount * 100,
           currency: 'NGN',
-          ref: 'LGM_' + Date.now() + '_' + Math.floor(Math.random() * 1000), 
+          ref: 'LGM_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
           callback: function(response) {
             notify('Verifying payment...', 'good');
-            
+
             fetch('/api/paystack', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                reference: response.reference, 
-                userId: uid, 
-                amount: topUpAmount 
+              body: JSON.stringify({
+                reference: response.reference,
+                userId: uid,
+                amount: topUpAmount
               })
             })
             .then(res => res.json())
@@ -409,7 +394,6 @@
         { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
 
-      // Calculate Club Status
       let clubRank = "Ajebutter";
       if ((s.clout || 0) > 1000) clubRank = "Club Rat";
       if ((s.clout || 0) > 5000) clubRank = "Baller";
@@ -442,7 +426,6 @@
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
             
-            // EXCHANGE RATE BANNER
             h('div', { className: 'mt-3 p-3 rounded-xl bg-gradient-to-r from-green-500/20 to-[#FFD60A]/20 border border-green-500/30 text-center animate-popIn' },
               h('div', { className: 'text-[12px] font-black text-white' }, '💸 ₦100 REAL = ₦500,000,000 FAKE CASH! 💸'),
               h('div', { className: 'text-[10px] text-white/70 mt-0.5 font-bold' }, 'Why? Because Na Lagos we dey! 🇳🇬 Top up and blow fake money.')
@@ -458,7 +441,6 @@
                 h('div', { className: 'text-3xl font-black text-[#22C55E] tabular-nums font-display mt-1' }, fmtReal(s.real || 0)),
                 h('div', { className: 'text-[10px] text-white/45 mt-1.5' }, 'Pay real money for flex moves inside club'),
 
-                // DYNAMIC TOP UP SECTION
                 h('div', { className: 'mt-3 pt-3 border-t border-white/[0.08]' },
                   h('div', { className: 'flex gap-2' },
                     h('div', { className: 'flex-1 flex items-center bg-white/[0.05] border border-white/10 rounded-xl px-3' },
@@ -477,7 +459,6 @@
               )
             ),
 
-            // REGULAR ACTIONS
             h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-white/30' }, 'Regular') }, 'Club Actions'),
             h('div', { className: 'grid grid-cols-2 gap-2.5' },
               REGULAR_ACTIONS.map((it) => {
@@ -501,7 +482,6 @@
               })
             ),
 
-            // VIP ACTIONS
             h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A] flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#FFD60A] animate-pulse glow-dot' }), 'VIP ROOM') }, 'Crazy Flex'),
             h('div', { className: 'grid grid-cols-2 gap-2.5' },
               VIP_ACTIONS.map((it) => {
@@ -529,7 +509,6 @@
               })
             ),
 
-            // LIVE FEED
             h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#22C55E] flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse glow-dot' }), 'LIVE') }, 'Club Feed'),
             h(Card, { className: 'divide-y divide-white/[0.05] max-h-96 overflow-y-auto' },
               feed.map((f) => h('div', { key: f.id, className: 'px-3.5 py-2.5 flex items-start gap-2.5 text-[11px] animate-slideInRight' },
@@ -550,7 +529,6 @@
             )
           ),
 
-          // NAVIGATION
           h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
               NAV.map((n) => {
