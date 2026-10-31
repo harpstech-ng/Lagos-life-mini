@@ -8,7 +8,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Lagos Life Mini — Leaderboard</title>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
@@ -59,7 +58,6 @@
     input:focus { outline: none; }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
     .hero-grid { background-image: linear-gradient(rgba(255,214,10,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,214,10,0.04) 1px, transparent 1px); background-size: 22px 22px; -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); }
-    
     .marquee { animation: marquee 15s linear infinite; white-space: nowrap; }
     @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
   </style>
@@ -93,12 +91,10 @@
     const ENERGY_MS = 5 * 60 * 1000;
     const TOTAL_USERS = 256890;
     
-    // Base withdrawal rate
     const BASE_MIN_WITHDRAW = 10_000_000_000_000; // 10 Trillion
     const REAL_PER_WITHDRAW = 10_000;
 
     const BIZ_PRICES = { water: 10_000, suya: 250_000, keke: 500_000, phone: 2_000_000, danfo: 5_000_000, wash: 25_000_000, bet9ja: 50_000_000, lounge: 500_000_000, oil: 5_000_000_000 };
-    const BIZ_PER_HR = { water: 2000, suya: 40000, keke: 75000, phone: 350000, danfo: 800000, wash: 4000000, bet9ja: 9000000, lounge: 90000000, oil: 1000000000 };
     const ASSET_PRICES = { chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000, gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000, mansion: 1_000_000_000_000 };
 
     const FEED_MESSAGES = [
@@ -117,9 +113,8 @@
           return Object.assign({}, parsed, { transactions: parsed.transactions || [], taps: parsed.taps || 0, clout: parsed.clout || 0, withdrawals: parsed.withdrawals || 0 });
         }
       } catch (e) {}
-      const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
-        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        name: localStorage.getItem("lagos_user_name") || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -202,32 +197,30 @@
       const [fakeUsers, setFakeUsers] = useState(() => generateDynamicLeaderboard());
       const [feedMsg, setFeedMsg] = useState(FEED_MESSAGES[0]);
 
-      // PAYSTACK STATES
       const [paystackKey, setPaystackKey] = useState("");
       const [topUpAmount, setTopUpAmount] = useState(1000);
 
-      // WITHDRAWAL STATES
       const [withdrawModal, setWithdrawModal] = useState(false);
       const [bankName, setBankName] = useState("");
       const [accountNumber, setAccountNumber] = useState("");
       const [accountName, setAccountName] = useState("");
 
       useEffect(() => {
-        const tg = window && window.Telegram && window.Telegram.WebApp;
-        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
-
         fetch('/api/config')
           .then(res => res.json())
           .then(data => setPaystackKey(data.publicKey))
           .catch(err => console.error("Could not load Paystack config", err));
 
-        auth.signInAnonymously().then((cred) => {
-          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+        let userUnsub = null;
+        const authUnsub = auth.onAuthStateChanged((user) => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          if (userUnsub) userUnsub();
+
+          const userId = user.uid;
           setUid(userId);
           
           const userRef = db.collection("users").doc(userId);
-          const unsubscribe = userRef.onSnapshot((doc) => {
+          userUnsub = userRef.onSnapshot((doc) => {
             if (doc.exists) {
               setS(prev => {
                 const dbData = doc.data();
@@ -243,7 +236,7 @@
               });
             } else {
               const defaultData = {
-                name: (tgUser && tgUser.first_name) || 'Hustler',
+                name: user.displayName || localStorage.getItem("lagos_user_name") || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -254,8 +247,9 @@
               try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
           }, (error) => console.error("Snapshot error:", error));
-          return unsubscribe;
-        }).catch(e => setAuthError(e.message));
+        });
+
+        return () => { authUnsub(); if (userUnsub) userUnsub(); };
       }, []);
 
       useEffect(() => {
@@ -314,34 +308,21 @@
         return () => clearInterval(iv);
       }, []);
 
-      // Tick: energy + income
+      // Tick: Energy regen only (cash handled by business.html vault)
       useEffect(() => {
         if (!uid) return;
         const iv = setInterval(() => {
           setS(prev => {
-            if (!prev) return prev;
+            if (!prev || prev.energy >= MAX_E) return prev;
             const now = Date.now();
-            let energy = prev.energy;
-            let lastEnergy = prev.lastEnergy;
-            if (energy < MAX_E) {
-              const gained = Math.floor((now - lastEnergy) / ENERGY_MS);
-              if (gained > 0) {
-                energy = Math.min(MAX_E, energy + gained);
-                lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
-              }
-            }
-            const perHr = Object.entries(prev.businesses || {}).reduce((a, kv) => a + kv[1] * (BIZ_PER_HR[kv[0]] || 0), 0);
-            const newCash = (prev.cash || 0) + perHr / 3600;
+            const gained = Math.floor((now - prev.lastEnergy) / ENERGY_MS);
+            if (gained <= 0) return prev;
             
-            if (energy !== prev.energy || perHr > 0) {
-              if (perHr > 0) {
-                db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600), energy, lastEnergy }).catch(() => {});
-              } else if (energy !== prev.energy) {
-                db.collection("users").doc(uid).update({ energy, lastEnergy }).catch(() => {});
-              }
-              return Object.assign({}, prev, { energy: energy, lastEnergy: lastEnergy, cash: newCash });
-            }
-            return prev;
+            const energy = Math.min(MAX_E, prev.energy + gained);
+            const lastEnergy = energy >= MAX_E ? now : prev.lastEnergy + gained * ENERGY_MS;
+            
+            db.collection("users").doc(uid).update({ energy, lastEnergy }).catch(() => {});
+            return Object.assign({}, prev, { energy, lastEnergy });
           });
         }, 1000);
         return () => clearInterval(iv);
@@ -368,12 +349,9 @@
       const rank = myIndex >= 0 ? myIndex + 1 : TOTAL_USERS;
       const board = allUsers.slice(0, 100);
 
-      // DYNAMIC WITHDRAWAL TARGET
-      // 1st = 10T, 2nd = 20T, 3rd = 35T, 4th = 55T, etc.
       const withdrawalCount = s.withdrawals || 0;
       const nextTarget = BASE_MIN_WITHDRAW * (1 + withdrawalCount * 0.5 + (withdrawalCount * withdrawalCount) * 0.1);
 
-      // WITHDRAWAL LOGIC (MANUAL PAYOUT)
       const submitWithdrawal = async () => {
         if ((s.cash || 0) < nextTarget) { 
           AudioEngine.error(); 
@@ -386,13 +364,11 @@
           return notify('Invalid account number', 'bad');
         }
 
-        // Deduct fake cash
         setS((p) => (Object.assign({}, p, { 
           cash: p.cash - nextTarget,
           withdrawals: (p.withdrawals || 0) + 1
         })));
         
-        // Save withdrawal request to Firebase
         if (uid) {
           await db.collection("withdrawals").add({
             userId: uid,
@@ -419,10 +395,9 @@
         
         AudioEngine.coin();
         notify('Withdrawal Request Submitted! You will be paid shortly. 💰');
-        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+        try { if (navigator.vibrate) navigator.vibrate(30); } catch(e) {}
       };
 
-      // REAL PAYSTACK TOP UP
       const topUpReal = () => {
         if (!paystackKey) return notify("Payment system loading. Try again.", 'bad');
         if (topUpAmount < 100) return notify("Minimum top up is ₦100", 'bad');
@@ -441,15 +416,15 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
                 reference: response.reference, 
-                userId: uid, 
-                amount: topUpAmount 
+                userId: uid
+                // Note: 'amount' is no longer sent; the backend verifies it via Paystack directly.
               })
             })
             .then(res => res.json())
             .then(data => {
               if (data.success) {
-                setS((p) => (Object.assign({}, p, { real: (p.real || 0) + topUpAmount })));
-                notify(`Payment Successful! +₦${topUpAmount.toLocaleString()} real 💳`);
+                setS((p) => (Object.assign({}, p, { real: (p.real || 0) + data.amount })));
+                notify(`Payment Successful! +₦${data.amount.toLocaleString()} real 💳`);
                 AudioEngine.coin();
               } else {
                 notify('Payment verification failed.', 'bad');
@@ -473,7 +448,6 @@
         { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
 
-      // Sapa Title
       let sapaTitle = "Mushin Under Bridge Tenant";
       if (netWorth > 1_000_000_000) sapaTitle = "Upcoming Baller";
       if (netWorth > 100_000_000_000) sapaTitle = "Odogwu of Lagos";
@@ -507,7 +481,6 @@
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
             
-            // LIVE FEED MARQUEE
             h('div', { className: 'mt-3 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center gap-2 overflow-hidden' },
               h('span', { className: 'text-sm shrink-0 animate-pulse' }, '📡'),
               h('div', { className: 'flex-1 overflow-hidden relative h-5' },
@@ -515,7 +488,6 @@
               )
             ),
 
-            // PROFILE CARD
             h(Card, { className: 'relative overflow-hidden p-4 mt-3 hero-grid', gold: true },
               h('div', { className: 'absolute -top-16 -right-12 w-48 h-48 rounded-full bg-[#FFD60A]/25 blur-3xl pointer-events-none' }),
               h('div', { className: 'relative flex items-center gap-3' },
@@ -548,7 +520,6 @@
               )
             ),
 
-            // WITHDRAWAL & TOP UP CARD
             h(SectionTitle, null, 'Wallet & Withdrawals'),
             h(Card, { className: 'p-4' },
               h('div', { className: 'text-[11px] text-white/55 leading-relaxed' },
@@ -570,7 +541,6 @@
                 'Withdraw ₦10,000.00 Real'
               ),
 
-              // DYNAMIC TOP UP SECTION
               h('div', { className: 'mt-5 pt-4 border-t border-white/[0.08]' },
                 h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2' }, 'Top Up Real Cash'),
                 h('div', { className: 'flex gap-2' },
@@ -589,7 +559,6 @@
               )
             ),
 
-            // LEADERBOARD LIST
             h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-white/30' }, 'TOP 100') }, 'Ranking'),
             h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden' },
               board.map((u, i) =>
@@ -621,7 +590,6 @@
             )
           ),
 
-          // WITHDRAWAL MODAL
           withdrawModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setWithdrawModal(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-2xl animate-popIn' },
@@ -651,7 +619,6 @@
             )
           ),
 
-          // NAVIGATION
           h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
               NAV.map((n) => {
