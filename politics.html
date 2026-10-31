@@ -8,7 +8,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Lagos Life Mini — Politics</title>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
@@ -110,9 +109,8 @@
         const cached = localStorage.getItem("lagos_user_data");
         if (cached) return JSON.parse(cached);
       } catch (e) {}
-      const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
-        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        name: localStorage.getItem("lagos_user_name") || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
         taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
@@ -193,18 +191,17 @@
       ]);
       const [tickerMsg, setTickerMsg] = useState(NEWS_TICKER[0]);
 
-      // Firebase Sync
       useEffect(() => {
-        const tg = window && window.Telegram && window.Telegram.WebApp;
-        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+        let userUnsub = null;
+        const authUnsub = auth.onAuthStateChanged((user) => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          if (userUnsub) userUnsub();
 
-        auth.signInAnonymously().then((cred) => {
-          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+          const userId = user.uid;
           setUid(userId);
           
           const userRef = db.collection("users").doc(userId);
-          const unsubscribe = userRef.onSnapshot((doc) => {
+          userUnsub = userRef.onSnapshot((doc) => {
             if (doc.exists) {
               setS(prev => {
                 const dbData = doc.data();
@@ -218,7 +215,7 @@
               });
             } else {
               const defaultData = {
-                name: (tgUser && tgUser.first_name) || 'Hustler',
+                name: user.displayName || localStorage.getItem("lagos_user_name") || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
@@ -229,11 +226,11 @@
               try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
           }, (error) => console.error("Snapshot error:", error));
-          return unsubscribe;
-        }).catch(e => setAuthError(e.message));
+        });
+
+        return () => { authUnsub(); if (userUnsub) userUnsub(); };
       }, []);
 
-      // Fetch Custom Polls from Firebase
       useEffect(() => {
         const unsub = db.collection("polls").orderBy("createdAt", "desc").limit(10).onSnapshot((snap) => {
           const p = [];
@@ -268,7 +265,6 @@
         }
       };
 
-      // --- BBN ACTIONS ---
       const voteBBN = (housemate) => {
         if (s.cash < VOTE_COST) { AudioEngine.error(); return notify('You need ₦10k to vote 💸', 'bad'); }
         
@@ -303,7 +299,6 @@
         addFeed('🚨 ELECTION RIGGED: ' + (s.name || 'You') + ' just bought 10,000 votes for ' + housemate.name + '!');
       };
 
-      // --- ELECTION ACTIONS ---
       const contestElection = () => {
         if (s.cash < ELECTION_COST) { AudioEngine.error(); return notify('You need ₦500M to contest 🚫', 'bad'); }
         
@@ -313,7 +308,7 @@
         AudioEngine.election();
         notify('👑 YOU ARE NOW THE PRESIDENT!');
         addFeed('🚨 BREAKING: ' + (s.name || 'You') + ' just won the Presidential Election!');
-        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+        try { if (navigator.vibrate) navigator.vibrate(50); } catch(e) {}
       };
 
       const rigElection = () => {
@@ -346,7 +341,6 @@
         AudioEngine.tap();
       };
 
-      // --- CUSTOM POLLS ACTIONS ---
       const createPoll = async () => {
         if (!pollTitle.trim() || !pollOptA.trim() || !pollOptB.trim()) return notify('Fill all fields', 'bad');
         if ((s.real || 0) < POLL_CREATE_COST) { AudioEngine.error(); return notify('Need ₦100 Real to create poll', 'bad'); }
@@ -426,7 +420,6 @@
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
             
-            // FAKE NEWS TICKER
             h('div', { className: 'mt-3 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center gap-2 overflow-hidden' },
               h('span', { className: 'text-sm shrink-0 animate-pulse' }, '📡'),
               h('div', { className: 'flex-1 overflow-hidden relative h-5' },
@@ -434,7 +427,6 @@
               )
             ),
 
-            // TABS
             h('div', { className: 'mt-3 flex gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06]' },
               ['bbn', 'election', 'polls'].map(tab => 
                 h('button', {
@@ -446,7 +438,6 @@
               )
             ),
 
-            // --- BBN TAB ---
             activeTab === 'bbn' && h('div', { className: 'mt-4' },
               h(Card, { className: 'p-4 text-center', blue: true },
                 h('div', { className: 'text-4xl mb-1' }, '📺'),
@@ -476,7 +467,6 @@
               )
             ),
 
-            // --- ELECTION TAB ---
             activeTab === 'election' && h('div', { className: 'mt-4' },
               h(Card, { className: 'p-5 text-center', gold: true },
                 h('div', { className: 'text-5xl mb-2' }, '🎩'),
@@ -504,7 +494,6 @@
               )
             ),
 
-            // --- POLLS TAB ---
             activeTab === 'polls' && h('div', { className: 'mt-4' },
               h('button', { onClick: () => setPollModalOpen(true), className: 'w-full py-3 rounded-xl bg-gradient-to-b from-blue-400 to-blue-600 text-white font-black text-[13px] shadow-[0_8px_24px_-8px_rgba(59,130,246,0.7)] active:scale-95 transition mb-4' }, '➕ Create Custom Poll (₦100 Real)'),
               
@@ -535,14 +524,12 @@
               )
             ),
 
-            // LIVE FEED
             h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-blue-400 flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse glow-dot' }), 'LIVE') }, 'Political Feed'),
             h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden min-h-[150px]' },
               feed.map((f, i) => h('div', { key: i, className: 'px-4 py-3 text-[11px] text-white/70 animate-slideDown' }, f))
             )
           ),
 
-          // Navigation
           h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
               NAV.map((n) => {
@@ -558,7 +545,6 @@
             )
           ),
 
-          // CREATE POLL MODAL
           pollModalOpen && h('div', { className: 'fixed inset-0 z-50 grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/80 backdrop-blur-sm', onClick: () => setPollModalOpen(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-blue-500/30 rounded-3xl p-5 animate-popIn' },
