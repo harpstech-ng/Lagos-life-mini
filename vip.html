@@ -308,28 +308,8 @@
           currency: 'NGN',
           ref: 'LGM_' + Date.now() + '_' + Math.floor(Math.random() * 1000), 
           callback: function(response) {
-            notify('Verifying payment...', 'good');
-            
-            fetch('/api/paystack', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                reference: response.reference, 
-                userId: uid
-                // 'amount' removed: backend verifies it securely via Paystack
-              })
-            })
-            .then(res => res.json())
-            .then(data => {
-              if (data.success) {
-                setS((p) => (Object.assign({}, p, { real: (p.real || 0) + data.amount })));
-                notify(`Payment Successful! +₦${data.amount.toLocaleString()} real 💳`);
-                AudioEngine.coin();
-              } else {
-                notify('Payment verification failed.', 'bad');
-              }
-            })
-            .catch(err => notify('Network error during verification.', 'bad'));
+            // 🔥 NEW: Redirect to success page instead of inline verification
+            window.location.href = '/payment-success.html?reference=' + response.reference;
           },
           onClose: function() {
             notify('Payment cancelled.', 'bad');
