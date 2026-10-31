@@ -106,16 +106,6 @@
       { name: 'Cubana Chief Priest', emoji: '🍾' }
     ];
 
-    const FAKE_REPLIES = [
-      "Chai! See balling 🤑",
-      "Odogwu! You too much 🔥",
-      "Na you dey reign 👑",
-      "Make we link up later 🤝",
-      "Money na water 💸",
-      "This guy don blow! 🚀",
-      "I respect your hustle 💪"
-    ];
-
     const OPPRESSION_FEED = [
       "Obi Cubana just sprayed ₦500M on dancers! 🤑",
       "E-Money bought the whole club a bottle of Ace of Spades 🍾",
@@ -184,14 +174,10 @@
       const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
       
-      const [chatLog, setChatLog] = useState([
-        { sender: 'Geh Geh', text: 'Ah, see this one. You wan enter Big Boys Lounge? Make sure say your account balance dey heavy o.', emoji: '🕶️' },
-        { sender: 'Peller', text: 'This one na money na water. If you no get money, commot for here.', emoji: '💸' }
-      ]);
-      
+      // REAL FIRESTORE CHAT STATE
+      const [chatMessages, setChatMessages] = useState([]);
       const [chatInput, setChatInput] = useState('');
-      const [isTyping, setIsTyping] = useState(false);
-      const [typingUser, setTypingUser] = useState('');
+      const chatEndRef = useRef(null);
 
       const [sprayAmt, setSprayAmt] = useState(10000000);
       const [feedMsg, setFeedMsg] = useState(OPPRESSION_FEED[0]);
@@ -201,8 +187,6 @@
 
       const [paystackKey, setPaystackKey] = useState("");
       const [topUpAmount, setTopUpAmount] = useState(5000);
-      
-      const chatEndRef = useRef(null);
 
       useEffect(() => {
         fetch('/api/config')
@@ -249,17 +233,29 @@
         return () => { authUnsub(); if (userUnsub) userUnsub(); };
       }, []);
 
+      // 📡 REAL-TIME CHAT LISTENER
+      useEffect(() => {
+        if (!uid || !s.isVip) return;
+        
+        // Listen to last 50 messages
+        const unsub = db.collection("vip_chat")
+          .orderBy("createdAt", "desc")
+          .limit(50)
+          .onSnapshot((snap) => {
+            const msgs = [];
+            snap.forEach(doc => msgs.push({ id: doc.id, ...doc.data() }));
+            setChatMessages(msgs.reverse()); // Oldest at top
+            setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+          }, (err) => console.error("Chat error:", err));
+
+        return () => unsub();
+      }, [uid, s.isVip]);
+
       useEffect(() => {
         if (!toast) return;
         const t = setTimeout(() => setToast(null), 2400);
         return () => clearTimeout(t);
       }, [toast]);
-
-      useEffect(() => {
-        if (chatEndRef.current) {
-          chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, [chatLog, isTyping]);
 
       // Random Oppression Feed
       useEffect(() => {
@@ -270,10 +266,10 @@
         return () => clearInterval(iv);
       }, []);
 
-      // Fake Chat Bot Intervals
+      // Fake Bots writing to Firestore
       useEffect(() => {
         if (!s.isVip) return;
-        const iv = setInterval(() => {
+        const iv = setInterval(async () => {
           const randomUser = VIP_USERS[Math.floor(Math.random() * VIP_USERS.length)];
           const randomMsgs = [
             "Just bought a new G-Wagon to the club 🚙",
@@ -283,8 +279,15 @@
             "This lounge too dry today, let's shut down Quilox 🚨"
           ];
           const msg = randomMsgs[Math.floor(Math.random() * randomMsgs.length)];
-          setChatLog(prev => [...prev.slice(-20), { sender: randomUser.name, text: msg, emoji: randomUser.emoji }]);
-        }, 12000);
+          
+          await db.collection("vip_chat").add({
+            uid: 'bot_' + Date.now(),
+            senderName: randomUser.name,
+            emoji: randomUser.emoji,
+            text: msg,
+            createdAt: Date.now()
+          }).catch(() => {});
+        }, 25000); // every 25 seconds (so it doesn't spam too fast)
         return () => clearInterval(iv);
       }, [s.isVip]);
 
@@ -308,7 +311,6 @@
           currency: 'NGN',
           ref: 'LGM_' + Date.now() + '_' + Math.floor(Math.random() * 1000), 
           callback: function(response) {
-            // 🔥 NEW: Redirect to success page instead of inline verification
             window.location.href = '/payment-success.html?reference=' + response.reference;
           },
           onClose: function() {
@@ -332,32 +334,31 @@
         try { if (navigator.vibrate) navigator.vibrate(40); } catch(e) {}
       };
 
-      const sendMessage = () => {
-        if (!chatInput.trim()) return;
+      const sendMessage = async () => {
+        if (!chatInput.trim() || !uid || !s.isVip) return;
         
-        const newMsg = { sender: 'You', text: chatInput.trim(), emoji: '👤' };
-        setChatLog(prev => [...prev, newMsg]);
+        const text = chatInput.trim();
         setChatInput('');
         AudioEngine.tap();
 
-        setTimeout(() => {
-          const randomUser = VIP_USERS[Math.floor(Math.random() * VIP_USERS.length)];
-          setTypingUser(randomUser.name);
-          setIsTyping(true);
-
-          setTimeout(() => {
-            setIsTyping(false);
-            const reply = FAKE_REPLIES[Math.floor(Math.random() * FAKE_REPLIES.length)];
-            setChatLog(prev => [...prev, { sender: randomUser.name, text: reply, emoji: randomUser.emoji }]);
-          }, 2000);
-        }, 500);
+        await db.collection("vip_chat").add({
+          uid: uid,
+          senderName: s.name || 'Hustler',
+          emoji: '👤',
+          text: text,
+          createdAt: Date.now()
+        }).catch(err => notify('Failed to send message.', 'bad'));
       };
 
       const buyDrinks = () => {
         if ((s.real || 0) < 500) { AudioEngine.error(); return notify('Need ₦500 real 💸', 'bad'); }
         updateUser({ real: s.real - 500, clout: (s.clout || 0) + 200 });
         AudioEngine.coin();
-        setChatLog(prev => [...prev, { sender: 'SYSTEM', text: '🍾 ' + (s.name || 'You') + ' just bought a round of drinks for the whole lounge! Everyone is hailing you!', emoji: '🍾' }]);
+        db.collection("vip_chat").add({
+          uid: 'system', senderName: 'SYSTEM', emoji: '🍾',
+          text: '🍾 ' + (s.name || 'You') + ' just bought a round of drinks for the whole lounge! Everyone is hailing you!',
+          createdAt: Date.now()
+        });
         notify('You bought drinks! +200 Clout 🍾');
       };
 
@@ -365,7 +366,11 @@
         if ((s.real || 0) < 1000) { AudioEngine.error(); return notify('Need ₦1,000 real 💸', 'bad'); }
         updateUser({ real: s.real - 1000, clout: (s.clout || 0) + 300 });
         AudioEngine.vip();
-        setChatLog(prev => [...prev, { sender: 'SYSTEM', text: '🛡️ ' + (s.name || 'You') + ' just hired 5 bodyguards! Nobody can touch you in this lounge!', emoji: '🛡️' }]);
+        db.collection("vip_chat").add({
+          uid: 'system', senderName: 'SYSTEM', emoji: '🛡️',
+          text: '🛡️ ' + (s.name || 'You') + ' just hired 5 bodyguards! Nobody can touch you in this lounge!',
+          createdAt: Date.now()
+        });
         notify('Bodyguards hired! +300 Clout 🛡️');
       };
 
@@ -373,7 +378,11 @@
         if ((s.real || 0) < 200) { AudioEngine.error(); return notify('Need ₦200 real 💸', 'bad'); }
         updateUser({ real: s.real - 200, clout: (s.clout || 0) + 100 });
         AudioEngine.vip();
-        setChatLog(prev => [...prev, { sender: 'SYSTEM', text: '🚨 ' + (s.name || 'You') + ' hijacked the DJ! The whole club is playing your song!', emoji: '🎧' }]);
+        db.collection("vip_chat").add({
+          uid: 'system', senderName: 'SYSTEM', emoji: '🎧',
+          text: '🚨 ' + (s.name || 'You') + ' hijacked the DJ! The whole club is playing your song!',
+          createdAt: Date.now()
+        });
         notify('You hijacked the DJ! 🎧');
       };
 
@@ -383,7 +392,11 @@
         AudioEngine.error();
         setFlashScreen(true);
         setTimeout(() => setFlashScreen(false), 2000);
-        setChatLog(prev => [...prev, { sender: 'SYSTEM', text: '🚨 BREAKING: ' + (s.name || 'You') + ' just SHUT DOWN THE CLUB with real money! The party has stopped!', emoji: '🚨' }]);
+        db.collection("vip_chat").add({
+          uid: 'system', senderName: 'SYSTEM', emoji: '🚨',
+          text: '🚨 BREAKING: ' + (s.name || 'You') + ' just SHUT DOWN THE CLUB with real money! The party has stopped!',
+          createdAt: Date.now()
+        });
         notify('YOU SHUT DOWN THE CLUB! 🚨');
       };
 
@@ -399,7 +412,11 @@
         if (s.cash < sprayAmt) { AudioEngine.error(); return notify('You no get money for spray 💸', 'bad'); }
         updateUser({ cash: s.cash - sprayAmt, clout: (s.clout || 0) + 500 });
         AudioEngine.coin();
-        setChatLog(prev => [...prev, { sender: 'SYSTEM', text: '👑 ' + (s.name || 'You') + ' just sprayed ' + fmt(sprayAmt) + ' for the Big Boys Lounge!', emoji: '💸' }]);
+        db.collection("vip_chat").add({
+          uid: 'system', senderName: 'SYSTEM', emoji: '💸',
+          text: '👑 ' + (s.name || 'You') + ' just sprayed ' + fmt(sprayAmt) + ' for the Big Boys Lounge!',
+          createdAt: Date.now()
+        });
         notify('You sprayed ' + fmt(sprayAmt) + '! +500 Clout 🔥');
       };
 
@@ -407,7 +424,11 @@
         if (s.cash < 50000000) { AudioEngine.error(); return notify('Need ₦50M fake 💸', 'bad'); }
         updateUser({ cash: s.cash - 50000000, clout: (s.clout || 0) + 300 });
         AudioEngine.vip();
-        setChatLog(prev => [...prev, { sender: 'SYSTEM', text: '🪑 ' + (s.name || 'You') + ' just bought the biggest VIP table for ₦50M! Area boys are guiding it!', emoji: '🪑' }]);
+        db.collection("vip_chat").add({
+          uid: 'system', senderName: 'SYSTEM', emoji: '🪑',
+          text: '🪑 ' + (s.name || 'You') + ' just bought the biggest VIP table for ₦50M! Area boys are guiding it!',
+          createdAt: Date.now()
+        });
         notify('Table bought! +300 Clout 🪑');
       };
 
@@ -415,7 +436,11 @@
         if (s.cash < 5000000) { AudioEngine.error(); return notify('Need ₦5M fake 💸', 'bad'); }
         updateUser({ cash: s.cash - 5000000, clout: (s.clout || 0) + 100 });
         AudioEngine.error();
-        setChatLog(prev => [...prev, { sender: 'SYSTEM', text: '😂 ' + (s.name || 'You') + ' just sent a Sapa Alert to everybody in the lounge! "Make una no sleep o!"', emoji: '😂' }]);
+        db.collection("vip_chat").add({
+          uid: 'system', senderName: 'SYSTEM', emoji: '😂',
+          text: '😂 ' + (s.name || 'You') + ' just sent a Sapa Alert to everybody in the lounge! "Make una no sleep o!"',
+          createdAt: Date.now()
+        });
         notify('Sapa Alert sent! 😂');
       };
 
@@ -584,20 +609,24 @@
             h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A] flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#FFD60A] animate-pulse glow-dot' }), 'LIVE CHAT') }, 'The Lounge'),
             h(Card, { className: 'p-3 h-80 flex flex-col' },
               h('div', { className: 'flex-1 overflow-y-auto space-y-3 mb-2 pr-1' },
-                chatLog.map((chat, i) => {
-                  if (chat.sender === 'SYSTEM') {
+                
+                // REAL CHAT MESSAGES
+                chatMessages.map((chat, i) => {
+                  const isSystem = chat.uid === 'system';
+                  if (isSystem) {
                     return h('div', { key: i, className: 'bg-[#FFD60A]/10 border border-[#FFD60A]/30 text-[#FFD60A] font-bold italic text-center w-full rounded-xl px-3 py-2 text-[11px]' }, chat.text);
                   }
-                  const isMe = chat.sender === 'You';
+                  const isMe = chat.uid === uid;
                   return h('div', { key: i, className: 'flex items-start gap-2 ' + (isMe ? 'flex-row-reverse' : '') },
                     h('div', { className: 'w-7 h-7 rounded-full bg-white/[0.1] grid place-items-center text-sm shrink-0' }, chat.emoji),
                     h('div', { className: 'max-w-[80%] rounded-xl px-3 py-2 text-[11px] ' + (isMe ? 'bg-[#FFD60A]/20 text-[#FFD60A]' : 'bg-white/[0.06] text-white/80') },
-                      !isMe && h('div', { className: 'font-bold text-[9px] mb-0.5 opacity-60' }, chat.sender),
+                      !isMe && h('div', { className: 'font-bold text-[9px] mb-0.5 opacity-60' }, chat.senderName),
                       chat.text
                     )
                   );
                 }),
-                isTyping && h('div', { className: 'text-[10px] text-white/40 italic px-2' }, typingUser + ' is typing...'),
+                
+                chatMessages.length === 0 && h('div', { className: 'text-center text-white/30 text-[11px] mt-10' }, 'Be the first to say something...'),
                 h('div', { ref: chatEndRef })
               ),
               h('div', { className: 'flex gap-2' },
