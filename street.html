@@ -8,10 +8,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Lagos Life Mini — Street</title>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js'"></script>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -53,7 +54,7 @@
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
     @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
     .action-pulse { animation: pulse 1.2s ease-in-out infinite; }
-    
+
     .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
   </style>
 </head>
@@ -86,7 +87,6 @@
     const ENERGY_MS = 5 * 60 * 1000;
 
     const BIZ_PRICES = { water: 10_000, suya: 250_000, keke: 500_000, phone: 2_000_000, danfo: 5_000_000, wash: 25_000_000, bet9ja: 50_000_000, lounge: 500_000_000, oil: 5_000_000_000 };
-    const BIZ_PER_HR = { water: 2000, suya: 40000, keke: 75000, phone: 350000, danfo: 800000, wash: 4000000, bet9ja: 9000000, lounge: 90000000, oil: 1000000000 };
     const ASSET_PRICES = { chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000, gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000, mansion: 1_000_000_000_000 };
 
     const STREET_ACTIONS = [
@@ -106,9 +106,8 @@
           return Object.assign({}, parsed, { heat: parsed.heat || 0 });
         }
       } catch (e) {}
-      const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
-        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        name: localStorage.getItem("lagos_user_name") || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -171,16 +170,16 @@
       const [raidModal, setRaidModal] = useState(false);
 
       useEffect(() => {
-        const tg = window && window.Telegram && window.Telegram.WebApp;
-        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+        let userUnsub = null;
+        const authUnsub = auth.onAuthStateChanged((user) => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          if (userUnsub) userUnsub();
 
-        auth.signInAnonymously().then((cred) => {
-          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+          const userId = user.uid;
           setUid(userId);
           
           const userRef = db.collection("users").doc(userId);
-          const unsubscribe = userRef.onSnapshot((doc) => {
+          userUnsub = userRef.onSnapshot((doc) => {
             if (doc.exists) {
               setS(prev => {
                 const dbData = doc.data();
@@ -196,7 +195,7 @@
               });
             } else {
               const defaultData = {
-                name: (tgUser && tgUser.first_name) || 'Hustler',
+                name: user.displayName || localStorage.getItem("lagos_user_name") || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
@@ -207,8 +206,9 @@
               try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
           }, (error) => console.error("Snapshot error:", error));
-          return unsubscribe;
-        }).catch(e => setAuthError(e.message));
+        });
+
+        return () => { authUnsub(); if (userUnsub) userUnsub(); };
       }, []);
 
       useEffect(() => {
@@ -219,33 +219,22 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
+      // Energy regen only (cash handled by business.html vault)
       useEffect(() => {
         if (!uid) return;
         const iv = setInterval(() => {
           setNow(Date.now());
-          setS((p) => {
+          setS(prev => {
+            if (!prev || prev.energy >= MAX_E) return prev;
             const nowT = Date.now();
-            let energy = p.energy;
-            let lastEnergy = p.lastEnergy;
-            if (energy < MAX_E) {
-              const gained = Math.floor((nowT - lastEnergy) / ENERGY_MS);
-              if (gained > 0) {
-                energy = Math.min(MAX_E, energy + gained);
-                lastEnergy = energy >= MAX_E ? nowT : lastEnergy + gained * ENERGY_MS;
-              }
-            }
-            const perHr = Object.entries(p.businesses || {}).reduce((a, kv) => a + kv[1] * (BIZ_PER_HR[kv[0]] || 0), 0);
-            const newCash = (p.cash || 0) + perHr / 3600;
+            const gained = Math.floor((nowT - prev.lastEnergy) / ENERGY_MS);
+            if (gained <= 0) return prev;
             
-            if (energy !== p.energy || perHr > 0) {
-              if (perHr > 0) {
-                db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600), energy, lastEnergy }).catch(() => {});
-              } else if (energy !== p.energy) {
-                db.collection("users").doc(uid).update({ energy, lastEnergy }).catch(() => {});
-              }
-              return Object.assign({}, p, { energy: energy, lastEnergy: lastEnergy, cash: newCash });
-            }
-            return p;
+            const energy = Math.min(MAX_E, prev.energy + gained);
+            const lastEnergy = energy >= MAX_E ? nowT : prev.lastEnergy + gained * ENERGY_MS;
+            
+            db.collection("users").doc(uid).update({ energy, lastEnergy }).catch(() => {});
+            return Object.assign({}, prev, { energy, lastEnergy });
           });
         }, 1000);
         return () => clearInterval(iv);
@@ -390,10 +379,7 @@
         
         setLog((l) => [{ id: Date.now(), msg, kind: logKind }, ...l].slice(0, 10));
         
-        try {
-          if (logKind === 'bad') window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
-          else window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
-        } catch(e) {}
+        try { if (navigator.vibrate) navigator.vibrate(logKind === 'bad' ? [40, 40, 40] : 20); } catch(e) {}
 
         if (uid) {
           await db.collection("users").doc(uid).update({
