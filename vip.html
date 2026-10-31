@@ -8,7 +8,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Lagos Life Mini — Big Boys Lounge</title>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
@@ -130,9 +129,8 @@
         const cached = localStorage.getItem("lagos_user_data");
         if (cached) return JSON.parse(cached);
       } catch (e) {}
-      const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
-        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        name: localStorage.getItem("lagos_user_name") || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
         taps: 0, clout: 0, goldName: false, isVip: false, vipTitle: 'Big Boy', lastSeen: Date.now(),
@@ -201,28 +199,27 @@
       const [customTitle, setCustomTitle] = useState('');
       const [flashScreen, setFlashScreen] = useState(false);
 
-      // PAYSTACK STATES
       const [paystackKey, setPaystackKey] = useState("");
       const [topUpAmount, setTopUpAmount] = useState(5000);
       
       const chatEndRef = useRef(null);
 
       useEffect(() => {
-        const tg = window && window.Telegram && window.Telegram.WebApp;
-        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
-
         fetch('/api/config')
           .then(res => res.json())
           .then(data => setPaystackKey(data.publicKey))
           .catch(err => console.error("Could not load Paystack config", err));
 
-        auth.signInAnonymously().then((cred) => {
-          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+        let userUnsub = null;
+        const authUnsub = auth.onAuthStateChanged((user) => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          if (userUnsub) userUnsub();
+
+          const userId = user.uid;
           setUid(userId);
           
           const userRef = db.collection("users").doc(userId);
-          const unsubscribe = userRef.onSnapshot((doc) => {
+          userUnsub = userRef.onSnapshot((doc) => {
             if (doc.exists) {
               setS(prev => {
                 const dbData = doc.data();
@@ -236,7 +233,7 @@
               });
             } else {
               const defaultData = {
-                name: (tgUser && tgUser.first_name) || 'Hustler',
+                name: user.displayName || localStorage.getItem("lagos_user_name") || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, isVip: false, vipTitle: 'Big Boy', lastSeen: Date.now(),
@@ -247,8 +244,9 @@
               try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
           }, (error) => console.error("Snapshot error:", error));
-          return unsubscribe;
-        }).catch(e => setAuthError(e.message));
+        });
+
+        return () => { authUnsub(); if (userUnsub) userUnsub(); };
       }, []);
 
       useEffect(() => {
@@ -299,7 +297,6 @@
         }
       };
 
-      // REAL PAYSTACK TOP UP
       const topUpReal = () => {
         if (!paystackKey) return notify("Payment system loading. Try again.", 'bad');
         if (topUpAmount < 100) return notify("Minimum top up is ₦100", 'bad');
@@ -307,7 +304,7 @@
         const handler = PaystackPop.setup({
           key: paystackKey,
           email: `user_${uid}@lagoslife.com`,
-          amount: topUpAmount * 100, // Paystack uses kobo
+          amount: topUpAmount * 100, 
           currency: 'NGN',
           ref: 'LGM_' + Date.now() + '_' + Math.floor(Math.random() * 1000), 
           callback: function(response) {
@@ -318,15 +315,15 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
                 reference: response.reference, 
-                userId: uid, 
-                amount: topUpAmount 
+                userId: uid
+                // 'amount' removed: backend verifies it securely via Paystack
               })
             })
             .then(res => res.json())
             .then(data => {
               if (data.success) {
-                setS((p) => (Object.assign({}, p, { real: (p.real || 0) + topUpAmount })));
-                notify(`Payment Successful! +₦${topUpAmount.toLocaleString()} real 💳`);
+                setS((p) => (Object.assign({}, p, { real: (p.real || 0) + data.amount })));
+                notify(`Payment Successful! +₦${data.amount.toLocaleString()} real 💳`);
                 AudioEngine.coin();
               } else {
                 notify('Payment verification failed.', 'bad');
@@ -352,7 +349,7 @@
         
         AudioEngine.vip();
         notify('👑 WELCOME TO THE BIG BOYS LOUNGE!');
-        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+        try { if (navigator.vibrate) navigator.vibrate(40); } catch(e) {}
       };
 
       const sendMessage = () => {
@@ -363,7 +360,6 @@
         setChatInput('');
         AudioEngine.tap();
 
-        // Trigger fake reply
         setTimeout(() => {
           const randomUser = VIP_USERS[Math.floor(Math.random() * VIP_USERS.length)];
           setTypingUser(randomUser.name);
@@ -377,7 +373,6 @@
         }, 500);
       };
 
-      // REAL MONEY ACTIONS
       const buyDrinks = () => {
         if ((s.real || 0) < 500) { AudioEngine.error(); return notify('Need ₦500 real 💸', 'bad'); }
         updateUser({ real: s.real - 500, clout: (s.clout || 0) + 200 });
@@ -420,7 +415,6 @@
         AudioEngine.coin();
       };
 
-      // FAKE MONEY ACTIONS
       const sprayMoney = () => {
         if (s.cash < sprayAmt) { AudioEngine.error(); return notify('You no get money for spray 💸', 'bad'); }
         updateUser({ cash: s.cash - sprayAmt, clout: (s.clout || 0) + 500 });
@@ -456,7 +450,6 @@
         { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
 
-      // --- LOCKED SCREEN ---
       if (!s.isVip) {
         return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
           h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
@@ -502,7 +495,6 @@
                 )
               ),
 
-              // TOP UP UI (Replaces Demo Button)
               h('div', { className: 'w-full bg-white/[0.04] border border-white/[0.07] rounded-2xl p-3 mb-3' },
                 h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2 text-left' }, 'Top Up Real Cash'),
                 h('div', { className: 'flex gap-2' },
@@ -524,7 +516,6 @@
                 'Pay ₦5,000 Real to Enter'
               )
             ),
-            // Navigation
             h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
               h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
                 NAV.map((n) => {
@@ -547,7 +538,6 @@
         );
       }
 
-      // --- VIP INSIDE SCREEN ---
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black ' + (flashScreen ? 'flash-red' : '') },
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
           h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
@@ -571,7 +561,6 @@
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
             
-            // OPPRESSION FEED TICKER
             h('div', { className: 'mt-3 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center gap-2 overflow-hidden' },
               h('span', { className: 'text-sm shrink-0 animate-pulse' }, '📡'),
               h('div', { className: 'flex-1 overflow-hidden relative h-5' },
@@ -579,7 +568,6 @@
               )
             ),
 
-            // VIP STATUS CARD
             h(Card, { className: 'vip-shine p-4 mt-3 text-center', vip: true },
               h('div', { className: 'text-4xl mb-1' }, '👑'),
               h('div', { className: 'text-[16px] font-black text-gradient-gold font-display' }, 'WELCOME, ' + (s.vipTitle || 'BIG BOY')),
@@ -595,7 +583,6 @@
                 )
               ),
 
-              // TOP UP INSIDE VIP
               h('div', { className: 'mt-4 pt-4 border-t border-[#FFD60A]/20' },
                 h('div', { className: 'text-[10px] uppercase tracking-widest text-[#FFD60A]/70 font-bold mb-2' }, 'Top Up Real Cash for Flexes'),
                 h('div', { className: 'flex gap-2' },
@@ -614,7 +601,6 @@
               )
             ),
 
-            // GROUP CHAT
             h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A] flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#FFD60A] animate-pulse glow-dot' }), 'LIVE CHAT') }, 'The Lounge'),
             h(Card, { className: 'p-3 h-80 flex flex-col' },
               h('div', { className: 'flex-1 overflow-y-auto space-y-3 mb-2 pr-1' },
@@ -634,7 +620,6 @@
                 isTyping && h('div', { className: 'text-[10px] text-white/40 italic px-2' }, typingUser + ' is typing...'),
                 h('div', { ref: chatEndRef })
               ),
-              // CHAT INPUT
               h('div', { className: 'flex gap-2' },
                 h('input', {
                   value: chatInput,
@@ -647,7 +632,6 @@
               )
             ),
 
-            // REAL MONEY OPPRESSION
             h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-green-400' }, 'Pay to Oppress') }, 'Real Money Flexes'),
             h(Card, { className: 'p-4' },
               h('div', { className: 'grid grid-cols-2 gap-2 mb-3' },
@@ -666,7 +650,6 @@
               )
             ),
 
-            // FAKE MONEY FLEX
             h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-white/30' }, 'Spray Money') }, 'Fake Flexes'),
             h(Card, { className: 'p-4' },
               h('div', { className: 'grid grid-cols-3 gap-2 mb-3' },
@@ -678,7 +661,6 @@
             )
           ),
 
-          // Navigation
           h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
               NAV.map((n) => {
