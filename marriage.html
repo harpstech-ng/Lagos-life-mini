@@ -8,10 +8,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Lagos Life Mini — Marriage & Divorce</title>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js'"></script>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -110,9 +111,8 @@
           });
         }
       } catch (e) {}
-      const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
-        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        name: localStorage.getItem("lagos_user_name") || 'Hustler',
         cash: 25000, real: 0, energy: 100,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
         taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
@@ -179,16 +179,16 @@
       const chatEndRef = useRef(null);
 
       useEffect(() => {
-        const tg = window && window.Telegram && window.Telegram.WebApp;
-        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+        let userUnsub = null;
+        const authUnsub = auth.onAuthStateChanged((user) => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          if (userUnsub) userUnsub();
 
-        auth.signInAnonymously().then((cred) => {
-          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+          const userId = user.uid;
           setUid(userId);
           
           const userRef = db.collection("users").doc(userId);
-          const unsubscribe = userRef.onSnapshot((doc) => {
+          userUnsub = userRef.onSnapshot((doc) => {
             if (doc.exists) {
               setS(prev => {
                 const dbData = doc.data();
@@ -202,7 +202,7 @@
               });
             } else {
               const defaultData = {
-                name: (tgUser && tgUser.first_name) || 'Hustler',
+                name: user.displayName || localStorage.getItem("lagos_user_name") || 'Hustler',
                 cash: 25000, real: 0, energy: 100,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
@@ -213,8 +213,9 @@
               try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
           }, (error) => console.error("Snapshot error:", error));
-          return unsubscribe;
-        }).catch(e => setAuthError(e.message));
+        });
+
+        return () => { authUnsub(); if (userUnsub) userUnsub(); };
       }, []);
 
       useEffect(() => {
@@ -249,15 +250,17 @@
         return () => unsub();
       }, [uid]);
 
+      // Chat Listener (Sorted client-side to avoid missing index errors)
       useEffect(() => {
         if (!activeChatUser || !uid) return;
         const chatId = [uid, activeChatUser.id].sort().join('_');
+        
         const unsub = db.collection("messages")
           .where("chatId", "==", chatId)
-          .orderBy("createdAt", "asc")
           .onSnapshot((snap) => {
             const msgs = [];
             snap.forEach(doc => msgs.push(doc.data()));
+            msgs.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
             setChatMessages(msgs);
             setTimeout(() => { if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' }); }, 100);
           }, (e) => console.error(e));
@@ -345,7 +348,6 @@
         addFeed('💔 ' + (s.name || 'You') + ' rejected ' + prop.fromName + '\'s marriage proposal.');
       };
 
-      // --- JOINT ACCOUNT ---
       const depositJoint = () => {
         if (s.cash < 1000000) return notify('Need ₦1M to deposit', 'bad');
         updateUser({ 
@@ -375,7 +377,6 @@
         notify('You ran away with the joint money! 💸');
       };
 
-      // --- CRAZY MARRIAGE EVENTS ---
       const cheat = async () => {
         if (s.marriage.status !== 'married') return;
         AudioEngine.tap();
@@ -532,7 +533,6 @@
                 )
               ),
 
-              // JOINT ACCOUNT
               spouse && h('div', { className: 'mt-4' },
                 h(Card, { className: 'p-4 border border-green-500/30' },
                   h('div', { className: 'flex justify-between items-center mb-2' },
@@ -546,7 +546,6 @@
                 )
               ),
 
-              // MARRIAGE ACTIONS
               spouse && !inCourt && h('div', { className: 'mt-4' },
                 h(SectionTitle, null, 'Marriage Actions'),
                 h('div', { className: 'grid grid-cols-2 gap-2' },
