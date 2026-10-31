@@ -8,7 +8,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Lagos Life Mini — Babe Wahala & Dating</title>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
@@ -55,7 +54,7 @@
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
     input { -webkit-user-select: text; user-select: text; }
     input:focus { outline: none; }
-    
+
     .chat-bubble-left { border-radius: 16px 16px 16px 4px; }
     .chat-bubble-right { border-radius: 16px 16px 4px 16px; }
   </style>
@@ -79,14 +78,14 @@
       storageBucket: "lagos-life-a8706.firebasestorage.app",
       messagingSenderId: "187884589425",
       appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
-      measurementId: "G-DDMJTH2WY7"
+      measurementD: "G-DDMJTH2WY7"
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
 
     const BABE_NAMES = ['Tolu', 'Amaka', 'Cynthia', 'Zainab', 'Blessing', 'Chioma', 'Bella', 'Shalewa', 'Nneka', 'Simi'];
-    
+
     const BILLS = [
       { item: 'Hair', amount: 20000, msg: 'Babe say she wan make hair. "My hair don spoil, I need 20k 🥺"' },
       { item: 'Nails', amount: 50000, msg: 'Babe say she wan do nails. "All my friends don do their own, I need 50k 💅"' },
@@ -101,16 +100,15 @@
         const cached = localStorage.getItem("lagos_user_data");
         if (cached) {
           const parsed = JSON.parse(cached);
-          return Object.assign({}, parsed, { babe: parsed.babe || { status: 'single' }, gender: parsed.gender || 'boy' });
+          return Object.assign({}, parsed, { babe: parsed.babe || { status: 'single' }, gender: parsed.gender || null });
         }
       } catch (e) {}
-      const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
-        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        name: localStorage.getItem("lagos_user_name") || 'Hustler',
         cash: 25000, real: 0, energy: 100,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-        transactions: [], babe: { status: 'single' }, gender: 'boy'
+        transactions: [], babe: { status: 'single' }, gender: null
       };
     };
 
@@ -159,42 +157,39 @@
       const [uid, setUid] = useState(null);
       const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
-      const [feed, setFeed] = useState([]); 
-      
-      const [activeTab, setActiveTab] = useState("dating"); // dating, npc
-      
-      // NPC State
+      const [feed, setFeed] = useState([]);
+
+      const [activeTab, setActiveTab] = useState("dating");
+
       const [currentRequest, setCurrentRequest] = useState(null);
       const [timeLeft, setTimeLeft] = useState(0);
       const [isPregnant, setIsPregnant] = useState(false);
-      const [pregnancyMsg, setPregnancyMsg] = useState('');
       const timerRef = useRef(null);
 
-      // Real Dating State
       const [realUsers, setRealUsers] = useState([]);
       const [activeChat, setActiveChat] = useState(null);
       const [chatMessages, setChatMessages] = useState([]);
       const [chatInput, setChatInput] = useState('');
       const chatEndRef = useRef(null);
 
-      // Firebase Sync
+      // Firebase auth + user doc sync
       useEffect(() => {
-        const tg = window && window.Telegram && window.Telegram.WebApp;
-        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+        let userUnsub = null;
+        const authUnsub = auth.onAuthStateChanged((user) => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          if (userUnsub) userUnsub();
 
-        auth.signInAnonymously().then((cred) => {
-          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+          const userId = user.uid;
           setUid(userId);
-          
+
           const userRef = db.collection("users").doc(userId);
-          const unsubscribe = userRef.onSnapshot((doc) => {
+          userUnsub = userRef.onSnapshot((doc) => {
             if (doc.exists) {
               setS(prev => {
                 const dbData = doc.data();
                 const newData = Object.assign({}, prev, dbData, {
                   babe: dbData.babe || prev.babe || { status: 'single' },
-                  gender: dbData.gender || prev.gender || 'boy',
+                  gender: dbData.gender || prev.gender || null,
                   transactions: dbData.transactions || []
                 });
                 try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
@@ -202,22 +197,23 @@
               });
             } else {
               const defaultData = {
-                name: (tgUser && tgUser.first_name) || 'Hustler',
+                name: user.displayName || localStorage.getItem("lagos_user_name") || 'Hustler',
                 cash: 25000, real: 0, energy: 100,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-                transactions: [], babe: { status: 'single' }, gender: 'boy'
+                transactions: [], babe: { status: 'single' }, gender: null
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
               try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
           }, (error) => console.error("Snapshot error:", error));
-          return unsubscribe;
-        }).catch(e => setAuthError(e.message));
+        });
+
+        return () => { authUnsub(); if (userUnsub) userUnsub(); };
       }, []);
 
-      // Fetch Real Users for Dating
+      // Fetch real users for dating pool
       useEffect(() => {
         if (!uid) return;
         const fetchUsers = async () => {
@@ -236,21 +232,21 @@
         fetchUsers();
       }, [uid]);
 
-      // Real Chat Listener
+      // Chat messages listener — removed orderBy to avoid composite index requirement
       useEffect(() => {
         if (!activeChat || !uid) return;
         const chatId = [uid, activeChat.id].sort().join('_');
-        
+
         const unsub = db.collection("messages")
           .where("chatId", "==", chatId)
-          .orderBy("createdAt", "asc")
           .onSnapshot((snap) => {
             const msgs = [];
             snap.forEach(doc => msgs.push(doc.data()));
+            msgs.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
             setChatMessages(msgs);
             setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
           }, (e) => console.error(e));
-          
+
         return () => unsub();
       }, [activeChat, uid]);
 
@@ -276,9 +272,9 @@
         AudioEngine.tap();
       };
 
-      // --- NPC LOGIC ---
+      // NPC babe bill timer — now guarded against real-babe relationships
       useEffect(() => {
-        if (activeTab !== 'npc' || s.babe.status !== 'dating') {
+        if (activeTab !== 'npc' || s.babe?.status !== 'dating' || s.babe?.isReal) {
           if (timerRef.current) clearInterval(timerRef.current);
           return;
         }
@@ -287,7 +283,7 @@
           const now = Date.now();
           const lastBill = s.babe.lastBillAt || now;
           const nextBill = lastBill + 60000;
-          
+
           if (now >= nextBill && !currentRequest && !isPregnant) {
             const randomBill = BILLS[Math.floor(Math.random() * BILLS.length)];
             setCurrentRequest(randomBill);
@@ -300,12 +296,12 @@
 
         timerRef.current = setInterval(tick, 1000);
         return () => clearInterval(timerRef.current);
-      }, [activeTab, s.babe.status, s.babe.lastBillAt, currentRequest, isPregnant]);
+      }, [activeTab, s.babe?.status, s.babe?.isReal, s.babe?.lastBillAt, currentRequest, isPregnant]);
 
       const findBabe = async () => {
         if (s.cash < 50000) { AudioEngine.error(); return notify('You need ₦50k to take a babe out 💸', 'bad'); }
         const name = BABE_NAMES[Math.floor(Math.random() * BABE_NAMES.length)];
-        const newBabe = { name, status: 'dating', lastBillAt: Date.now() };
+        const newBabe = { name, status: 'dating', isReal: false, lastBillAt: Date.now() };
         updateUser({ cash: s.cash - 50000, babe: newBabe });
         AudioEngine.love();
         notify('You are now dating ' + name + ' ❤️');
@@ -336,7 +332,6 @@
         setIsPregnant(false);
       };
 
-      // --- REAL DATING CHAT ---
       const sendMessage = async () => {
         if (!chatInput.trim() || !activeChat || !uid) return;
         const text = chatInput.trim();
@@ -355,15 +350,21 @@
 
       const propose = async () => {
         if (!activeChat) return;
-        // In a real app, you'd send a proposal and wait for acceptance. 
-        // Here we just link up immediately for simplicity.
         updateUser({ babe: { name: activeChat.name, status: 'dating', isReal: true, partnerId: activeChat.id } });
         notify('You are now officially dating ' + activeChat.name + '! 💖');
         setActiveChat(null);
-        setActiveTab('npc'); // Switch to relationship view
+        setActiveTab('npc');
       };
 
-      if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
+      const messageMyBabe = async () => {
+        if (!s.babe?.partnerId) return;
+        const partner = realUsers.find(u => u.id === s.babe.partnerId);
+        if (partner) {
+          setActiveChat(partner);
+        } else {
+          notify('Partner not in pool right now', 'bad');
+        }
+      };
 
       const NAV = [
         { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
@@ -374,11 +375,12 @@
         { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
 
-      const babeStatus = s.babe.status || 'single';
-      const babeName = s.babe.name || 'Babe';
+      const babeStatus = s.babe?.status || 'single';
+      const babeName = s.babe?.name || 'Babe';
+      const isRealBabe = !!s.babe?.isReal;
 
-      // GENDER MODAL
-      if (!s.gender) {
+      // Gender modal (in case someone bypassed login quiz)
+      if (uid && !s.gender) {
         return h('div', { className: 'min-h-screen flex flex-col items-center justify-center p-6 text-center' },
           h('div', { className: 'text-6xl mb-4' }, '❤️'),
           h('h1', { className: 'text-2xl font-black mb-2' }, 'Welcome to Babe Wahala'),
@@ -388,9 +390,15 @@
         );
       }
 
+      if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' },
+        h('div', { className: 'text-4xl' }, '⚠️'),
+        h('div', { className: 'font-bold' }, 'Auth Error'),
+        h('div', { className: 'text-sm' }, authError)
+      );
+
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#EC4899] selection:text-black' },
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
-          
+
           h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
             h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
               h('div', { className: 'flex items-center gap-2 min-w-0' },
@@ -407,20 +415,18 @@
           ),
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
-            
-            // TABS
+
             h('div', { className: 'mt-3 flex gap-2 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06]' },
-              ['dating', 'npc'].map(tab => 
+              ['dating', 'npc'].map(tab =>
                 h('button', {
                   key: tab,
                   onClick: () => { setActiveTab(tab); AudioEngine.tap(); },
-                  className: 'flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ' + 
+                  className: 'flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ' +
                     (activeTab === tab ? 'bg-gradient-to-b from-pink-400 to-pink-600 text-white shadow-md' : 'text-white/50')
                 }, tab === 'dating' ? '💖 Dating Pool' : '😭 NPC Wahala')
               )
             ),
 
-            // --- REAL DATING TAB ---
             activeTab === 'dating' && h('div', { className: 'mt-4' },
               h(Card, { className: 'p-4 text-center', pink: true },
                 h('div', { className: 'text-4xl mb-1' }, '💖'),
@@ -429,33 +435,38 @@
               ),
 
               h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-white/30' }, realUsers.length + ' Players Online') }, 'Dating Pool'),
-              h('div', { className: 'space-y-2' },
-                realUsers.map(u => 
-                  h(Card, { key: u.id, className: 'p-3 flex items-center gap-3' },
-                    h('div', { className: 'w-10 h-10 rounded-full bg-white/[0.06] grid place-items-center text-lg shrink-0' }, u.gender === 'girl' ? '👩🏾' : '👨🏾'),
-                    h('div', { className: 'flex-1 min-w-0' },
-                      h('div', { className: 'text-[13px] font-extrabold truncate font-display flex items-center gap-1' }, u.name, u.babe?.status === 'dating' && h('span', { className: 'text-[8px] bg-red-500/20 text-red-400 px-1 rounded' }, 'Taken')),
-                      h('div', { className: 'text-[9px] text-white/40' }, u.gender === 'girl' ? 'Girl 👧' : 'Boy 👦')
-                    ),
-                    h('button', { onClick: () => setActiveChat(u), className: 'shrink-0 px-3 py-1.5 rounded-lg bg-pink-500/20 text-pink-400 text-[10px] font-black border border-pink-500/30 active:scale-95 transition' }, 'Chat')
+              realUsers.length === 0
+                ? h(Card, { className: 'p-6 text-center' },
+                    h('div', { className: 'text-3xl mb-2' }, '🫥'),
+                    h('div', { className: 'text-[11px] text-white/40' }, 'No other players online right now.')
                   )
-                )
-              )
+                : h('div', { className: 'space-y-2' },
+                    realUsers.map(u =>
+                      h(Card, { key: u.id, className: 'p-3 flex items-center gap-3' },
+                        h('div', { className: 'w-10 h-10 rounded-full bg-white/[0.06] grid place-items-center text-lg shrink-0' }, u.gender === 'girl' ? '👩🏾' : '👨🏾'),
+                        h('div', { className: 'flex-1 min-w-0' },
+                          h('div', { className: 'text-[13px] font-extrabold truncate font-display flex items-center gap-1' }, u.name, u.babe?.status === 'dating' && h('span', { className: 'text-[8px] bg-red-500/20 text-red-400 px-1 rounded' }, 'Taken')),
+                          h('div', { className: 'text-[9px] text-white/40' }, u.gender === 'girl' ? 'Girl 👧' : 'Boy 👦')
+                        ),
+                        h('button', { onClick: () => setActiveChat(u), className: 'shrink-0 px-3 py-1.5 rounded-lg bg-pink-500/20 text-pink-400 text-[10px] font-black border border-pink-500/30 active:scale-95 transition' }, 'Chat')
+                      )
+                    )
+                  )
             ),
 
-            // --- NPC WAHALA TAB ---
             activeTab === 'npc' && h('div', { className: 'mt-4' },
               h(Card, { className: 'relative overflow-hidden p-5', pink: true },
                 h('div', { className: 'relative flex flex-col items-center text-center' },
-                  h('div', { className: 'text-6xl mb-3' }, babeStatus === 'dating' ? '👩🏾‍❤️‍👨🏾' : '💔'),
-                  h('div', { className: 'text-[11px] uppercase tracking-widest text-pink-400/80 font-bold mb-1' }, babeStatus === 'dating' ? 'Current Babe' : 'Relationship Status'),
+                  h('div', { className: 'text-6xl mb-3' }, babeStatus === 'dating' ? (isRealBabe ? '💑' : '👩🏾‍❤️‍👨🏾') : '💔'),
+                  h('div', { className: 'text-[11px] uppercase tracking-widest text-pink-400/80 font-bold mb-1' }, babeStatus === 'dating' ? (isRealBabe ? 'Real Partner' : 'Current Babe') : 'Relationship Status'),
                   h('div', { className: 'text-2xl font-black text-white font-display' }, babeStatus === 'dating' ? babeName : 'Single & Searching'),
-                  babeStatus === 'single' && h('button', { onClick: findBabe, className: 'mt-4 px-6 py-2.5 rounded-xl bg-gradient-to-b from-pink-400 to-pink-600 text-white font-black text-[12px] shadow-[0_8px_24px_-8px_rgba(236,72,153,0.7)] active:scale-95 transition' }, 'Take a Babe Out (₦50K)')
+                  babeStatus === 'single' && h('button', { onClick: findBabe, className: 'mt-4 px-6 py-2.5 rounded-xl bg-gradient-to-b from-pink-400 to-pink-600 text-white font-black text-[12px] shadow-[0_8px_24px_-8px_rgba(236,72,153,0.7)] active:scale-95 transition' }, 'Take a Babe Out (₦50K)'),
+                  isRealBabe && babeStatus === 'dating' && h('button', { onClick: messageMyBabe, className: 'mt-4 px-6 py-2.5 rounded-xl bg-pink-500/20 border border-pink-500/30 text-pink-300 font-black text-[12px] active:scale-95 transition' }, '💬 Message Babe')
                 )
               ),
 
-              babeStatus === 'dating' && h('div', { className: 'mt-4' },
-                currentRequest 
+              babeStatus === 'dating' && !isRealBabe && h('div', { className: 'mt-4' },
+                currentRequest
                   ? h(Card, { className: 'p-4 border border-pink-500/30' },
                       h('div', { className: 'flex items-start gap-3' },
                         h('div', { className: 'text-3xl' }, '💬'),
@@ -475,21 +486,24 @@
                       h('div', { className: 'text-[11px] font-bold text-white/50' }, 'Babe is chilling...'),
                       h('div', { className: 'text-[14px] font-black text-pink-400 mt-1' }, 'Next bill in ' + timeLeft + 's')
                     )
+              ),
+
+              babeStatus === 'dating' && isRealBabe && h(Card, { className: 'p-4 mt-4 text-center' },
+                h('div', { className: 'text-3xl mb-2' }, '💌'),
+                h('div', { className: 'text-[12px] font-black text-pink-400 mb-1' }, 'Dating a real player!'),
+                h('div', { className: 'text-[11px] text-white/50' }, 'Tap "Message Babe" above to chat. Real relationships = no NPC bills 😂')
               )
             ),
 
-            // LIVE FEED
             h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-pink-400 flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse glow-dot' }), 'LIVE') }, 'Relationship Feed'),
             h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden min-h-[100px]' },
-              feed.length === 0 
+              feed.length === 0
                 ? h('div', { className: 'px-4 py-6 text-center text-[11px] text-white/30' }, 'No relationship drama yet.')
                 : feed.map(f => h('div', { key: f.id, className: 'px-4 py-3 text-[11px] text-white/70 animate-slideDown' }, f.msg))
             )
           ),
 
-          // CHAT MODAL
           activeChat && h('div', { className: 'fixed inset-0 z-50 flex flex-col bg-[#08080B]' },
-            // Header
             h('div', { className: 'flex items-center gap-2 px-4 py-3 border-b border-white/[0.06] bg-[#08080B]' },
               h('button', { onClick: () => setActiveChat(null), className: 'text-white/50 text-xl px-2' }, '←'),
               h('div', { className: 'w-8 h-8 rounded-full bg-white/[0.1] grid place-items-center text-sm' }, activeChat.gender === 'girl' ? '👩🏾' : '👨🏾'),
@@ -498,9 +512,9 @@
                 h('div', { className: 'text-[9px] text-green-400' }, 'Online')
               )
             ),
-            
-            // Messages
+
             h('div', { className: 'flex-1 overflow-y-auto p-4 space-y-3' },
+              chatMessages.length === 0 && h('div', { className: 'text-center text-[11px] text-white/30 py-6' }, 'Say hi 👋'),
               chatMessages.map((msg, i) => {
                 const isMe = msg.senderId === uid;
                 return h('div', { key: i, className: 'flex ' + (isMe ? 'justify-end' : 'justify-start') },
@@ -512,7 +526,6 @@
               h('div', { ref: chatEndRef })
             ),
 
-            // Input
             h('div', { className: 'p-3 border-t border-white/[0.06] flex gap-2 bg-[#101016]' },
               h('input', {
                 value: chatInput,
@@ -522,10 +535,13 @@
                 className: 'flex-1 rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2 text-[12px] text-white focus:border-pink-500/50'
               }),
               h('button', { onClick: sendMessage, className: 'px-4 rounded-xl bg-pink-500 text-white font-black text-[11px] active:scale-95 transition' }, 'Send')
+            ),
+
+            !isRealBabe && babeStatus !== 'dating' && s.gender && activeChat && h('div', { className: 'p-3 border-t border-white/[0.06] bg-[#101016]' },
+              h('button', { onClick: propose, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-pink-400 to-pink-600 text-white font-black text-[12px] active:scale-95 transition' }, '💍 Propose to ' + activeChat.name)
             )
           ),
 
-          // NAV
           h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
               NAV.map((n) => {
