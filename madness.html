@@ -8,10 +8,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Lagos Life Mini — Madness</title>
 
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js'"></script>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -51,17 +52,16 @@
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
-    
-    /* Smoke Effect */
+
     .smoke-blur { filter: blur(6px); transition: filter 1s ease; pointer-events: none; }
     .smoke-bg { background: radial-gradient(circle, rgba(34,197,94,0.2) 0%, transparent 70%); }
-    
+
     @keyframes floatEmoji {
       0% { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
       100% { transform: translateY(-200px) scale(2) rotate(45deg); opacity: 0; }
     }
     .hallucination { position: absolute; animation: floatEmoji 3s ease-out forwards; pointer-events: none; z-index: 9999; }
-    
+
     @keyframes screenShake {
       0%, 100% { transform: translateX(0); }
       10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
@@ -105,9 +105,8 @@
           return Object.assign({}, parsed, { madnessScore: parsed.madnessScore || 0 });
         }
       } catch (e) {}
-      const tg = window && window.Telegram && window.Telegram.WebApp;
       return {
-        name: (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'Hustler',
+        name: localStorage.getItem("lagos_user_name") || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
         taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
@@ -178,16 +177,16 @@
       const smokeInterval = useRef(null);
 
       useEffect(() => {
-        const tg = window && window.Telegram && window.Telegram.WebApp;
-        if (tg) { try { tg.ready(); tg.expand(); } catch(e) {} }
+        let userUnsub = null;
+        const authUnsub = auth.onAuthStateChanged((user) => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          if (userUnsub) userUnsub();
 
-        auth.signInAnonymously().then((cred) => {
-          const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-          const userId = (tgUser && tgUser.id) ? String(tgUser.id) : cred.user.uid;
+          const userId = user.uid;
           setUid(userId);
           
           const userRef = db.collection("users").doc(userId);
-          const unsubscribe = userRef.onSnapshot((doc) => {
+          userUnsub = userRef.onSnapshot((doc) => {
             if (doc.exists) {
               setS(prev => {
                 const dbData = doc.data();
@@ -200,7 +199,7 @@
               });
             } else {
               const defaultData = {
-                name: (tgUser && tgUser.first_name) || 'Hustler',
+                name: user.displayName || localStorage.getItem("lagos_user_name") || 'Hustler',
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
@@ -211,8 +210,14 @@
               try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
           }, (error) => console.error("Snapshot error:", error));
-          return unsubscribe;
-        }).catch(e => setAuthError(e.message));
+        });
+
+        return () => {
+          authUnsub();
+          if (userUnsub) userUnsub();
+          if (timerRef.current) clearInterval(timerRef.current);
+          if (smokeInterval.current) clearInterval(smokeInterval.current);
+        };
       }, []);
 
       useEffect(() => {
@@ -326,7 +331,7 @@
         
         notify('RITUAL SUCCESSFUL! +₦10M 🩸');
         addFeed('🩸 ' + (s.name || 'You') + ' just used ' + selectedVictim.name + ' for money ritual! ' + selectedVictim.name + ' lost ₦1M!');
-        try { window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback && window.Telegram.WebApp.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+        try { if (navigator.vibrate) navigator.vibrate(50); } catch(e) {}
         setSelectedVictim(null);
       };
 
