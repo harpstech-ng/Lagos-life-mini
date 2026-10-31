@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Verifying Payment...</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { background: #08080B; color: #fff; font-family: 'Sora', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; padding: 20px; }
+    .spinner { border: 4px solid rgba(255,255,255,0.1); border-left-color: #FFD60A; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    const root = document.getElementById('root');
+
+    // 1. Get reference from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const reference = urlParams.get('reference');
+
+    if (!reference) {
+      root.innerHTML = `
+        <div class="text-6xl mb-4">⚠️</div>
+        <h1 class="text-2xl font-black text-red-500 mb-2">No Reference Found</h1>
+        <p class="text-white/50 text-sm mb-6">This page must be accessed after a payment.</p>
+        <a href="/club.html" class="bg-white/10 px-6 py-3 rounded-xl font-bold text-sm">Go Back</a>
+      `;
+    } else {
+      // Show loading spinner
+      root.innerHTML = `
+        <div class="spinner"></div>
+        <h1 class="text-xl font-black text-white mb-2">Verifying Payment...</h1>
+        <p class="text-white/50 text-sm">Please do not close this page.</p>
+      `;
+
+      // 2. Wait for Firebase Auth to load the user, then verify
+      auth.onAuthStateChanged(async (user) => {
+        if (!user) {
+          root.innerHTML = `<div class="text-4xl mb-4">🔒</div><h1 class="text-xl font-black text-red-500">You are not logged in.</h1><a href="/login.html" class="mt-4 block text-[#FFD60A]">Login here</a>`;
+          return;
+        }
+
+        try {
+          // 3. Call our existing backend to verify and update Firestore
+          const res = await fetch('/api/paystack', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reference: reference, userId: user.uid })
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            root.innerHTML = `
+              <div class="text-6xl mb-4">🤑</div>
+              <h1 class="text-2xl font-black text-green-400 mb-2">Payment Successful!</h1>
+              <p class="text-white/70 text-lg mb-1">₦${Number(data.amount).toLocaleString()} added.</p>
+              <p class="text-white/40 text-sm mb-6">Ref: ${reference}</p>
+              <a href="/club.html" class="bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black px-8 py-3 rounded-xl font-black text-sm active:scale-95 transition">Return to Game</a>
+            `;
+            // Optional: Auto-redirect after 3 seconds
+            setTimeout(() => { window.location.href = '/club.html'; }, 4000);
+          } else {
+            root.innerHTML = `
+              <div class="text-6xl mb-4">❌</div>
+              <h1 class="text-2xl font-black text-red-500 mb-2">Verification Failed</h1>
+              <p class="text-white/50 text-sm mb-6">${data.error || 'Unknown error occurred.'}</p>
+              <a href="/club.html" class="bg-white/10 px-6 py-3 rounded-xl font-bold text-sm">Go Back</a>
+            `;
+          }
+        } catch (err) {
+          root.innerHTML = `
+            <div class="text-6xl mb-4">😭</div>
+            <h1 class="text-2xl font-black text-red-500 mb-2">Network Error</h1>
+            <p class="text-white/50 text-sm mb-6">Could not reach the server. Please contact support with Ref: ${reference}</p>
+            <a href="/club.html" class="bg-white/10 px-6 py-3 rounded-xl font-bold text-sm">Go Back</a>
+          `;
+        }
+      });
+    }
+  </script>
+</body>
+</html>
