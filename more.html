@@ -16,6 +16,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -41,11 +42,18 @@
     .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes floatBottles { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-8px) rotate(6deg); } }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-floatBottles { animation: floatBottles 3s ease-in-out infinite; }
     .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    .lounge-banner-bg {
+      background: radial-gradient(circle at top left, rgba(255,214,10,0.25) 0%, transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(239,68,68,0.15) 0%, transparent 55%),
+                  linear-gradient(180deg, #0a0a12 0%, #08080B 100%);
+    }
   </style>
 </head>
 <body>
@@ -71,6 +79,7 @@
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
+    const db = firebase.firestore();
 
     const getCachedData = () => {
       try {
@@ -106,12 +115,29 @@
       const [logoutOpen, setLogoutOpen] = useState(false);
       const [loggingOut, setLoggingOut] = useState(false);
       const [userEmail, setUserEmail] = useState('');
+      const [onlineCount, setOnlineCount] = useState(0);
 
       useEffect(() => {
         const unsub = auth.onAuthStateChanged((user) => {
           if (!user) { window.location.href = '/login.html'; return; }
           setUserEmail(user.email || user.displayName || '');
         });
+        return () => unsub();
+      }, []);
+
+      // live online count
+      useEffect(() => {
+        const unsub = db.collection("lounge_presence").onSnapshot(
+          snap => {
+            const now = Date.now();
+            const active = snap.docs.filter(d => {
+              const hb = d.data().lastHeartbeat || 0;
+              return (now - hb) < 60000;
+            });
+            setOnlineCount(active.length);
+          },
+          () => {}
+        );
         return () => unsub();
       }, []);
 
@@ -202,6 +228,41 @@
               h('div', { className: 'text-[16px] font-black text-[#FFD60A] font-display' }, 'Welcome to Lagos Life 🇳🇬'),
               h('div', { className: 'text-[11px] text-white/60 mt-1 leading-relaxed' }, 
                 'This is your hub for everything. Build your empire, flex on the streets, or create pure wahala. Where do you want to go today?'
+              )
+            ),
+
+            /* ========== VGC LOUNGE HERO BANNER ========== */
+            h('button', {
+              onClick: () => window.location.href = 'lounge.html',
+              className: 'w-full text-left mt-4 rounded-2xl overflow-hidden relative lounge-banner-bg border border-[#FFD60A]/35 active:scale-[0.98] transition shadow-[0_8px_32px_-8px_rgba(255,214,10,0.4)]'
+            },
+              h('div', { className: 'absolute inset-0 pointer-events-none overflow-hidden' },
+                ['🍾', '🥂', '🍾', '🥃'].map((e, i) =>
+                  h('div', {
+                    key: i,
+                    className: 'absolute text-3xl opacity-15 animate-floatBottles',
+                    style: { left: (15 + i * 25) + '%', top: (20 + (i % 2) * 40) + '%', animationDelay: (i * 0.5) + 's' }
+                  }, e)
+                )
+              ),
+              h('div', { className: 'relative p-4' },
+                h('div', { className: 'flex items-center justify-between mb-2' },
+                  h('div', { className: 'flex items-center gap-1.5' },
+                    h('span', { className: 'text-[9px] uppercase tracking-widest text-[#FFD60A] font-black bg-[#FFD60A]/25 px-2 py-0.5 rounded-full border border-[#FFD60A]/40' }, '🔴 LIVE'),
+                    onlineCount > 0 && h('span', { className: 'text-[10px] font-bold text-white/70 flex items-center gap-1' },
+                      h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#22C55E] glow-dot animate-pulse' }),
+                      onlineCount + ' online'
+                    )
+                  )
+                ),
+                h('div', { className: 'flex items-center gap-3' },
+                  h('div', { className: 'text-4xl animate-floatBottles' }, '🍾'),
+                  h('div', { className: 'flex-1 min-w-0' },
+                    h('div', { className: 'text-[17px] font-black font-display text-[#FFD60A] leading-tight' }, 'VGC Lounge'),
+                    h('div', { className: 'text-[10px] text-white/60 mt-0.5' }, 'Beach Bar · Live chat · Buy bottles for everyone')
+                  ),
+                  h('div', { className: 'text-2xl text-[#FFD60A]' }, '→')
+                )
               )
             ),
 
