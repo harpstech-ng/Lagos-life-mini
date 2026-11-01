@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <title>Lagos Life Mini — Hustle History</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+      }},
+    };
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent); }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
+    .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); }
+    button { background: none; border: none; color: inherit; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    const { useState, useEffect } = React;
+    const h = React.createElement;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const fmt = (n) => {
+      n = Math.floor(n || 0);
+      const s = n < 0 ? '-' : '';
+      n = Math.abs(n);
+      if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
+      if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return s + '₦' + (n / 1e3).toFixed(1) + 'K';
+      return s + '₦' + n.toLocaleString();
+    };
+
+    function App() {
+      const [s, setS] = useState(null);
+      const [activeTab, setActiveTab] = useState('all'); // all, transactions, activities
+
+      useEffect(() => {
+        const unsub = auth.onAuthStateChanged((user) => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          
+          db.collection("users").doc(user.uid).onSnapshot((doc) => {
+            if (doc.exists) {
+              const data = doc.data();
+              setS({
+                name: data.name || 'Hustler',
+                transactions: data.transactions || [],
+                history: data.history || []
+              });
+            }
+          });
+        });
+        return () => unsub();
+      }, []);
+
+      if (!s) return h('div', { className: 'min-h-screen flex items-center justify-center text-[#FFD60A] animate-pulse font-black' }, 'Loading...');
+
+      // Combine and sort both arrays by date
+      const allEvents = [
+        ...(s.transactions || []).map(t => ({ ...t, category: 'transaction' })),
+        ...(s.history || []).map(hx => ({ ...hx, category: 'activity' }))
+      ].sort((a, b) => (b.date || 0) - (a.date || 0));
+
+      const filtered = activeTab === 'all' ? allEvents :
+                       activeTab === 'transactions' ? allEvents.filter(e => e.category === 'transaction') :
+                       allEvents.filter(e => e.category === 'activity');
+
+      const NAV = [
+        { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
+        { id: 'hustle', label: 'Hustle', icon: '👊', href: 'hustle.html' },
+        { id: 'biz', label: 'Biz', icon: '🏪', href: 'business.html' },
+        { id: 'market', label: 'Market', icon: '🛒', href: 'market.html' },
+        { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
+        { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
+      ];
+
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans' },
+        h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
+          
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+            h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
+              h('div', { className: 'flex items-center gap-2 min-w-0' },
+                h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm font-display' }, 'L'),
+                h('div', { className: 'min-w-0' },
+                  h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 font-display' }, 'History'),
+                  h('div', { className: 'text-[13px] font-black truncate font-display mt-0.5' }, s.name + "'s Timeline")
+                )
+              )
+            )
+          ),
+
+          h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown mt-3' },
+            
+            h('div', { className: 'flex gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06] mb-4' },
+              ['all', 'transactions', 'activities'].map(tab => 
+                h('button', {
+                  key: tab,
+                  onClick: () => setActiveTab(tab),
+                  className: 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ' + 
+                    (activeTab === tab ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-md' : 'text-white/50')
+                }, tab === 'all' ? 'All' : tab === 'transactions' ? '💸 Money' : '🎮 Actions')
+              )
+            ),
+
+            filtered.length === 0 ? h('div', { className: 'text-center text-white/40 text-[12px] py-10' }, 'No history yet. Go and hustle!') :
+            h('div', { className: 'space-y-3' },
+              filtered.map((item, i) => {
+                const isTransaction = item.category === 'transaction';
+                const isPositive = isTransaction ? item.type === 'received' : (item.amount || 0) > 0;
+                
+                return h('div', { key: i, className: 'card-gradient p-3 flex items-center gap-3' },
+                  h('div', { className: 'w-10 h-10 rounded-full grid place-items-center shrink-0 text-lg ' + 
+                    (isTransaction ? (item.type === 'sent' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400') : 'bg-[#FFD60A]/20 text-[#FFD60A]') 
+                  }, isTransaction ? (item.type === 'sent' ? '↗️' : '↙️') : '📜'),
+                  
+                  h('div', { className: 'flex-1 min-w-0' },
+                    h('div', { className: 'text-[12px] font-extrabold text-white truncate' }, item.title || item.name || 'Activity'),
+                    h('div', { className: 'text-[9px] text-white/40' }, item.desc || new Date(item.date).toLocaleDateString() + ' ' + new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}))
+                  ),
+                  
+                  item.amount !== undefined && h('div', { className: 'text-[13px] font-black tabular-nums ' + (isPositive ? 'text-[#22C55E]' : 'text-red-400') },
+                    (isPositive ? '+' : '') + fmt(item.amount)
+                  )
+                );
+              })
+            )
+          ),
+
+          h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
+            h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
+              NAV.map((n) => {
+                const active = n.id === 'more';
+                return h('a', {
+                  key: n.id, href: n.href,
+                  className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')
+                },
+                  h('span', { className: 'text-[17px] leading-none' }, n.icon),
+                  h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
+                );
+              })
+            )
+          )
+        )
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+  </script>
+</body>
+</html>
