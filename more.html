@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#08080B" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Lagos Life Mini  —  Explore </title>
+  <title>Lagos Life Mini — Explore</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
@@ -141,10 +141,16 @@
 
       const FEATURES = [
         {
+          category: 'Personal',
+          items: [
+            { id: 'history', label: 'Hustle History', icon: '🕒', desc: 'Track all your money & moves', href: 'history.html', color: 'from-blue-500/20 to-blue-700/10' },
+            { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100, Withdraw real', href: 'leaderboard.html', color: 'from-amber-400/20 to-amber-700/10' },
+          ]
+        },
+        {
           category: 'Empire & Money',
           items: [
             { id: 'bet', label: 'Bet Center', icon: '🎰', desc: 'Aviator, Virtual, Cards', href: 'bet.html', color: 'from-emerald-500/20 to-emerald-700/10' },
-            { id: 'leaderboard', label: 'Ranks & Wallet', icon: '🏆', desc: 'Top 100, Withdraw real', href: 'leaderboard.html', color: 'from-amber-400/20 to-amber-700/10' },
           ]
         },
         {
