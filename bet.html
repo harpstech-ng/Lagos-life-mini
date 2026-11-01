@@ -45,15 +45,19 @@
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+    @keyframes confettiFall { 0% { transform: translateY(-20vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(105vh) rotate(720deg); opacity: 0; } }
+    @keyframes pulseBg { 0%,100% { box-shadow: 0 0 20px rgba(255,214,10,0.3); } 50% { box-shadow: 0 0 40px rgba(255,214,10,0.6); } }
     .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
     .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .animate-pulse-bg { animation: pulseBg 2s ease-in-out infinite; }
     .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
     input { -webkit-user-select: text; user-select: text; }
     input:focus { outline: none; }
+    .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
     
     .aviator-bg { background: radial-gradient(circle at bottom left, #1A1A24 0%, #08080B 100%); }
     .plane { position: absolute; transition: transform 0.1s linear; z-index: 10; transform-origin: center; }
@@ -66,6 +70,19 @@
     .cup { transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); cursor: pointer; }
     .cup:hover { transform: translateY(-5px); }
     .cup-lifted { transform: translateY(-40px); }
+    .confetti-piece { position: fixed; top: 0; width: 10px; height: 10px; border-radius: 2px; pointer-events: none; z-index: 9999; animation: confettiFall 2.5s linear forwards; }
+
+    @keyframes slot-spin { 0% { transform: translateY(0); } 100% { transform: translateY(-100%); } }
+    .slot-reel-spinning { animation: slot-spin 0.15s linear infinite; }
+    
+    @keyframes dice-roll { 0% { transform: rotate(0deg); } 100% { transform: rotate(720deg); } }
+    .dice-rolling { animation: dice-roll 0.7s ease-out; }
+    
+    @keyframes roulette-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(1080deg); } }
+    .roulette-spinning { animation: roulette-spin 2s cubic-bezier(0.2,0.8,0.3,1); }
+
+    .streak-glow { animation: streakPulse 1s ease-in-out infinite; }
+    @keyframes streakPulse { 0%,100% { text-shadow: 0 0 10px rgba(255,107,0,0.8); } 50% { text-shadow: 0 0 25px rgba(255,107,0,1), 0 0 35px rgba(255,0,85,0.8); } }
   </style>
 </head>
 <body>
@@ -94,6 +111,7 @@
     const auth = firebase.auth();
 
     const MAX_E = 100;
+
     const CRASH_MESSAGES = [
       "Omo plane don crash for Murtala Muhammed 😭",
       "Pilot na drunk man, e crash 😂",
@@ -101,7 +119,6 @@
       "Fuel don finish mid-air ⛽",
       "Na ritual plane, e disappear 😳"
     ];
-
     const WIN_MESSAGES = [
       "You hold am reach! Odogwu! 🦍",
       "Cashed out sharp sharp! 🤑",
@@ -109,27 +126,61 @@
       "Correct Lagos boy! 🏆",
       "You sabi this game oo! 🧠"
     ];
-
-    const BET_FEED = [
+    const BET_FEED_BASE = [
       "Tunde just cashed out ₦50M on Aviator! 🤑",
       "Aje Butler lost ₦10M on Virtual. Sapa don catch am 😭",
       "Bisi won ₦5M on 3-Cup Moni! 🏆",
       "Chidi lost all his money on Aviator. E don go back to Mushin 💔",
       "Emeka won ₦200M on Aviator! The plane flew to 100x ✈️",
-      "Ngozi is on a winning streak on Cards! 🃏"
+      "Ngozi is on a winning streak on Cards! 🃏",
+      "Yemi hit the jackpot on Slots! 💎",
+      "Somebody just won ₦500M on Dice. Alujo! 🎲",
+      "Funke cashed out ₦100M on Mines! 💣",
+      "Roulette don favour Ade today! 🎡"
     ];
+    const BIG_WIN_MESSAGES = [
+      "OMO YOU DON BLOW! 🎉",
+      "ODOGWU OF LEKKI! 👑",
+      "THIS NA YOUR YEAR! 🔥",
+      "OMO SEE MONEY! 💰",
+      "YOU JUST JEJELY CASH OUT! 🤑"
+    ];
+
+    const DAILY_SPIN_MIN = 50000;
+    const DAILY_SPIN_MAX = 500000;
+    const BIG_WIN_THRESHOLD = 1000000;
+    const STREAK_THRESHOLD = 3;
+
+    const SLOT_SYMBOLS = ['🍚', '🍗', '🥤', '👑', '💎', '🎰'];
+    const SLOT_PAYOUTS = {
+      '🎰🎰🎰': 20, '💎💎💎': 15, '👑👑👑': 10,
+      '🍗🍗🍗': 8, '🍚🍚🍚': 6, '🥤🥤🥤': 5,
+      '💎👑🎰': 4, '🍚🍗🥤': 3
+    };
+
+    const MINES_BOMBS = 3;
+    const MINES_GRID = 25;
+    const MINES_MULTS = [1.0, 1.15, 1.35, 1.6, 1.9, 2.3, 2.8, 3.5, 4.4, 5.5, 7.0, 9.0, 11.5, 15.0, 20.0, 27.0, 37.0, 52.0, 75.0, 110.0, 165.0, 250.0];
 
     const getCachedData = () => {
       try {
         const cached = localStorage.getItem("lagos_user_data");
-        if (cached) return JSON.parse(cached);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return Object.assign({}, parsed, {
+            lastDailySpinAt: parsed.lastDailySpinAt || 0,
+            winStreak: parsed.winStreak || 0,
+            biggestWin: parsed.biggestWin || 0
+          });
+        }
       } catch (e) {}
       return {
         name: localStorage.getItem("lagos_user_name") || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-        transactions: []
+        transactions: [],
+        lastDailySpinAt: 0, winStreak: 0, biggestWin: 0
       };
     };
 
@@ -144,11 +195,14 @@
       return s + '₦' + n.toLocaleString();
     };
 
+    const todayStr = () => new Date().toISOString().slice(0, 10);
+
     const AudioEngine = (() => {
       let ctx = null;
+      let enabled = true;
       function init() { if (ctx) return; ctx = new (window.AudioContext || window.webkitAudioContext)(); }
       function tone(f, d, t, w=0, g=0.3) {
-        if (!ctx) return; const start = ctx.currentTime + w;
+        if (!ctx || !enabled) return; const start = ctx.currentTime + w;
         const o = ctx.createOscillator(), gain = ctx.createGain();
         o.type = t; o.frequency.value = f;
         gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(g, start+0.01);
@@ -160,41 +214,117 @@
         coin: () => { init(); tone(1046, 0.08, "square", 0, 0.15); tone(1318, 0.15, "square", 0.07, 0.15); },
         error: () => { init(); tone(220, 0.15, "sawtooth", 0, 0.25); tone(165, 0.25, "sawtooth", 0.1, 0.25); },
         crash: () => { init(); tone(150, 0.4, "sawtooth", 0, 0.4); tone(100, 0.6, "square", 0.1, 0.3); },
-        cashout: () => { init(); tone(880, 0.1, "sine", 0, 0.2); tone(1046, 0.1, "sine", 0.08, 0.2); tone(1318, 0.2, "sine", 0.16, 0.2); }
+        cashout: () => { init(); tone(880, 0.1, "sine", 0, 0.2); tone(1046, 0.1, "sine", 0.08, 0.2); tone(1318, 0.2, "sine", 0.16, 0.2); },
+        jackpot: () => { init(); [523, 659, 783, 1046, 1318, 1568].forEach((f,i) => tone(f, 0.2, "triangle", i*0.08, 0.25)); },
+        slot: () => { init(); tone(600 + Math.random()*200, 0.05, "square", 0, 0.1); },
+        dice: () => { init(); tone(300, 0.08, "square", 0, 0.2); tone(250, 0.1, "square", 0.05, 0.2); },
+        boom: () => { init(); tone(80, 0.5, "sawtooth", 0, 0.5); tone(60, 0.6, "square", 0.1, 0.4); },
+        spin: () => { init(); for(let i=0;i<8;i++) tone(600+i*80, 0.04, "triangle", i*0.15, 0.15); },
+        toggle: () => { enabled = !enabled; return enabled; },
+        isEnabled: () => enabled
       };
     })();
 
     const Card = ({ children, className = '', gold = false }) =>
       h('div', { className: 'rounded-2xl ' + (gold ? 'card-gold' : 'card-gradient') + ' ' + className }, children);
 
+    const Confetti = ({ trigger }) => {
+      const [pieces, setPieces] = useState([]);
+      useEffect(() => {
+        if (!trigger) return;
+        const colors = ['#FFD60A','#FFB800','#22C55E','#EF4444','#3B82F6','#A855F7','#FF6B00'];
+        const arr = Array.from({ length: 50 }, (_, i) => ({
+          id: i + '-' + Date.now(),
+          left: Math.random() * 100,
+          delay: Math.random() * 0.3,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          width: 6 + Math.random() * 10,
+          height: 6 + Math.random() * 10,
+        }));
+        setPieces(arr);
+        const t = setTimeout(() => setPieces([]), 3000);
+        return () => clearTimeout(t);
+      }, [trigger]);
+      if (pieces.length === 0) return null;
+      return h(React.Fragment, null,
+        pieces.map(p => h('div', {
+          key: p.id,
+          className: 'confetti-piece',
+          style: {
+            left: p.left + '%',
+            backgroundColor: p.color,
+            width: p.width + 'px',
+            height: p.height + 'px',
+            animationDelay: p.delay + 's',
+          }
+        }))
+      );
+    };
+
     function App() {
       const [s, setS] = useState(getCachedData);
       const [uid, setUid] = useState(null);
-      const [authError, setAuthError] = useState(null);
+      const [authError] = useState(null);
       const [toast, setToast] = useState(null);
+      const [soundOn, setSoundOn] = useState(true);
       
       const [activeTab, setActiveTab] = useState("aviator");
-      const [feedMsg, setFeedMsg] = useState(BET_FEED[0]);
+      const [feedMsg, setFeedMsg] = useState(BET_FEED_BASE[0]);
+      const [confettiTrigger, setConfettiTrigger] = useState(0);
+      const [bigWin, setBigWin] = useState(null);
 
+      // Aviator
       const [aviatorBet, setAviatorBet] = useState(10000);
       const [aviatorState, setAviatorState] = useState("idle");
       const [multiplier, setMultiplier] = useState(1.00);
       const [hasCashedOut, setHasCashedOut] = useState(false);
-      const [history, setHistory] = useState([1.2, 5.4, 1.0, 2.1, 12.5, 1.8, 1.0]);
+      const [aviatorHistory, setAviatorHistory] = useState([1.2, 5.4, 1.0, 2.1, 12.5, 1.8, 1.0]);
       const [crashMsg, setCrashMsg] = useState("");
 
+      // Virtual
       const [virtualBet, setVirtualBet] = useState(10000);
       const [virtualState, setVirtualState] = useState("idle");
       const [matchScore, setMatchScore] = useState({ manU: 0, arsenal: 0 });
 
+      // Cards
       const [cardBet, setCardBet] = useState(10000);
       const [cardState, setCardState] = useState("idle");
       const [currentCard, setCurrentCard] = useState(null);
 
+      // Cups
       const [cupBet, setCupBet] = useState(10000);
       const [cupState, setCupState] = useState("idle");
       const [winningCup, setWinningCup] = useState(null);
       const [pickedCup, setPickedCup] = useState(null);
+
+      // Slots
+      const [slotBet, setSlotBet] = useState(10000);
+      const [slotState, setSlotState] = useState("idle");
+      const [slotReels, setSlotReels] = useState(['🍚', '🍗', '🥤']);
+      const [slotResult, setSlotResult] = useState(null);
+
+      // Dice
+      const [diceBet, setDiceBet] = useState(10000);
+      const [diceChoice, setDiceChoice] = useState('high');
+      const [diceRoll, setDiceRoll] = useState(null);
+      const [diceRolling, setDiceRolling] = useState(false);
+
+      // Mines
+      const [minesBet, setMinesBet] = useState(10000);
+      const [minesState, setMinesState] = useState("idle");
+      const [minesGrid, setMinesGrid] = useState([]);
+      const [minesRevealed, setMinesRevealed] = useState([]);
+      const [minesMultiplier, setMinesMultiplier] = useState(1);
+      const [minesExploded, setMinesExploded] = useState(false);
+
+      // Roulette
+      const [rouletteBet, setRouletteBet] = useState(10000);
+      const [rouletteChoice, setRouletteChoice] = useState('red');
+      const [rouletteState, setRouletteState] = useState("idle");
+      const [rouletteResult, setRouletteResult] = useState(null);
+
+      // Daily
+      const [dailySpinState, setDailySpinState] = useState("idle");
 
       const aviatorInterval = useRef(null);
       const crashPoint = useRef(0);
@@ -204,10 +334,8 @@
         const authUnsub = auth.onAuthStateChanged((user) => {
           if (!user) { window.location.href = '/login.html'; return; }
           if (userUnsub) userUnsub();
-
           const userId = user.uid;
           setUid(userId);
-          
           const userRef = db.collection("users").doc(userId);
           userUnsub = userRef.onSnapshot((doc) => {
             if (doc.exists) {
@@ -217,7 +345,10 @@
                   businesses: dbData.businesses || prev.businesses || {},
                   assets: dbData.assets || prev.assets || {},
                   travels: dbData.travels || prev.travels || [],
-                  transactions: dbData.transactions || []
+                  transactions: dbData.transactions || [],
+                  lastDailySpinAt: dbData.lastDailySpinAt || prev.lastDailySpinAt || 0,
+                  winStreak: dbData.winStreak || prev.winStreak || 0,
+                  biggestWin: dbData.biggestWin || prev.biggestWin || 0
                 });
                 try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
                 return newData;
@@ -228,7 +359,8 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-                transactions: []
+                transactions: [],
+                lastDailySpinAt: 0, winStreak: 0, biggestWin: 0
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
@@ -236,7 +368,6 @@
             }
           }, (error) => console.error("Snapshot error:", error));
         });
-
         return () => { 
           authUnsub(); 
           if (userUnsub) userUnsub();
@@ -252,12 +383,13 @@
 
       useEffect(() => {
         const iv = setInterval(() => {
-          setFeedMsg(BET_FEED[Math.floor(Math.random() * BET_FEED.length)]);
+          setFeedMsg(BET_FEED_BASE[Math.floor(Math.random() * BET_FEED_BASE.length)]);
         }, 6000);
         return () => clearInterval(iv);
       }, []);
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+      const fireConfetti = () => setConfettiTrigger(t => t + 1);
 
       const updateCash = async (amount) => {
         setS(prev => Object.assign({}, prev, { cash: prev.cash + amount }));
@@ -269,15 +401,48 @@
         }
       };
 
+      const updateField = async (field, value) => {
+        setS(prev => Object.assign({}, prev, { [field]: value }));
+        if (uid) {
+          await db.collection("users").doc(uid).update({ [field]: value, lastSeen: Date.now() }).catch(() => {});
+        }
+      };
+
+      // Win handler - handles streak, big win, confetti
+      const handleWin = (amount) => {
+        const newStreak = (s.winStreak || 0) + 1;
+        updateField('winStreak', newStreak);
+        
+        if (amount > (s.biggestWin || 0)) {
+          updateField('biggestWin', amount);
+        }
+
+        if (amount >= BIG_WIN_THRESHOLD) {
+          fireConfetti();
+          AudioEngine.jackpot();
+          const msg = BIG_WIN_MESSAGES[Math.floor(Math.random() * BIG_WIN_MESSAGES.length)];
+          setBigWin({ amount, msg });
+        } else if (newStreak >= STREAK_THRESHOLD) {
+          AudioEngine.coin();
+        } else {
+          AudioEngine.coin();
+        }
+      };
+
+      const handleLose = () => {
+        if ((s.winStreak || 0) > 0) {
+          updateField('winStreak', 0);
+        }
+      };
+
+      // ===== AVIATOR =====
       const startAviator = () => {
         if (s.cash < aviatorBet) { AudioEngine.error(); return notify('Not enough cash 💸', 'bad'); }
-        
         updateCash(-aviatorBet);
         setAviatorState("flying");
         setMultiplier(1.00);
         setHasCashedOut(false);
         AudioEngine.tap();
-
         const r = Math.random();
         let cp = 1.00;
         if (r < 0.4) cp = 1.0 + Math.random() * 0.5;
@@ -285,11 +450,9 @@
         else if (r < 0.9) cp = 3.0 + Math.random() * 7.0;
         else cp = 10.0 + Math.random() * 40.0;
         crashPoint.current = cp;
-
         let currentM = 1.00;
         aviatorInterval.current = setInterval(() => {
           currentM += 0.02 + (currentM * 0.01);
-          
           if (currentM >= crashPoint.current) {
             clearInterval(aviatorInterval.current);
             setMultiplier(crashPoint.current);
@@ -297,11 +460,10 @@
             setCrashMsg(CRASH_MESSAGES[Math.floor(Math.random() * CRASH_MESSAGES.length)]);
             AudioEngine.crash();
             try { if (navigator.vibrate) navigator.vibrate([50, 50, 50]); } catch(e) {}
-            
-            setHistory(prev => [Number(crashPoint.current.toFixed(2)), ...prev].slice(0, 10));
-            
+            setAviatorHistory(prev => [Number(crashPoint.current.toFixed(2)), ...prev].slice(0, 10));
             if (!hasCashedOut) {
               notify('You lost! Plane crash 😭', 'bad');
+              handleLose();
             }
           } else {
             setMultiplier(currentM);
@@ -314,26 +476,23 @@
         if (aviatorState !== "flying" || hasCashedOut) return;
         clearInterval(aviatorInterval.current);
         setHasCashedOut(true);
-        
         const winAmount = Math.floor(aviatorBet * multiplier);
         updateCash(winAmount);
-        AudioEngine.cashout();
+        handleWin(winAmount);
         try { if (navigator.vibrate) navigator.vibrate(40); } catch(e) {}
-        
         const msg = WIN_MESSAGES[Math.floor(Math.random() * WIN_MESSAGES.length)];
         notify(msg + ' +' + fmt(winAmount));
         setAviatorState("idle");
-        setHistory(prev => [Number(multiplier.toFixed(2)), ...prev].slice(0, 10));
+        setAviatorHistory(prev => [Number(multiplier.toFixed(2)), ...prev].slice(0, 10));
       };
 
+      // ===== VIRTUAL =====
       const playVirtual = (team) => {
         if (s.cash < virtualBet) { AudioEngine.error(); return notify('Not enough cash 💸', 'bad'); }
-        
         updateCash(-virtualBet);
         setVirtualState("playing");
         setMatchScore({ manU: 0, arsenal: 0 });
         AudioEngine.tap();
-
         let minute = 0;
         const matchInt = setInterval(() => {
           minute += 10;
@@ -341,15 +500,15 @@
             clearInterval(matchInt);
             const manUWins = Math.random() > 0.5;
             setMatchScore({ manU: manUWins ? 2 : 1, arsenal: manUWins ? 1 : 2 });
-            
             setTimeout(() => {
               const win = (team === 'Man U' && manUWins) || (team === 'Arsenal' && !manUWins);
               if (win) {
                 const winAmount = virtualBet * 2;
                 updateCash(winAmount);
-                AudioEngine.coin();
+                handleWin(winAmount);
                 notify('WINNER! You won ' + fmt(winAmount) + ' 🤑');
               } else {
+                handleLose();
                 AudioEngine.error();
                 notify('You lost this one. Bet9ja chop your money 😭', 'bad');
               }
@@ -361,6 +520,7 @@
         }, 500);
       };
 
+      // ===== CARDS =====
       const startCards = () => {
         if (s.cash < cardBet) { AudioEngine.error(); return notify('Not enough cash 💸', 'bad'); }
         updateCash(-cardBet);
@@ -368,23 +528,21 @@
         setCardState("playing");
         AudioEngine.tap();
       };
-
       const playCard = (guess) => {
         const nextCard = Math.floor(Math.random() * 13) + 1;
         const win = guess === 'higher' ? nextCard > currentCard : nextCard < currentCard;
-        
         if (nextCard === currentCard) {
           notify('Draw! Try again.', 'bad');
           setCurrentCard(nextCard);
           return;
         }
-
         if (win) {
           const winAmount = cardBet * 2;
           updateCash(winAmount);
-          AudioEngine.coin();
+          handleWin(winAmount);
           notify('Correct! You won ' + fmt(winAmount) + ' 🃏');
         } else {
+          handleLose();
           AudioEngine.error();
           notify('Wrong guess! You lost 😭', 'bad');
         }
@@ -392,6 +550,7 @@
         setCurrentCard(null);
       };
 
+      // ===== CUPS =====
       const startCups = () => {
         if (s.cash < cupBet) { AudioEngine.error(); return notify('Not enough cash 💸', 'bad'); }
         updateCash(-cupBet);
@@ -400,25 +559,207 @@
         setPickedCup(null);
         AudioEngine.tap();
       };
-
       const pickCup = (index) => {
         if (cupState !== 'picking') return;
         setPickedCup(index);
         setCupState("revealing");
-        
         setTimeout(() => {
           if (index === winningCup) {
             const winAmount = cupBet * 3;
             updateCash(winAmount);
-            AudioEngine.coin();
+            handleWin(winAmount);
             notify('Correct! You won ' + fmt(winAmount) + ' 🏆');
           } else {
+            handleLose();
             AudioEngine.error();
             notify('Wrong cup! The guy don run with your money 😭', 'bad');
           }
           setCupState("result");
         }, 1000);
       };
+
+      // ===== SLOTS =====
+      const spinSlots = () => {
+        if (s.cash < slotBet) { AudioEngine.error(); return notify('Not enough cash 💸', 'bad'); }
+        updateCash(-slotBet);
+        setSlotState("spinning");
+        setSlotResult(null);
+        
+        let tick = 0;
+        const spinInt = setInterval(() => {
+          tick++;
+          setSlotReels([
+            SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)],
+            SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)],
+            SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]
+          ]);
+          AudioEngine.slot();
+          if (tick >= 15) {
+            clearInterval(spinInt);
+            const finalReels = [
+              SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)],
+              SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)],
+              SLOT_SYMBOLS[Math.floor(Math.random() * SLOT_SYMBOLS.length)]
+            ];
+            setSlotReels(finalReels);
+            const key = finalReels.join('');
+            const mult = SLOT_PAYOUTS[key] || (finalReels[0] === finalReels[1] || finalReels[1] === finalReels[2] ? 1.5 : 0);
+            
+            if (mult > 0) {
+              const winAmount = Math.floor(slotBet * mult);
+              updateCash(winAmount);
+              setSlotResult({ won: true, amount: winAmount, mult });
+              handleWin(winAmount);
+              notify('🎰 YOU WON ' + fmt(winAmount) + '!');
+            } else {
+              handleLose();
+              setSlotResult({ won: false });
+              AudioEngine.error();
+              notify('No win. Try again 😭', 'bad');
+            }
+            setSlotState("idle");
+          }
+        }, 100);
+      };
+
+      // ===== DICE =====
+      const rollDice = () => {
+        if (s.cash < diceBet) { AudioEngine.error(); return notify('Not enough cash 💸', 'bad'); }
+        updateCash(-diceBet);
+        setDiceRolling(true);
+        setDiceRoll(null);
+        AudioEngine.dice();
+        
+        setTimeout(() => {
+          const result = Math.floor(Math.random() * 6) + 1;
+          setDiceRoll(result);
+          setDiceRolling(false);
+          
+          let won = false;
+          let mult = 0;
+          if (diceChoice === 'high' && result >= 4) { won = true; mult = 2; }
+          else if (diceChoice === 'low' && result <= 3) { won = true; mult = 2; }
+          else if (diceChoice === 'exact' && result === 6) { won = true; mult = 6; }
+          
+          if (won) {
+            const winAmount = diceBet * mult;
+            updateCash(winAmount);
+            handleWin(winAmount);
+            notify('🎲 Rolled ' + result + '! You won ' + fmt(winAmount) + '!');
+          } else {
+            handleLose();
+            AudioEngine.error();
+            notify('Rolled ' + result + '. You lost 😭', 'bad');
+          }
+        }, 700);
+      };
+
+      // ===== MINES =====
+      const startMines = () => {
+        if (s.cash < minesBet) { AudioEngine.error(); return notify('Not enough cash 💸', 'bad'); }
+        updateCash(-minesBet);
+        const bombs = new Set();
+        while (bombs.size < MINES_BOMBS) {
+          bombs.add(Math.floor(Math.random() * MINES_GRID));
+        }
+        setMinesGrid(Array.from(bombs));
+        setMinesRevealed([]);
+        setMinesMultiplier(1);
+        setMinesExploded(false);
+        setMinesState("playing");
+        AudioEngine.tap();
+      };
+
+      const revealMineCell = (idx) => {
+        if (minesState !== 'playing') return;
+        if (minesRevealed.includes(idx)) return;
+        
+        if (minesGrid.includes(idx)) {
+          setMinesExploded(true);
+          setMinesState("exploded");
+          AudioEngine.boom();
+          handleLose();
+          try { if (navigator.vibrate) navigator.vibrate([100, 50, 100]); } catch(e) {}
+          notify('💥 BOOM! You hit a bomb. Lost it all.', 'bad');
+        } else {
+          const newRevealed = [...minesRevealed, idx];
+          setMinesRevealed(newRevealed);
+          const mult = MINES_MULTS[newRevealed.length] || 1;
+          setMinesMultiplier(mult);
+          AudioEngine.slot();
+        }
+      };
+
+      const cashOutMines = () => {
+        if (minesState !== 'playing') return;
+        const winAmount = Math.floor(minesBet * minesMultiplier);
+        updateCash(winAmount);
+        handleWin(winAmount);
+        notify('💰 Cashed out ' + fmt(winAmount) + '!');
+        setMinesState("idle");
+      };
+
+      // ===== ROULETTE =====
+      const spinRoulette = () => {
+        if (s.cash < rouletteBet) { AudioEngine.error(); return notify('Not enough cash 💸', 'bad'); }
+        updateCash(-rouletteBet);
+        setRouletteState("spinning");
+        setRouletteResult(null);
+        AudioEngine.spin();
+        
+        setTimeout(() => {
+          const roll = Math.floor(Math.random() * 37);
+          const color = roll === 0 ? 'green' : (roll % 2 === 0 ? 'black' : 'red');
+          setRouletteResult({ number: roll, color });
+          
+          const won = color === rouletteChoice;
+          const mult = color === 'green' ? 14 : 2;
+          
+          if (won) {
+            const winAmount = rouletteBet * mult;
+            updateCash(winAmount);
+            handleWin(winAmount);
+            notify('🎡 ' + color.toUpperCase() + ' ' + roll + '! You won ' + fmt(winAmount) + '!');
+          } else {
+            handleLose();
+            AudioEngine.error();
+            notify('🎡 ' + color.toUpperCase() + ' ' + roll + '. You lost 😭', 'bad');
+          }
+          setRouletteState("idle");
+        }, 2000);
+      };
+
+      // ===== DAILY SPIN =====
+      const canDailySpin = () => {
+        const lastDate = new Date(s.lastDailySpinAt || 0).toISOString().slice(0, 10);
+        return lastDate !== todayStr();
+      };
+
+      const claimDailySpin = () => {
+        if (!canDailySpin()) return notify('Come back tomorrow 😴', 'bad');
+        if (dailySpinState === 'spinning') return;
+        setDailySpinState("spinning");
+        AudioEngine.spin();
+        setTimeout(() => {
+          const amount = Math.floor(DAILY_SPIN_MIN + Math.random() * (DAILY_SPIN_MAX - DAILY_SPIN_MIN));
+          updateCash(amount);
+          updateField('lastDailySpinAt', Date.now());
+          setDailySpinState("idle");
+          AudioEngine.coin();
+          notify('🎁 Daily bonus! +' + fmt(amount));
+        }, 2000);
+      };
+
+      const GAMES = [
+        { id: 'aviator', label: '✈️ Aviator', color: 'from-[#22C55E] to-[#16A34A]' },
+        { id: 'slots', label: '🎰 Slots', color: 'from-[#FFD60A] to-[#FFB800]' },
+        { id: 'dice', label: '🎲 Dice', color: 'from-[#A855F7] to-[#7C3AED]' },
+        { id: 'mines', label: '💎 Mines', color: 'from-[#06B6D4] to-[#0891B2]' },
+        { id: 'roulette', label: '🎡 Roulette', color: 'from-[#EF4444] to-[#DC2626]' },
+        { id: 'virtual', label: '⚽ Virtual', color: 'from-[#3B82F6] to-[#2563EB]' },
+        { id: 'cards', label: '🃏 Cards', color: 'from-[#F59E0B] to-[#D97706]' },
+        { id: 'cups', label: '🥤 3-Cup', color: 'from-[#EC4899] to-[#DB2777]' },
+      ];
 
       const NAV = [
         { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
@@ -429,7 +770,26 @@
         { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
 
+      const betInput = (value, setValue, disabled) => h(React.Fragment, null,
+        h('div', { className: 'flex justify-between items-end mb-2' },
+          h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Bet Amount'),
+          h('div', { className: 'text-[10px] text-white/40 tabular-nums' }, 'Bal: ' + fmt(s.cash))
+        ),
+        h('input', {
+          type: 'number', value, onChange: (e) => setValue(Math.floor(Number(e.target.value))),
+          disabled,
+          className: 'w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[18px] font-black text-white focus:border-[#FFD60A]/50 transition tabular-nums disabled:opacity-50'
+        }),
+        h('div', { className: 'flex gap-2 mt-2' },
+          [10000, 100000, 1000000].map(amt => 
+            h('button', { key: amt, onClick: () => setValue(amt), disabled, className: 'flex-1 py-1.5 rounded-lg bg-white/[0.06] text-[10px] font-bold text-white/60 active:bg-white/[0.1] transition disabled:opacity-40' }, fmt(amt))
+          ),
+          h('button', { onClick: () => setValue(Math.floor(s.cash)), disabled, className: 'flex-1 py-1.5 rounded-lg bg-[#FFD60A]/20 text-[10px] font-black text-[#FFD60A] active:bg-[#FFD60A]/30 transition disabled:opacity-40' }, 'MAX')
+        )
+      );
+
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
+        h(Confetti, { trigger: confettiTrigger }),
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
           
           h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
@@ -442,13 +802,18 @@
                 )
               ),
               h('div', { className: 'flex items-center gap-1.5 shrink-0' },
-                h('div', { className: 'px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums' }, '⚡ ' + (s.energy || 0))
+                (s.winStreak || 0) >= STREAK_THRESHOLD && h('div', { className: 'px-2 py-1 rounded-lg bg-gradient-to-r from-[#FF6B00] to-[#FF0055] text-white text-[10px] font-black tabular-nums streak-glow' }, '🔥 ' + s.winStreak),
+                h('button', { 
+                  onClick: () => { const on = AudioEngine.toggle(); setSoundOn(on); },
+                  className: 'w-7 h-7 rounded-lg bg-white/[0.06] border border-white/10 grid place-items-center active:scale-90 transition text-[12px]'
+                }, soundOn ? '🔊' : '🔇')
               )
             )
           ),
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
             
+            // Feed
             h('div', { className: 'mt-3 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center gap-2 overflow-hidden' },
               h('span', { className: 'text-sm shrink-0 animate-pulse' }, '📡'),
               h('div', { className: 'flex-1 overflow-hidden relative h-5' },
@@ -456,54 +821,57 @@
               )
             ),
 
-            h('div', { className: 'mt-3 flex gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06] overflow-x-auto no-scrollbar' },
-              ['aviator', 'virtual', 'cards', 'cups'].map(tab => 
+            // Daily free spin
+            h('div', { className: 'mt-3 rounded-2xl p-3 bg-gradient-to-r from-[#FFE566]/15 via-[#FFB800]/10 to-[#FF6B00]/15 border border-[#FFD60A]/30 flex items-center justify-between animate-pulse-bg' },
+              h('div', { className: 'flex items-center gap-2.5' },
+                h('div', { className: 'text-3xl' }, '🎁'),
+                h('div', null,
+                  h('div', { className: 'text-[11px] font-black text-[#FFD60A] font-display' }, 'DAILY FREE SPIN'),
+                  h('div', { className: 'text-[9px] text-white/50 mt-0.5' }, canDailySpin() ? 'Claim ₦50K - ₦500K now!' : 'Come back tomorrow 😴')
+                )
+              ),
+              h('button', {
+                onClick: claimDailySpin,
+                disabled: !canDailySpin() || dailySpinState === 'spinning',
+                className: 'px-4 py-2 rounded-lg text-[10px] font-black active:scale-95 transition ' +
+                  (canDailySpin() && dailySpinState !== 'spinning' ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.7)]' : 'bg-white/[0.06] text-white/40')
+              }, dailySpinState === 'spinning' ? '...' : canDailySpin() ? 'CLAIM' : '✓')
+            ),
+
+            // Game tabs (scrollable)
+            h('div', { className: 'mt-3 flex gap-1.5 overflow-x-auto no-scrollbar pb-1' },
+              GAMES.map(g => 
                 h('button', {
-                  key: tab,
-                  onClick: () => { setActiveTab(tab); AudioEngine.tap(); },
-                  className: 'flex-1 whitespace-nowrap px-3 py-2 rounded-lg text-[10.5px] font-black uppercase tracking-wider transition-all ' + 
-                    (activeTab === tab ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-md' : 'text-white/50')
-                }, tab === 'aviator' ? '✈️ Aviator' : tab === 'virtual' ? '⚽ Virtual' : tab === 'cards' ? '🃏 Cards' : '🥤 3-Cup Moni')
+                  key: g.id,
+                  onClick: () => { setActiveTab(g.id); AudioEngine.tap(); },
+                  className: 'shrink-0 px-3 py-2 rounded-xl text-[11px] font-black whitespace-nowrap transition-all ' + 
+                    (activeTab === g.id 
+                      ? 'bg-gradient-to-r ' + g.color + ' text-white shadow-[0_4px_12px_-4px_rgba(255,214,10,0.5)] scale-105' 
+                      : 'bg-white/[0.04] border border-white/[0.06] text-white/50')
+                }, g.label)
               )
             ),
 
+            // ===== AVIATOR =====
             activeTab === 'aviator' && h('div', { className: 'mt-4' },
               h('div', { className: 'w-full h-64 rounded-2xl aviator-bg border border-white/[0.08] relative overflow-hidden flex flex-col items-center justify-center shadow-2xl' },
                 h('div', { className: 'absolute inset-0 opacity-10', style: { backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' } }),
-                
                 aviatorState === 'flying' && h('div', { 
-                  className: 'absolute bg-gradient-to-r from-transparent via-green-500/50 to-green-400 h-1 rounded-full transition-all duration-100',
-                  style: { 
-                    width: (multiplier * 30) + 'px', 
-                    bottom: (10 + (multiplier - 1) * 20) + 'px',
-                    left: '10px',
-                    transform: 'rotate(-' + Math.min(45, multiplier * 2) + 'deg)',
-                    transformOrigin: 'left center'
-                  }
+                  className: 'absolute bg-gradient-to-r from-transparent via-green-500/50 to-green-400 h-1 rounded-full',
+                  style: { width: (multiplier * 30) + 'px', bottom: (10 + (multiplier - 1) * 20) + 'px', left: '10px', transform: 'rotate(-' + Math.min(45, multiplier * 2) + 'deg)', transformOrigin: 'left center' }
                 }),
-
                 aviatorState === 'idle' && h('div', { className: 'text-center z-10' },
                   h('div', { className: 'text-5xl mb-2' }, '✈️'),
                   h('div', { className: 'text-[13px] text-white/50 font-bold mb-4' }, 'Place your bet to start flying'),
                   h('button', { onClick: startAviator, className: 'px-8 py-3 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black font-black text-sm shadow-[0_8px_24px_-8px_rgba(34,197,94,0.7)] active:scale-95 transition' }, 'PLACE BET')
                 ),
-
                 aviatorState === 'flying' && h('div', { className: 'absolute inset-0' },
-                  h('div', { 
-                    className: 'plane text-4xl', 
-                    style: { 
-                      bottom: (10 + (multiplier - 1) * 20) + 'px',
-                      left: (10 + (multiplier - 1) * 40) + 'px',
-                      transform: 'rotate(-' + Math.min(45, multiplier * 2) + 'deg)' 
-                    } 
-                  }, '✈️'),
-                  
+                  h('div', { className: 'plane text-4xl', style: { bottom: (10 + (multiplier - 1) * 20) + 'px', left: (10 + (multiplier - 1) * 40) + 'px', transform: 'rotate(-' + Math.min(45, multiplier * 2) + 'deg)' } }, '✈️'),
                   h('div', { className: 'absolute inset-0 flex flex-col items-center justify-center z-20' },
                     h('div', { className: 'text-6xl font-black text-white win-text tabular-nums font-display' }, multiplier.toFixed(2) + 'x'),
                     h('div', { className: 'text-[11px] font-bold text-[#22C55E] mt-1 animate-pulse' }, 'FLYING...')
                   )
                 ),
-
                 aviatorState === 'crashed' && h('div', { className: 'absolute inset-0 flex flex-col items-center justify-center z-20 animate-shake' },
                   h('div', { className: 'text-5xl mb-2' }, '💥'),
                   h('div', { className: 'text-5xl font-black text-[#EF4444] crash-text tabular-nums font-display' }, multiplier.toFixed(2) + 'x'),
@@ -512,30 +880,13 @@
                   h('button', { onClick: () => setAviatorState('idle'), className: 'px-8 py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 font-bold text-xs' }, 'Play Again')
                 )
               ),
-
-              h('div', { className: 'flex gap-1.5 mt-3 overflow-x-auto pb-1 no-scrollbar' },
-                history.map((hVal, i) => 
+              h('div', { className: 'flex gap-1.5 mt-3 overflow-x-auto no-scrollbar pb-1' },
+                aviatorHistory.map((hVal, i) => 
                   h('div', { key: i, className: 'shrink-0 px-2.5 py-1 rounded-lg text-[10px] font-black tabular-nums ' + (hVal < 2.0 ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400') }, hVal.toFixed(2) + 'x')
                 )
               ),
-
               h(Card, { className: 'p-4 mt-4' },
-                h('div', { className: 'flex justify-between items-end mb-2' },
-                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Bet Amount'),
-                  h('div', { className: 'text-[10px] text-white/40 tabular-nums' }, 'Bal: ' + fmt(s.cash))
-                ),
-                h('input', {
-                  type: 'number', value: aviatorBet, onChange: (e) => setAviatorBet(Math.floor(Number(e.target.value))),
-                  disabled: aviatorState !== 'idle',
-                  className: 'w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[18px] font-black text-white focus:border-[#FFD60A]/50 transition tabular-nums disabled:opacity-50'
-                }),
-                h('div', { className: 'flex gap-2 mt-2' },
-                  [10000, 100000, 1000000].map(amt => 
-                    h('button', { key: amt, onClick: () => setAviatorBet(amt), disabled: aviatorState !== 'idle', className: 'flex-1 py-1.5 rounded-lg bg-white/[0.06] text-[10px] font-bold text-white/60 active:bg-white/[0.1] transition' }, fmt(amt))
-                  ),
-                  h('button', { onClick: () => setAviatorBet(Math.floor(s.cash)), disabled: aviatorState !== 'idle', className: 'flex-1 py-1.5 rounded-lg bg-[#FFD60A]/20 text-[10px] font-black text-[#FFD60A] active:bg-[#FFD60A]/30 transition' }, 'MAX')
-                ),
-                
+                betInput(aviatorBet, setAviatorBet, aviatorState !== 'idle'),
                 h('div', { className: 'mt-4' },
                   aviatorState === 'flying' && !hasCashedOut 
                     ? h('button', { onClick: cashOutAviator, className: 'w-full py-4 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[15px] shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)] active:scale-95 transition' }, 'CASH OUT ' + fmt(Math.floor(aviatorBet * multiplier)))
@@ -544,11 +895,168 @@
               )
             ),
 
+            // ===== SLOTS =====
+            activeTab === 'slots' && h('div', { className: 'mt-4' },
+              h('div', { className: 'rounded-2xl bg-gradient-to-br from-[#2a1a00] to-[#0a0a10] border border-[#FFD60A]/30 p-6 text-center shadow-2xl' },
+                h('div', { className: 'text-[11px] uppercase tracking-widest text-[#FFD60A]/80 font-black mb-3' }, '🎰 Naija Slots'),
+                h('div', { className: 'flex justify-center gap-3 mb-4' },
+                  slotReels.map((sym, i) => 
+                    h('div', { 
+                      key: i,
+                      className: 'w-20 h-24 rounded-xl bg-gradient-to-b from-black to-[#1a1a24] border-2 border-[#FFD60A]/40 flex items-center justify-center text-4xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)] ' +
+                        (slotState === 'spinning' ? 'animate-pulse' : '')
+                    }, sym)
+                  )
+                ),
+                slotResult && slotResult.won && h('div', { className: 'text-[15px] font-black text-[#22C55E] mb-3 animate-popIn' },
+                  '🎉 ' + slotResult.mult + 'x WINNER! +' + fmt(slotResult.amount)
+                ),
+                slotResult && !slotResult.won && h('div', { className: 'text-[13px] font-black text-[#EF4444] mb-3' },
+                  'No luck this time 😭'
+                ),
+                h('div', { className: 'text-[9px] text-white/40 mt-3 leading-relaxed' },
+                  '🍚×3=6x 🍗×3=8x 👑×3=10x 💎×3=15x 🎰×3=20x',
+                  h('br'),
+                  'Any 2 matching = 1.5x'
+                )
+              ),
+              h(Card, { className: 'p-4 mt-3' },
+                betInput(slotBet, setSlotBet, slotState !== 'idle'),
+                h('button', { 
+                  onClick: spinSlots, 
+                  disabled: slotState !== 'idle',
+                  className: 'w-full mt-4 py-4 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[15px] shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)] active:scale-95 transition disabled:opacity-50 disabled:shadow-none'
+                }, slotState === 'spinning' ? 'SPINNING...' : '🎰 SPIN')
+              )
+            ),
+
+            // ===== DICE =====
+            activeTab === 'dice' && h('div', { className: 'mt-4' },
+              h('div', { className: 'rounded-2xl bg-gradient-to-br from-[#1a0033] to-[#0a0a10] border border-[#A855F7]/30 p-6 text-center shadow-2xl' },
+                h('div', { className: 'text-[11px] uppercase tracking-widest text-[#A855F7] font-black mb-3' }, '🎲 Dice Master'),
+                h('div', { className: 'text-8xl mb-4 ' + (diceRolling ? 'dice-rolling' : '') },
+                  diceRoll ? ['⚀','⚁','⚂','⚃','⚄','⚅'][diceRoll - 1] : '🎲'
+                ),
+                diceRoll && h('div', { className: 'text-[15px] font-black text-white mb-2' }, 'Rolled: ' + diceRoll),
+                
+                h('div', { className: 'grid grid-cols-3 gap-2 mt-3' },
+                  [
+                    { id: 'low', label: 'LOW (1-3)', mult: '2x' },
+                    { id: 'high', label: 'HIGH (4-6)', mult: '2x' },
+                    { id: 'exact', label: 'EXACT (6)', mult: '6x' },
+                  ].map(c => 
+                    h('button', {
+                      key: c.id,
+                      onClick: () => setDiceChoice(c.id),
+                      disabled: diceRolling,
+                      className: 'py-2 rounded-lg text-[10px] font-black transition-all ' +
+                        (diceChoice === c.id ? 'bg-[#A855F7] text-white shadow-lg scale-105' : 'bg-white/[0.06] text-white/50 border border-white/10')
+                    }, c.label + ' ' + c.mult)
+                  )
+                )
+              ),
+              h(Card, { className: 'p-4 mt-3' },
+                betInput(diceBet, setDiceBet, diceRolling),
+                h('button', { 
+                  onClick: rollDice, 
+                  disabled: diceRolling,
+                  className: 'w-full mt-4 py-4 rounded-xl bg-gradient-to-b from-[#C084FC] to-[#A855F7] text-white font-black text-[15px] shadow-[0_8px_24px_-8px_rgba(168,85,247,0.7)] active:scale-95 transition disabled:opacity-50 disabled:shadow-none'
+                }, diceRolling ? 'ROLLING...' : '🎲 ROLL DICE')
+              )
+            ),
+
+            // ===== MINES =====
+            activeTab === 'mines' && h('div', { className: 'mt-4' },
+              h('div', { className: 'rounded-2xl bg-gradient-to-br from-[#001f2e] to-[#0a0a10] border border-[#06B6D4]/30 p-4 shadow-2xl' },
+                h('div', { className: 'flex justify-between items-center mb-3' },
+                  h('div', { className: 'text-[11px] uppercase tracking-widest text-[#06B6D4] font-black' }, '💎 Diamond Mines'),
+                  minesState === 'playing' && h('div', { className: 'text-[11px] font-black text-[#22C55E] tabular-nums' }, minesMultiplier.toFixed(2) + 'x')
+                ),
+                h('div', { className: 'grid grid-cols-5 gap-1.5' },
+                  Array.from({ length: MINES_GRID }, (_, i) => {
+                    const isRevealed = minesRevealed.includes(i);
+                    const isBomb = minesGrid.includes(i);
+                    const showBomb = minesState === 'exploded' && isBomb;
+                    const showDiamond = isRevealed && !isBomb;
+                    return h('button', {
+                      key: i,
+                      onClick: () => revealMineCell(i),
+                      disabled: minesState !== 'playing' || isRevealed,
+                      className: 'aspect-square rounded-lg flex items-center justify-center text-lg font-black transition-all active:scale-90 ' +
+                        (showDiamond ? 'bg-gradient-to-br from-[#06B6D4]/40 to-[#0891B2]/30 border border-[#06B6D4]' 
+                        : showBomb ? 'bg-[#EF4444]/40 border border-[#EF4444] animate-shake'
+                        : isRevealed ? 'bg-white/[0.06]'
+                        : 'bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08]')
+                    }, showDiamond ? '💎' : showBomb ? '💥' : isRevealed ? '' : '?');
+                  })
+                ),
+                minesState === 'playing' && h('button', {
+                  onClick: cashOutMines,
+                  disabled: minesRevealed.length === 0,
+                  className: 'w-full mt-3 py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[13px] shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)] active:scale-95 transition disabled:opacity-40'
+                }, '💰 CASH OUT ' + fmt(Math.floor(minesBet * minesMultiplier))),
+                minesState === 'exploded' && h('button', {
+                  onClick: () => setMinesState('idle'),
+                  className: 'w-full mt-3 py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 font-bold text-xs'
+                }, 'Play Again'),
+                h('div', { className: 'text-[9px] text-white/40 mt-2 text-center' }, '💣 3 bombs hidden • Reveal diamonds • Cash out before BOOM!')
+              ),
+              h(Card, { className: 'p-4 mt-3' },
+                betInput(minesBet, setMinesBet, minesState !== 'idle'),
+                minesState === 'idle' && h('button', { 
+                  onClick: startMines, 
+                  className: 'w-full mt-4 py-4 rounded-xl bg-gradient-to-b from-[#22D3EE] to-[#06B6D4] text-black font-black text-[15px] shadow-[0_8px_24px_-8px_rgba(6,182,212,0.7)] active:scale-95 transition'
+                }, '💎 START MINING')
+              )
+            ),
+
+            // ===== ROULETTE =====
+            activeTab === 'roulette' && h('div', { className: 'mt-4' },
+              h('div', { className: 'rounded-2xl bg-gradient-to-br from-[#2a0000] to-[#0a0a10] border border-[#EF4444]/30 p-6 text-center shadow-2xl' },
+                h('div', { className: 'text-[11px] uppercase tracking-widest text-[#EF4444] font-black mb-3' }, '🎡 Color Roulette'),
+                h('div', { className: 'relative w-40 h-40 mx-auto mb-4' },
+                  h('div', { className: 'w-40 h-40 rounded-full border-8 border-[#FFD60A] grid place-items-center bg-gradient-to-br from-[#1a1a24] to-black shadow-2xl ' + (rouletteState === 'spinning' ? 'roulette-spinning' : '') },
+                    rouletteResult 
+                      ? h('div', null,
+                          h('div', { className: 'text-3xl font-black text-white' }, rouletteResult.number),
+                          h('div', { className: 'text-[10px] font-black uppercase ' + 
+                            (rouletteResult.color === 'red' ? 'text-[#EF4444]' : rouletteResult.color === 'green' ? 'text-[#22C55E]' : 'text-gray-400') 
+                          }, rouletteResult.color)
+                        )
+                      : h('div', { className: 'text-3xl' }, '🎯')
+                  )
+                ),
+                h('div', { className: 'grid grid-cols-3 gap-2 mb-3' },
+                  [
+                    { id: 'red', label: 'RED', mult: '2x', cls: 'from-[#EF4444] to-[#DC2626]' },
+                    { id: 'black', label: 'BLACK', mult: '2x', cls: 'from-gray-700 to-gray-900' },
+                    { id: 'green', label: 'GREEN', mult: '14x', cls: 'from-[#22C55E] to-[#16A34A]' },
+                  ].map(c => 
+                    h('button', {
+                      key: c.id,
+                      onClick: () => setRouletteChoice(c.id),
+                      disabled: rouletteState === 'spinning',
+                      className: 'py-2 rounded-lg text-[10px] font-black transition-all ' +
+                        (rouletteChoice === c.id ? 'bg-gradient-to-r ' + c.cls + ' text-white shadow-lg scale-105' : 'bg-white/[0.06] text-white/50 border border-white/10')
+                    }, c.label, h('div', { className: 'text-[8px] opacity-80' }, c.mult))
+                  )
+                )
+              ),
+              h(Card, { className: 'p-4 mt-3' },
+                betInput(rouletteBet, setRouletteBet, rouletteState === 'spinning'),
+                h('button', { 
+                  onClick: spinRoulette, 
+                  disabled: rouletteState === 'spinning',
+                  className: 'w-full mt-4 py-4 rounded-xl bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white font-black text-[15px] shadow-[0_8px_24px_-8px_rgba(239,68,68,0.7)] active:scale-95 transition disabled:opacity-50 disabled:shadow-none'
+                }, rouletteState === 'spinning' ? 'SPINNING...' : '🎡 SPIN WHEEL')
+              )
+            ),
+
+            // ===== VIRTUAL =====
             activeTab === 'virtual' && h('div', { className: 'mt-4' },
               h(Card, { className: 'p-6 text-center' },
                 h('div', { className: 'text-4xl mb-2' }, '⚽'),
                 h('div', { className: 'text-[16px] font-black font-display mb-4' }, 'Man U vs Arsenal'),
-                
                 virtualState === 'playing' 
                   ? h('div', { className: 'py-6 text-center' },
                       h('div', { className: 'text-[24px] font-black text-white mb-2' }, matchScore.manU + ' - ' + matchScore.arsenal),
@@ -567,30 +1075,15 @@
                         h('div', { className: 'text-[13px] font-black text-[#FFD60A]' }, '1.95x')
                       )
                     ),
-                
                 virtualState === 'idle' && h('div', { className: 'space-y-2' },
                   h('button', { onClick: () => playVirtual('Man U'), className: 'w-full py-3 rounded-xl bg-white/[0.06] border border-white/10 font-bold text-[13px] active:scale-95 transition' }, 'Bet on Man U'),
                   h('button', { onClick: () => playVirtual('Arsenal'), className: 'w-full py-3 rounded-xl bg-white/[0.06] border border-white/10 font-bold text-[13px] active:scale-95 transition' }, 'Bet on Arsenal')
                 )
               ),
-              h(Card, { className: 'p-4 mt-3' },
-                h('div', { className: 'flex justify-between items-end mb-2' },
-                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Stake Amount'),
-                  h('div', { className: 'text-[10px] text-white/40 tabular-nums' }, 'Bal: ' + fmt(s.cash))
-                ),
-                h('input', {
-                  type: 'number', value: virtualBet, onChange: (e) => setVirtualBet(Math.floor(Number(e.target.value))),
-                  disabled: virtualState === 'playing',
-                  className: 'w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[18px] font-black text-white focus:border-[#FFD60A]/50 transition tabular-nums disabled:opacity-50'
-                }),
-                h('div', { className: 'flex gap-2 mt-2' },
-                  [10000, 100000, 1000000].map(amt => 
-                    h('button', { key: amt, onClick: () => setVirtualBet(amt), disabled: virtualState === 'playing', className: 'flex-1 py-1.5 rounded-lg bg-white/[0.06] text-[10px] font-bold text-white/60 active:bg-white/[0.1] transition' }, fmt(amt))
-                  )
-                )
-              )
+              h(Card, { className: 'p-4 mt-3' }, betInput(virtualBet, setVirtualBet, virtualState === 'playing'))
             ),
 
+            // ===== CARDS =====
             activeTab === 'cards' && h('div', { className: 'mt-4' },
               h(Card, { className: 'p-6 text-center' },
                 h('div', { className: 'text-4xl mb-2' }, '🃏'),
@@ -610,29 +1103,14 @@
                       )
                     )
               ),
-              h(Card, { className: 'p-4 mt-3' },
-                h('div', { className: 'flex justify-between items-end mb-2' },
-                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Bet Amount'),
-                  h('div', { className: 'text-[10px] text-white/40 tabular-nums' }, 'Bal: ' + fmt(s.cash))
-                ),
-                h('input', {
-                  type: 'number', value: cardBet, onChange: (e) => setCardBet(Math.floor(Number(e.target.value))),
-                  disabled: cardState === 'playing',
-                  className: 'w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[18px] font-black text-white focus:border-[#FFD60A]/50 transition tabular-nums disabled:opacity-50'
-                }),
-                h('div', { className: 'flex gap-2 mt-2' },
-                  [10000, 100000, 1000000].map(amt => 
-                    h('button', { key: amt, onClick: () => setCardBet(amt), disabled: cardState === 'playing', className: 'flex-1 py-1.5 rounded-lg bg-white/[0.06] text-[10px] font-bold text-white/60 active:bg-white/[0.1] transition' }, fmt(amt))
-                  )
-                )
-              )
+              h(Card, { className: 'p-4 mt-3' }, betInput(cardBet, setCardBet, cardState === 'playing'))
             ),
 
+            // ===== CUPS =====
             activeTab === 'cups' && h('div', { className: 'mt-4' },
               h(Card, { className: 'p-6 text-center' },
                 h('div', { className: 'text-4xl mb-2' }, '🥤'),
                 h('div', { className: 'text-[16px] font-black font-display mb-4' }, 'Find the Ball'),
-                
                 cupState === 'idle' 
                   ? h('div', null,
                       h('div', { className: 'text-6xl mb-4' }, '👀'),
@@ -641,47 +1119,37 @@
                   : h('div', null,
                       h('div', { className: 'text-[11px] text-white/40 uppercase tracking-widest mb-4' }, 
                         cupState === 'picking' ? 'Pick the cup with the ball' : 
-                        cupState === 'revealing' ? 'Revealing...' : 
-                        'Result'
+                        cupState === 'revealing' ? 'Revealing...' : 'Result'
                       ),
-                      
                       h('div', { className: 'flex justify-center gap-4 mb-6' },
                         [0, 1, 2].map(i => 
-                          h('div', { 
-                            key: i, 
-                            onClick: () => pickCup(i),
-                            className: 'relative w-16 h-20 flex flex-col items-center justify-end' 
-                          },
+                          h('div', { key: i, onClick: () => pickCup(i), className: 'relative w-16 h-20 flex flex-col items-center justify-end' },
                             (cupState === 'result' || cupState === 'revealing') && i === winningCup && 
                               h('div', { className: 'absolute top-0 text-2xl animate-bounce' }, '⚽'),
-                            
-                            h('div', { 
-                              className: 'cup w-14 h-16 bg-gradient-to-b from-gray-600 to-gray-800 rounded-t-lg border border-gray-500 shadow-lg z-10 flex items-center justify-center text-2xl ' + 
-                                (pickedCup === i && (cupState === 'revealing' || cupState === 'result') ? 'cup-lifted' : '') 
-                            }, '🥤')
+                            h('div', { className: 'cup w-14 h-16 bg-gradient-to-b from-gray-600 to-gray-800 rounded-t-lg border border-gray-500 shadow-lg z-10 flex items-center justify-center text-2xl ' + (pickedCup === i && (cupState === 'revealing' || cupState === 'result') ? 'cup-lifted' : '') }, '🥤')
                           )
                         )
                       ),
-
                       cupState === 'result' && h('button', { onClick: () => setCupState('idle'), className: 'px-8 py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 font-bold text-xs' }, 'Play Again'),
                       cupState === 'picking' && h('div', { className: 'text-[11px] text-[#FFD60A] font-bold animate-pulse' }, 'Choose wisely...')
                     )
               ),
-              h(Card, { className: 'p-4 mt-3' },
-                h('div', { className: 'flex justify-between items-end mb-2' },
-                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Bet Amount'),
-                  h('div', { className: 'text-[10px] text-white/40 tabular-nums' }, 'Bal: ' + fmt(s.cash))
-                ),
-                h('input', {
-                  type: 'number', value: cupBet, onChange: (e) => setCupBet(Math.floor(Number(e.target.value))),
-                  disabled: cupState !== 'idle',
-                  className: 'w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[18px] font-black text-white focus:border-[#FFD60A]/50 transition tabular-nums disabled:opacity-50'
-                }),
-                h('div', { className: 'flex gap-2 mt-2' },
-                  [10000, 100000, 1000000].map(amt => 
-                    h('button', { key: amt, onClick: () => setCupBet(amt), disabled: cupState !== 'idle', className: 'flex-1 py-1.5 rounded-lg bg-white/[0.06] text-[10px] font-bold text-white/60 active:bg-white/[0.1] transition' }, fmt(amt))
-                  )
-                )
+              h(Card, { className: 'p-4 mt-3' }, betInput(cupBet, setCupBet, cupState !== 'idle'))
+            ),
+
+            // Stats row
+            h('div', { className: 'grid grid-cols-3 gap-2 mt-4' },
+              h(Card, { className: 'p-2.5 text-center' },
+                h('div', { className: 'text-[9px] uppercase tracking-widest text-white/35 font-bold' }, 'Win Streak'),
+                h('div', { className: 'text-[15px] font-black text-[#FF6B00] tabular-nums mt-0.5' }, (s.winStreak || 0) + (s.winStreak >= 3 ? ' 🔥' : ''))
+              ),
+              h(Card, { className: 'p-2.5 text-center' },
+                h('div', { className: 'text-[9px] uppercase tracking-widest text-white/35 font-bold' }, 'Biggest Win'),
+                h('div', { className: 'text-[15px] font-black text-[#FFD60A] tabular-nums mt-0.5' }, fmt(s.biggestWin || 0))
+              ),
+              h(Card, { className: 'p-2.5 text-center' },
+                h('div', { className: 'text-[9px] uppercase tracking-widest text-white/35 font-bold' }, 'Balance'),
+                h('div', { className: 'text-[15px] font-black text-[#22C55E] tabular-nums mt-0.5' }, fmt(s.cash))
               )
             ),
 
@@ -698,7 +1166,7 @@
           h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
               NAV.map((n) => {
-                const active = n.id === 'more'; // Make it show on More as it's accessed from More
+                const active = n.id === 'more';
                 return h('a', {
                   key: n.id, href: n.href,
                   className: 'flex flex-col items-center gap-0.5 py-1.5 rounded-xl transition-all duration-150 ' + (active ? 'text-[#FFD60A] nav-active-pill' : 'text-white/35')
@@ -707,6 +1175,26 @@
                   h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
                 );
               })
+            )
+          ),
+
+          // ===== BIG WIN MODAL =====
+          bigWin && h('div', { className: 'fixed inset-0 z-[90] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setBigWin(null) }),
+            h('div', { className: 'relative w-full max-w-sm animate-popIn' },
+              h('div', { className: 'rounded-3xl bg-gradient-to-br from-[#FFE566] via-[#FFD60A] to-[#FFB800] p-1 shadow-[0_0_80px_-10px_rgba(255,214,10,0.8)]' },
+                h('div', { className: 'rounded-3xl bg-[#0a0a10] p-6 text-center' },
+                  h('div', { className: 'text-6xl mb-3 animate-bounce' }, '🎉'),
+                  h('div', { className: 'text-[16px] font-black tracking-widest text-[#FFD60A] font-display' }, bigWin.msg),
+                  h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mt-4' }, 'You just won'),
+                  h('div', { className: 'text-5xl font-black text-gradient-gold font-display tabular-nums my-2 drop-shadow-lg' }, fmt(bigWin.amount)),
+                  h('div', { className: 'text-[11px] text-white/60 mt-2' }, 'This one na proper blessing 🙏'),
+                  h('button', {
+                    onClick: () => setBigWin(null),
+                    className: 'w-full mt-5 py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[13px] active:scale-95 transition shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)]'
+                  }, '🔥 COLLECT AM!')
+                )
+              )
             )
           ),
 
