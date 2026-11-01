@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>VGC Lounge 🍾 — Lagos Life</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js'"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+      }},
+    };
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; height: 100%; }
+    body { background: radial-gradient(ellipse at top, rgba(255,214,10,0.12) 0%, transparent 50%), radial-gradient(ellipse at bottom right, rgba(239,68,68,0.08) 0%, transparent 50%), #08080B; }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+    .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+    @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes msgIn { from { transform: translateY(12px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+    @keyframes floatBottles { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-8px) rotate(6deg); } }
+    @keyframes confettiFall { 0% { transform: translateY(-20vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(105vh) rotate(720deg); opacity: 0; } }
+    @keyframes pulseBottle { 0%, 100% { box-shadow: 0 0 20px rgba(255,214,10,0.4); } 50% { box-shadow: 0 0 40px rgba(255,214,10,0.8); } }
+    .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-msgIn { animation: msgIn 0.3s ease-out; }
+    .animate-floatBottles { animation: floatBottles 3s ease-in-out infinite; }
+    .animate-pulseBottle { animation: pulseBottle 2s ease-in-out infinite; }
+    .confetti-piece { position: fixed; top: 0; width: 10px; height: 10px; border-radius: 2px; pointer-events: none; z-index: 9999; animation: confettiFall 2.5s linear forwards; }
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    input { -webkit-user-select: text; user-select: text; }
+    input:focus { outline: none; }
+    .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .bubble-mine { background: linear-gradient(135deg, #FFD60A 0%, #FFB800 100%); color: #000; }
+    .bubble-theirs { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); }
+    .bottle-card { background: linear-gradient(135deg, rgba(255,214,10,0.3), rgba(239,68,68,0.15)); border: 1px solid rgba(255,214,10,0.5); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { console.error('Unhandled rejection:', e.reason); });
+  </script>
+
+  <script>
+    const { useState, useEffect, useRef, useMemo } = React;
+    const h = React.createElement;
+
+    /* ========== FIREBASE ========== */
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    /* ========== CLOUDINARY ========== */
+    const CLOUDINARY_CLOUD = "dwc2sthsd";
+    const CLOUDINARY_PRESET = "Lagos_unsigned"; // if error, try lowercase "lagos_unsigned"
+
+    /* ========== CONSTANTS ========== */
+    const CHAT_LIMIT = 60;
+    const MSG_COOLDOWN_MS = 1500;
+    const PRESENCE_HEARTBEAT_MS = 25000;
+    const PRESENCE_ACTIVE_MS = 60000;
+    const MAX_IMG_MB = 8;
+    const MAX_TIPS_BATCH = 100;
+    const BOOST_DURATION_MS = 5 * 60 * 1000;
+
+    const BOTTLES = [
+      { id: 'star',     name: 'Star Lager',      emoji: '🍺', price: 10_000,    tip: 500 },
+      { id: 'hennessy', name: 'Hennessy VS',     emoji: '🥃', price: 50_000,    tip: 2_500 },
+      { id: 'moet',     name: 'Moët & Chandon',  emoji: '🍾', price: 100_000,   tip: 5_000 },
+      { id: 'dom',      name: 'Dom Pérignon',    emoji: '🍾', price: 250_000,   tip: 12_500 },
+      { id: 'cristal',  name: 'Cristal',         emoji: '💎', price: 500_000,   tip: 25_000 },
+      { id: 'ace',      name: 'Ace of Spades',   emoji: '👑', price: 1_000_000, tip: 50_000 },
+    ];
+
+    const QUICK_REACTIONS = ['🔥', '💯', '😂', '🍾', '💰', '😭', '🫡', '👑', '🎉', '💀'];
+
+    /* ========== HELPERS ========== */
+    const fmt = (n) => {
+      n = Math.floor(Number(n) || 0);
+      const s = n < 0 ? '-' : '';
+      n = Math.abs(n);
+      if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
+      if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return s + '₦' + (n / 1e3).toFixed(1) + 'K';
+      return s + '₦' + n.toLocaleString();
+    };
+
+    const timeAgo = (ts) => {
+      if (!ts) return 'now';
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      const sec = Math.floor((Date.now() - d.getTime()) / 1000);
+      if (sec < 10) return 'now';
+      if (sec < 60) return sec + 's';
+      if (sec < 3600) return Math.floor(sec / 60) + 'm';
+      if (sec < 86400) return Math.floor(sec / 3600) + 'h';
+      return Math.floor(sec / 86400) + 'd';
+    };
+
+    const initial = (name) => (name || 'H').trim().charAt(0).toUpperCase();
+
+    const colorFromName = (name) => {
+      const colors = ['#FFD60A', '#22C55E', '#3B82F6', '#A855F7', '#EF4444', '#EC4899', '#06B6D4', '#F59E0B'];
+      let hash = 0;
+      for (let i = 0; i < (name || '').length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+      return colors[Math.abs(hash) % colors.length];
+    };
+
+    const getCachedData = () => {
+      try {
+        const cached = localStorage.getItem("lagos_user_data");
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+      return {
+        name: localStorage.getItem("lagos_user_name") || 'Hustler',
+        cash: 25000, real: 0, clout: 0, energy: 100, bottlesBought: 0
+      };
+    };
+
+    /* ========== AUDIO ========== */
+    const AudioEngine = (() => {
+      let ctx = null; let enabled = true;
+      function init() { if (ctx) return; ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+      function tone(f, d, t, w=0, g=0.3) {
+        if (!ctx || !enabled) return;
+        const start = ctx.currentTime + w;
+        const o = ctx.createOscillator(), gain = ctx.createGain();
+        o.type = t; o.frequency.value = f;
+        gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(g, start+0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start+d);
+        o.connect(gain); gain.connect(ctx.destination); o.start(start); o.stop(start+d+0.05);
+      }
+      return {
+        tap: () => { init(); if(ctx.state==="suspended") ctx.resume(); tone(880, 0.09, "triangle", 0, 0.25); },
+        send: () => { init(); tone(1046, 0.06, "sine", 0, 0.15); },
+        receive: () => { init(); tone(660, 0.05, "sine", 0, 0.1); },
+        bottle: () => { init(); [523, 659, 783, 1046, 1318].forEach((f,i) => tone(f, 0.2, "triangle", i*0.08, 0.25)); },
+        error: () => { init(); tone(220, 0.15, "sawtooth", 0, 0.2); },
+        toggle: () => { enabled = !enabled; return enabled; },
+      };
+    })();
+
+    /* ========== IMAGE COMPRESSION + UPLOAD ========== */
+    const compressImage = (file, maxWidth = 1200, quality = 0.75) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let { width, height } = img;
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width; canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            canvas.toBlob((blob) => {
+              resolve(new File([blob], file.name || 'image.jpg', { type: 'image/jpeg' }));
+            }, 'image/jpeg', quality);
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    };
+
+    const uploadToCloudinary = async (file) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', CLOUDINARY_PRESET);
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+        method: 'POST', body: formData
+      });
+      const data = await res.json();
+      if (!data.secure_url) throw new Error(data.error?.message || 'Upload failed');
+      return data.secure_url;
+    };
+
+    /* ========== CONFETTI ========== */
+    const Confetti = ({ trigger }) => {
+      const [pieces, setPieces] = useState([]);
+      useEffect(() => {
+        if (!trigger) return;
+        const colors = ['#FFD60A','#FFB800','#22C55E','#EF4444','#3B82F6','#A855F7','#FF6B00'];
+        const arr = Array.from({ length: 60 }, (_, i) => ({
+          id: i + '-' + Date.now(),
+          left: Math.random() * 100,
+          delay: Math.random() * 0.4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          size: 6 + Math.random() * 10,
+        }));
+        setPieces(arr);
+        const t = setTimeout(() => setPieces([]), 3000);
+        return () => clearTimeout(t);
+      }, [trigger]);
+      if (pieces.length === 0) return null;
+      return h(React.Fragment, null,
+        pieces.map(p => h('div', {
+          key: p.id, className: 'confetti-piece',
+          style: { left: p.left + '%', backgroundColor: p.color, width: p.size + 'px', height: p.size + 'px', animationDelay: p.delay + 's' }
+        }))
+      );
+    };
+
+    /* ========== MAIN ========== */
+    function App() {
+      const [s, setS] = useState(getCachedData);
+      const [uid, setUid] = useState(null);
+      const [messages, setMessages] = useState([]);
+      const [onlineUsers, setOnlineUsers] = useState([]);
+      const [text, setText] = useState('');
+      const [sending, setSending] = useState(false);
+      const [uploading, setUploading] = useState(false);
+      const [bottlePickerOpen, setBottlePickerOpen] = useState(false);
+      const [celebration, setCelebration] = useState(null);
+      const [confettiTrigger, setConfettiTrigger] = useState(0);
+      const [zoomImage, setZoomImage] = useState(null);
+      const [toast, setToast] = useState(null);
+      const [nowTick, setNowTick] = useState(Date.now());
+
+      const chatScrollRef = useRef(null);
+      const fileInputRef = useRef(null);
+      const lastMessageAt = useRef(0);
+      const lastBottleShownRef = useRef(null);
+      const firstMessageLoadRef = useRef(true);
+
+      /* tick for time-based UI */
+      useEffect(() => {
+        const iv = setInterval(() => setNowTick(Date.now()), 1000);
+        return () => clearInterval(iv);
+      }, []);
+
+      /* auth + user doc */
+      useEffect(() => {
+        let userUnsub = null;
+        const authUnsub = auth.onAuthStateChanged((user) => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          if (userUnsub) userUnsub();
+          setUid(user.uid);
+          userUnsub = db.collection("users").doc(user.uid).onSnapshot((doc) => {
+            if (doc.exists) {
+              setS(prev => {
+                const d = doc.data();
+                const merged = Object.assign({}, prev, d, {
+                  name: d.name || prev.name,
+                  cash: d.cash || 0,
+                  bottlesBought: d.bottlesBought || 0,
+                });
+                try { localStorage.setItem("lagos_user_data", JSON.stringify(merged)); } catch(e) {}
+                return merged;
+              });
+            }
+          }, (e) => console.error(e));
+        });
+        return () => { authUnsub(); if (userUnsub) userUnsub(); };
+      }, []);
+
+      /* presence heartbeat */
+      useEffect(() => {
+        if (!uid || !s?.name) return;
+        const hb = () => {
+          db.collection("lounge_presence").doc(uid).set({
+            name: s.name, lastHeartbeat: Date.now()
+          }, { merge: true }).catch(() => {});
+        };
+        hb();
+        const iv = setInterval(hb, PRESENCE_HEARTBEAT_MS);
+        return () => clearInterval(iv);
+      }, [uid, s?.name]);
+
+      /* online users */
+      useEffect(() => {
+        const unsub = db.collection("lounge_presence").onSnapshot(snap => {
+          const now = Date.now();
+          const active = [];
+          snap.forEach(doc => {
+            const d = doc.data();
+            if (d.lastHeartbeat && (now - d.lastHeartbeat) < PRESENCE_ACTIVE_MS) {
+              active.push({ id: doc.id, name: d.name || 'Anonymous' });
+            }
+          });
+          setOnlineUsers(active);
+        }, () => {});
+        return () => unsub();
+      }, []);
+
+      /* messages */
+      useEffect(() => {
+        const unsub = db.collection("vip_chat")
+          .orderBy("createdAt", "desc")
+          .limit(CHAT_LIMIT)
+          .onSnapshot(snap => {
+            const list = [];
+            snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+            list.reverse();
+            setMessages(list);
+          }, (e) => console.error('chat error', e));
+        return () => unsub();
+      }, []);
+
+      /* auto scroll */
+      useEffect(() => {
+        if (chatScrollRef.current) {
+          chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+        }
+      }, [messages.length]);
+
+      /* bottle celebration for others' bottles */
+      useEffect(() => {
+        if (messages.length === 0) return;
+        const latest = [...messages].reverse().find(m => m.type === 'bottle');
+        if (!latest) return;
+
+        if (firstMessageLoadRef.current) {
+          firstMessageLoadRef.current = false;
+          lastBottleShownRef.current = latest.id;
+          return;
+        }
+        if (latest.id === lastBottleShownRef.current) return;
+        lastBottleShownRef.current = latest.id;
+        if (latest.userId === uid) return; // mine, already celebrated locally
+
+        const ts = latest.createdAt?.toMillis?.() || 0;
+        if (Date.now() - ts > 30000) return;
+
+        setCelebration({
+          buyer: latest.name,
+          bottle: { emoji: latest.bottleEmoji, name: latest.bottleName },
+          tip: latest.tipAmount || 0,
+          isMine: false
+        });
+        AudioEngine.bottle();
+        setConfettiTrigger(t => t + 1);
+        setTimeout(() => setCelebration(null), 4500);
+      }, [messages, uid]);
+
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2600);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      /* ========== ACTIONS ========== */
+      const sendMessage = async (payload) => {
+        if (Date.now() - lastMessageAt.current < MSG_COOLDOWN_MS) {
+          notify('Slow down ⏱️', 'bad');
+          return false;
+        }
+        lastMessageAt.current = Date.now();
+        try {
+          await db.collection("vip_chat").add({
+            userId: uid,
+            name: s.name || 'Hustler',
+            ...payload,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          return true;
+        } catch (e) {
+          notify('Send failed', 'bad');
+          return false;
+        }
+      };
+
+      const handleSendText = async () => {
+        const trimmed = text.trim();
+        if (!trimmed) return;
+        setSending(true);
+        const ok = await sendMessage({ type: 'text', text: trimmed.slice(0, 500) });
+        if (ok) { setText(''); AudioEngine.send(); }
+        setSending(false);
+      };
+
+      const handleImagePick = () => {
+        if (uploading) return;
+        fileInputRef.current?.click();
+      };
+
+      const handleImageFile = async (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        if (!file.type.startsWith('image/')) return notify('Only images 📸', 'bad');
+        if (file.size > MAX_IMG_MB * 1024 * 1024) return notify('Max ' + MAX_IMG_MB + 'MB 📸', 'bad');
+
+        setUploading(true);
+        try {
+          const compressed = await compressImage(file);
+          const url = await uploadToCloudinary(compressed);
+          const ok = await sendMessage({ type: 'image', imageUrl: url });
+          if (ok) { AudioEngine.send(); notify('Image posted! 📸'); }
+        } catch (err) {
+          notify('Upload failed: ' + err.message, 'bad');
+        }
+        setUploading(false);
+      };
+
+      const quickReact = async (emoji) => {
+        const ok = await sendMessage({ type: 'text', text: emoji });
+        if (ok) AudioEngine.send();
+      };
+
+      const buyBottle = async (bottle) => {
+        if ((s.cash || 0) < bottle.price) {
+          AudioEngine.error();
+          return notify('You need ' + fmt(bottle.price) + ' 💸', 'bad');
+        }
+        if (!uid) return;
+        setBottlePickerOpen(false);
+
+        try {
+          // active users (excluding me), capped for batch safety
+          const activeIds = onlineUsers
+            .filter(u => u.id !== uid)
+            .slice(0, MAX_TIPS_BATCH)
+            .map(u => u.id);
+
+          const batch = db.batch();
+
+          // buyer payment + reward
+          batch.update(db.collection("users").doc(uid), {
+            cash: firebase.firestore.FieldValue.increment(-bottle.price),
+            bottlesBought: firebase.firestore.FieldValue.increment(1),
+            clout: firebase.firestore.FieldValue.increment(50)
+          });
+
+          // tips to everyone online
+          activeIds.forEach(id => {
+            batch.update(db.collection("users").doc(id), {
+              cash: firebase.firestore.FieldValue.increment(bottle.tip)
+            });
+          });
+
+          // chat message
+          const msgRef = db.collection("vip_chat").doc();
+          batch.set(msgRef, {
+            userId: uid,
+            name: s.name || 'Hustler',
+            type: 'bottle',
+            bottleName: bottle.name,
+            bottleEmoji: bottle.emoji,
+            bottlePrice: bottle.price,
+            tipAmount: bottle.tip,
+            text: 'just oppression-funded ' + bottle.emoji + ' ' + bottle.name + ' for everybody here! 🥂',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+
+          await batch.commit();
+
+          // local celebration
+          setCelebration({
+            buyer: s.name || 'You',
+            bottle: bottle,
+            tip: bottle.tip,
+            isMine: true,
+            tipped: activeIds.length
+          });
+          lastBottleShownRef.current = msgRef.id;
+          AudioEngine.bottle();
+          setConfettiTrigger(t => t + 1);
+          setTimeout(() => setCelebration(null), 5000);
+          notify('🍾 Legend! You blessed ' + activeIds.length + ' people');
+        } catch (e) {
+          notify('Failed: ' + e.message, 'bad');
+          AudioEngine.error();
+        }
+      };
+
+      /* derived */
+      const latestBottle = useMemo(() => [...messages].reverse().find(m => m.type === 'bottle'), [messages]);
+      const boostRemaining = latestBottle
+        ? Math.max(0, BOOST_DURATION_MS - (nowTick - (latestBottle.createdAt?.toMillis?.() || nowTick)))
+        : 0;
+
+      return h('div', { className: 'h-screen flex flex-col max-w-md mx-auto relative' },
+        h(Confetti, { trigger: confettiTrigger }),
+
+        /* HEADER */
+        h('header', { className: 'flex-shrink-0 px-3 py-2.5 border-b border-white/[0.08] bg-black/50 backdrop-blur-xl' },
+          h('div', { className: 'flex items-center justify-between gap-2' },
+            h('a', {
+              href: 'more.html',
+              className: 'w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 grid place-items-center active:scale-90 transition text-lg'
+            }, '←'),
+            h('div', { className: 'flex-1 min-w-0 text-center' },
+              h('div', { className: 'text-[13px] font-black font-display leading-tight',
+                style: { background: 'linear-gradient(135deg, #FFE566, #FFD60A, #FFB800)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } }, 'VGC Lounge 🍾'),
+              h('div', { className: 'text-[9px] text-white/40 flex items-center justify-center gap-1 mt-0.5' },
+                h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#22C55E] glow-dot animate-pulse' }),
+                onlineUsers.length + ' in the lounge'
+              )
+            ),
+            h('div', { className: 'text-[10px] font-black text-[#FFD60A] tabular-nums px-2 py-1 rounded-lg bg-[#FFD60A]/10 border border-[#FFD60A]/30' }, fmt(s.cash))
+          ),
+
+          /* online avatars */
+          onlineUsers.length > 0 && h('div', { className: 'mt-2 flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5' },
+            onlineUsers.slice(0, 15).map(u =>
+              h('div', { key: u.id, className: 'shrink-0 flex flex-col items-center gap-0.5 w-10' },
+                h('div', { className: 'w-8 h-8 rounded-full grid place-items-center text-[11px] font-black text-black border-2 border-[#22C55E]/40 relative', style: { background: colorFromName(u.name) } },
+                  initial(u.name),
+                  h('span', { className: 'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#22C55E] border-2 border-black' })
+                ),
+                h('div', { className: 'text-[7px] text-white/50 truncate w-full text-center' }, (u.name || '').split(' ')[0])
+              )
+            )
+          )
+        ),
+
+        /* BOOST BANNER */
+        boostRemaining > 0 && latestBottle && h('div', { className: 'flex-shrink-0 mx-3 mt-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#FFD60A]/25 to-[#FFB800]/10 border border-[#FFD60A]/40 flex items-center justify-between' },
+          h('div', { className: 'flex items-center gap-1.5' },
+            h('span', { className: 'text-sm' }, '⚡'),
+            h('div', { className: 'text-[10px] font-black text-[#FFD60A]' }, latestBottle.name + "'s bottle boost!")
+          ),
+          h('div', { className: 'text-[10px] font-black text-white/70 tabular-nums' },
+            Math.floor(boostRemaining / 60000) + 'm ' + Math.floor((boostRemaining % 60000) / 1000) + 's')
+        ),
+
+        /* MESSAGES */
+        h('div', { ref: chatScrollRef, className: 'flex-1 overflow-y-auto px-3 py-3 space-y-2.5' },
+          messages.length === 0 && h('div', { className: 'flex flex-col items-center justify-center h-full text-center px-6' },
+            h('div', { className: 'text-6xl mb-3 animate-floatBottles' }, '🍾'),
+            h('div', { className: 'text-[14px] font-black text-white/80' }, 'Welcome to VGC Lounge!'),
+            h('div', { className: 'text-[11px] text-white/40 mt-1 max-w-xs' }, 'Nobody has said anything yet. Break the ice — send a message or buy a bottle to get the party started 🔥')
+          ),
+
+          messages.map((m) => {
+            const isMine = m.userId === uid;
+
+            if (m.type === 'bottle') {
+              return h('div', { key: m.id, className: 'animate-msgIn flex justify-center py-1' },
+                h('div', { className: 'bottle-card rounded-2xl px-4 py-3 max-w-[92%] text-center shadow-[0_8px_24px_-8px_rgba(255,214,10,0.5)]' },
+                  h('div', { className: 'text-3xl mb-1' }, m.bottleEmoji || '🍾'),
+                  h('div', { className: 'text-[11px] uppercase tracking-widest font-black text-[#FFD60A]' }, 'BOTTLE ALERT'),
+                  h('div', { className: 'text-[12px] font-black text-white mt-1' }, m.name + ' ' + (m.text || '')),
+                  h('div', { className: 'text-[9px] text-white/50 mt-1 tabular-nums' },
+                    'Everyone got ₦' + (m.tipAmount || 0).toLocaleString() + ' tip! · ' + timeAgo(m.createdAt))
+                )
+              );
+            }
+
+            return h('div', { key: m.id, className: 'animate-msgIn flex ' + (isMine ? 'justify-end' : 'justify-start') },
+              h('div', { className: 'flex gap-2 max-w-[80%] ' + (isMine ? 'flex-row-reverse' : '') },
+                !isMine && h('div', { className: 'w-7 h-7 rounded-full shrink-0 grid place-items-center text-[10px] font-black text-black mt-1', style: { background: colorFromName(m.name) } }, initial(m.name)),
+                h('div', { className: 'flex flex-col gap-0.5 ' + (isMine ? 'items-end' : 'items-start') },
+                  !isMine && h('div', { className: 'text-[9px] font-bold text-white/50 px-1' }, m.name),
+                  h('div', { className: 'rounded-2xl px-3 py-2 text-[12px] leading-relaxed ' + (isMine ? 'bubble-mine rounded-tr-sm' : 'bubble-theirs rounded-tl-sm') },
+                    m.type === 'image' && m.imageUrl
+                      ? h('img', { src: m.imageUrl, alt: 'chat', loading: 'lazy', onClick: () => setZoomImage(m.imageUrl), className: 'rounded-lg max-w-[200px] max-h-[240px] object-cover cursor-pointer block' })
+                      : h('div', { className: 'whitespace-pre-wrap break-words' }, m.text || '')
+                  ),
+                  h('div', { className: 'text-[8px] text-white/30 px-1 tabular-nums' }, timeAgo(m.createdAt))
+                )
+              )
+            );
+          })
+        ),
+
+        /* QUICK REACTIONS */
+        h('div', { className: 'flex-shrink-0 px-2 py-1.5 border-t border-white/[0.06] bg-black/30 flex gap-1 overflow-x-auto no-scrollbar' },
+          QUICK_REACTIONS.map(emoji =>
+            h('button', {
+              key: emoji,
+              onClick: () => quickReact(emoji),
+              className: 'shrink-0 w-9 h-9 rounded-full bg-white/[0.06] border border-white/10 flex items-center justify-center text-base active:scale-90 transition'
+            }, emoji)
+          )
+        ),
+
+        /* BOTTLE CTA + INPUT */
+        h('div', { className: 'flex-shrink-0 px-3 py-2 border-t border-white/[0.08] bg-[#0a0a12]' },
+          h('button', {
+            onClick: () => setBottlePickerOpen(true),
+            className: 'w-full mb-2 py-2.5 rounded-xl bg-gradient-to-r from-[#FFE566] to-[#FFB800] text-black font-black text-[11px] active:scale-95 transition shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] animate-pulseBottle'
+          }, '🍾 BUY BOTTLE FOR EVERYONE'),
+          h('div', { className: 'flex gap-1.5' },
+            h('button', {
+              onClick: handleImagePick,
+              disabled: uploading,
+              className: 'w-11 h-11 rounded-xl bg-white/[0.06] border border-white/10 grid place-items-center active:scale-90 transition text-lg disabled:opacity-50'
+            }, uploading ? '⏳' : '📸'),
+            h('input', {
+              type: 'text',
+              value: text,
+              onChange: e => setText(e.target.value),
+              onKeyDown: e => { if (e.key === 'Enter') handleSendText(); },
+              placeholder: 'Send message...',
+              maxLength: 500,
+              disabled: sending,
+              className: 'flex-1 rounded-xl bg-white/[0.06] border border-white/10 px-3 py-2.5 text-[13px] text-white placeholder-white/30 focus:border-[#FFD60A]/50 transition disabled:opacity-50'
+            }),
+            h('button', {
+              onClick: handleSendText,
+              disabled: sending || !text.trim(),
+              className: 'w-11 h-11 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] text-black font-black grid place-items-center active:scale-90 transition disabled:opacity-40 text-lg'
+            }, '➤')
+          )
+        ),
+
+        /* HIDDEN FILE INPUT */
+        h('input', {
+          ref: fileInputRef, type: 'file', accept: 'image/*',
+          onChange: handleImageFile, style: { display: 'none' }
+        }),
+
+        /* BOTTLE PICKER */
+        bottlePickerOpen && h('div', { className: 'fixed inset-0 z-[300] grid place-items-center p-5' },
+          h('div', { className: 'absolute inset-0 bg-black/92 backdrop-blur-md', onClick: () => setBottlePickerOpen(false) }),
+          h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.5)] animate-popIn max-h-[85vh] overflow-y-auto' },
+            h('div', { className: 'text-center mb-4' },
+              h('div', { className: 'text-4xl mb-1' }, '🍾'),
+              h('div', { className: 'text-[15px] font-black tracking-widest text-[#FFD60A] font-display' }, 'BUY A BOTTLE'),
+              h('div', { className: 'text-[10px] text-white/50 mt-1' }, 'Everyone online gets a tip instantly 🤑')
+            ),
+            h('div', { className: 'space-y-2' },
+              BOTTLES.map(b =>
+                h('button', {
+                  key: b.id,
+                  onClick: () => buyBottle(b),
+                  disabled: (s.cash || 0) < b.price,
+                  className: 'w-full rounded-xl bg-white/[0.04] border border-white/10 p-3 flex items-center gap-3 active:scale-[0.98] transition disabled:opacity-40 hover:bg-white/[0.08]'
+                },
+                  h('div', { className: 'text-3xl' }, b.emoji),
+                  h('div', { className: 'flex-1 text-left' },
+                    h('div', { className: 'text-[13px] font-black text-white' }, b.name),
+                    h('div', { className: 'text-[10px] text-[#22C55E] font-bold tabular-nums' }, 'Tips: ₦' + b.tip.toLocaleString() + ' each')
+                  ),
+                  h('div', { className: 'text-[13px] font-black text-[#FFD60A] tabular-nums' }, fmt(b.price))
+                )
+              )
+            ),
+            h('button', {
+              onClick: () => setBottlePickerOpen(false),
+              className: 'w-full mt-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-[11px] font-bold text-white/60 active:scale-95'
+            }, 'Cancel')
+          )
+        ),
+
+        /* CELEBRATION */
+        celebration && h('div', {
+          className: 'fixed inset-0 z-[250] grid place-items-center p-6',
+          onClick: () => setCelebration(null)
+        },
+          h('div', { className: 'absolute inset-0 bg-gradient-to-b from-[#FFD60A]/40 via-black/70 to-[#FFB800]/30 animate-popIn' }),
+          h('div', { className: 'relative w-full max-w-sm text-center animate-popIn pointer-events-none' },
+            h('div', { className: 'text-7xl mb-2 animate-floatBottles' }, celebration.bottle.emoji),
+            h('div', { className: 'text-[11px] uppercase tracking-widest font-black text-[#FFD60A] drop-shadow-lg' },
+              celebration.isMine ? 'YOU JUST BLESSED THE LOUNGE!' : 'SOMEONE JUST BOUGHT A BOTTLE!'),
+            h('div', { className: 'text-3xl font-black text-white mt-2 font-display drop-shadow-xl' }, celebration.buyer),
+            h('div', { className: 'text-[18px] font-black text-[#FFD60A] mt-1 drop-shadow-lg' }, celebration.bottle.name),
+            celebration.isMine
+              ? h('div', { className: 'text-[12px] text-white/80 mt-2 font-bold' }, '👑 You tipped ' + celebration.tipped + ' people ₦' + celebration.tip.toLocaleString() + ' each!')
+              : h('div', { className: 'text-[12px] text-white/80 mt-2 font-bold' }, '💰 You got ₦' + celebration.tip.toLocaleString() + ' tip!')
+          )
+        ),
+
+        /* IMAGE ZOOM */
+        zoomImage && h('div', { className: 'fixed inset-0 z-[280] grid place-items-center p-4 bg-black/95', onClick: () => setZoomImage(null) },
+          h('img', { src: zoomImage, alt: 'zoomed', className: 'max-w-full max-h-full rounded-2xl object-contain animate-popIn' }),
+          h('button', { onClick: () => setZoomImage(null), className: 'absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 border border-white/20 text-white text-xl grid place-items-center' }, '×')
+        ),
+
+        /* TOAST */
+        toast && h('div', {
+          className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[400] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
+            (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')
+        }, toast.msg)
+      );
+    }
+
+    /* ========== ERROR BOUNDARY ========== */
+    class ErrorBoundary extends React.Component {
+      constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+      static getDerivedStateFromError(error) { return { hasError: true, error }; }
+      componentDidCatch(error, info) { console.error('EB:', error, info); }
+      render() {
+        if (this.state.hasError) {
+          return h('div', { style: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', padding: '24px', textAlign: 'center', background: '#08080B', color: '#F87171', fontFamily: 'monospace', fontSize: '12px' } },
+            h('div', { style: { fontSize: '32px' } }, '⚠️'),
+            h('div', { style: { fontWeight: 'bold' } }, 'Something went wrong'),
+            h('div', { style: { opacity: 0.6, wordBreak: 'break-word' } }, String(this.state.error?.message || 'Unknown')),
+            h('button', { style: { marginTop: '12px', padding: '8px 16px', background: '#FFD60A', color: '#000', borderRadius: '8px', fontWeight: 'bold' }, onClick: () => window.location.reload() }, 'Reload')
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(ErrorBoundary, null, h(App)));
+  </script>
+</body>
+</html>
