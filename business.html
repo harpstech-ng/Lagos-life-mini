@@ -98,6 +98,7 @@
     const CATEGORIES = ["All", "Street", "Small", "Mid", "High", "Cartel"];
 
     const BUSINESSES = [
+      // Street
       { id: 'water',  name: 'Pure Water Stand', emoji: '💧', price: 10_000, perHr: 2_000, cat: 'Street', desc: 'Cold pure water for the whole street.' },
       { id: 'mai_shai', name: 'Mai Shai', emoji: '☕', price: 50_000, perHr: 8_000, cat: 'Street', desc: 'Tea and bread for the early morning hustlers.' },
       { id: 'corn',   name: 'Roasted Corn', emoji: '🌽', price: 100_000, perHr: 15_000, cat: 'Street', desc: 'With coconut and pear. Sweet!' },
@@ -108,6 +109,11 @@
       { id: 'keke',   name: 'Keke Napep', emoji: '🛺', price: 500_000, perHr: 75_000, cat: 'Street', desc: 'The king of short distances.' },
       { id: 'okada',  name: 'Okada Rider', emoji: '🏍️', price: 300_000, perHr: 50_000, cat: 'Street', desc: 'Beat the traffic sharp sharp.' },
       { id: 'umbrella', name: 'Umbrella Seller', emoji: '☂️', price: 20_000, perHr: 5_000, cat: 'Street', desc: 'Rain or shine, money must be made.' },
+      { id: 'gala', name: 'Gala Hawker', emoji: '🌭', price: 30_000, perHr: 5_000, cat: 'Street', desc: 'Gala and La Casera for the road.' },
+      { id: 'alomo', name: 'Alomo Joint', emoji: '🍶', price: 150_000, perHr: 20_000, cat: 'Street', desc: 'Bitters for the elders.' },
+      { id: 'newspaper', name: 'Newspaper Vendor', emoji: '📰', price: 10_000, perHr: 2_500, cat: 'Street', desc: 'Guardian, Punch, and Vanguard.' },
+
+      // Small
       { id: 'phone_acc', name: 'Phone Accessories', emoji: '📱', price: 2_000_000, perHr: 350_000, cat: 'Small', desc: 'Chargers, cases and screen protectors.' },
       { id: 'barber', name: 'Barber Shop', emoji: '💈', price: 1_500_000, perHr: 250_000, cat: 'Small', desc: 'Sharp haircuts for the guys.' },
       { id: 'salon',  name: 'Hair Salon', emoji: '💇🏾‍♀️', price: 3_000_000, perHr: 500_000, cat: 'Small', desc: 'Braids, weaves and styling for the ladies.' },
@@ -118,6 +124,13 @@
       { id: 'wash',   name: 'Car Wash', emoji: '🧼', price: 8_000_000, perHr: 1_500_000, cat: 'Small', desc: 'Make your car clean for the road.' },
       { id: 'pos',    name: 'POS Stand', emoji: '💳', price: 4_000_000, perHr: 700_000, cat: 'Small', desc: 'Withdraw money, transfer money.' },
       { id: 'eggs',   name: 'Egg Seller', emoji: '🥚', price: 600_000, perHr: 100_000, cat: 'Small', desc: 'Crates of eggs for the neighborhood.' },
+      { id: 'water_truck', name: 'Water Tanker', emoji: '🚛', price: 3_000_000, perHr: 450_000, cat: 'Small', desc: 'Supply water to the mansions.' },
+      { id: 'okrika', name: 'Okrika Bale', emoji: '👚', price: 500_000, perHr: 80_000, cat: 'Small', desc: 'Bend down and select.' },
+      { id: 'phone_repair', name: 'Phone Repair Kiosk', emoji: '🔧', price: 1_000_000, perHr: 180_000, cat: 'Small', desc: 'Fixing cracked screens.' },
+      { id: 'keke_mech', name: 'Keke Mechanic', emoji: '⚙️', price: 700_000, perHr: 120_000, cat: 'Small', desc: 'Fixing tricycles.' },
+      { id: 'photocopy', name: 'Photocopy Shop', emoji: '📄', price: 400_000, perHr: 60_000, cat: 'Small', desc: 'Jamb forms and ID cards.' },
+
+      // Mid
       { id: 'bet9ja', name: 'Bet9ja Shop', emoji: '🎰', price: 50_000_000, perHr: 9_000_000, cat: 'Mid', desc: 'Where people come to lose money.' },
       { id: 'cyber',  name: 'Cyber Cafe', emoji: '💻', price: 15_000_000, perHr: 2_500_000, cat: 'Mid', desc: 'Printing, typing and jamb forms.' },
       { id: 'fastfood', name: 'Fast Food Joint', emoji: '🍔', price: 30_000_000, perHr: 5_000_000, cat: 'Mid', desc: 'Chicken and chips for the workers.' },
@@ -128,6 +141,12 @@
       { id: 'event',  name: 'Event Center', emoji: '🎪', price: 150_000_000, perHr: 25_000_000, cat: 'Mid', desc: 'Weddings, birthdays and conferences.' },
       { id: 'hotel',  name: 'Small Hotel', emoji: '🏨', price: 300_000_000, perHr: 50_000_000, cat: 'Mid', desc: 'Short time, long time.' },
       { id: 'blocks', name: 'Block Industry', emoji: '🧱', price: 200_000_000, perHr: 35_000_000, cat: 'Mid', desc: 'Blocks for the builders.' },
+      { id: 'cassava', name: 'Cassava Farm', emoji: '🌾', price: 10_000_000, perHr: 1_800_000, cat: 'Mid', desc: 'Garri production.' },
+      { id: 'poultry', name: 'Poultry Farm', emoji: '🐔', price: 15_000_000, perHr: 2_500_000, cat: 'Mid', desc: 'Eggs and chicken.' },
+      { id: 'video_rental', name: 'Video Rental', emoji: '📼', price: 5_000_000, perHr: 800_000, cat: 'Mid', desc: 'Old Nollywood movies.' },
+      { id: 'e_learning', name: 'E-Learning Center', emoji: '🖥️', price: 30_000_000, perHr: 5_000_000, cat: 'Mid', desc: 'Coding classes for kids.' },
+
+      // High
       { id: 'lounge', name: 'Lekki Lounge', emoji: '🍾', price: 500_000_000, perHr: 90_000_000, cat: 'High', desc: 'Shisha and champagne for the big boys.' },
       { id: 'club',   name: 'Night Club', emoji: '🎧', price: 1_000_000_000, perHr: 180_000_000, cat: 'High', desc: 'DJ, dancers and plenty dollars.' },
       { id: 'car_deal', name: 'Car Dealership', emoji: '🚘', price: 2_500_000_000, perHr: 450_000_000, cat: 'High', desc: 'Brand new and tokunbo cars.' },
@@ -138,6 +157,11 @@
       { id: 'supermarket', name: 'Supermarket', emoji: '🛒', price: 1_200_000_000, perHr: 220_000_000, cat: 'High', desc: 'Where the elites shop.' },
       { id: 'printing', name: 'Printing Press', emoji: '🖨️', price: 800_000_000, perHr: 150_000_000, cat: 'High', desc: 'Printing millions for companies.' },
       { id: 'tech',   name: 'Tech Startup', emoji: '🚀', price: 8_000_000_000, perHr: 1_500_000_000, cat: 'High', desc: 'Pitch to investors and raise funds.' },
+      { id: 'movie_studio', name: 'Movie Studio', emoji: '🎬', price: 2_000_000_000, perHr: 350_000_000, cat: 'High', desc: 'Producing blockbuster Nollywood films.' },
+      { id: 'car_assembly', name: 'Car Assembly', emoji: '🏭', price: 4_000_000_000, perHr: 650_000_000, cat: 'High', desc: 'Building cars locally.' },
+      { id: 'microfinance', name: 'Microfinance Bank', emoji: '🏦', price: 1_000_000_000, perHr: 200_000_000, cat: 'High', desc: 'Loans with high interest.' },
+
+      // Cartel
       { id: 'oil',    name: 'Oil & Gas Bloc', emoji: '🛢️', price: 50_000_000_000, perHr: 10_000_000_000, cat: 'Cartel', desc: 'Crude oil money. The real deal.' },
       { id: 'jet',    name: 'Private Jet Charter', emoji: '✈️', price: 150_000_000_000, perHr: 30_000_000_000, cat: 'Cartel', desc: 'Fly the politicians around.' },
       { id: 'yacht',  name: 'Yacht Club', emoji: '🛥️', price: 80_000_000_000, perHr: 15_000_000_000, cat: 'Cartel', desc: 'Party on the water.' },
@@ -148,9 +172,24 @@
       { id: 'security', name: 'Private Security', emoji: '🛡️', price: 300_000_000_000, perHr: 60_000_000_000, cat: 'Cartel', desc: 'Guard the billionaires.' },
       { id: 'construction', name: 'Construction Giant', emoji: '🏗️', price: 800_000_000_000, perHr: 150_000_000_000, cat: 'Cartel', desc: 'Build roads and bridges.' },
       { id: 'political', name: 'Political Party', emoji: '🎩', price: 5_000_000_000_000, perHr: 1_000_000_000_000, cat: 'Cartel', desc: 'The ultimate cartel. (No violence o)' },
+      { id: 'bullion_van', name: 'Bullion Van', emoji: '🚐', price: 100_000_000_000, perHr: 18_000_000_000, cat: 'Cartel', desc: 'Moving money for banks.' },
+      { id: 'data_center', name: 'Data Center', emoji: '☁️', price: 300_000_000_000, perHr: 50_000_000_000, cat: 'Cartel', desc: 'Hosting the internet.' },
+      { id: 'crypto_ex', name: 'Crypto Exchange', emoji: '🪙', price: 500_000_000_000, perHr: 90_000_000_000, cat: 'Cartel', desc: 'Buying and selling coins.' },
+      { id: 'railway', name: 'Railway Line', emoji: '🚆', price: 800_000_000_000, perHr: 120_000_000_000, cat: 'Cartel', desc: 'Connecting the cities.' },
+      { id: 'private_island', name: 'Private Island', emoji: '🏝️', price: 2_000_000_000_000, perHr: 350_000_000_000, cat: 'Cartel', desc: 'A whole island to yourself.' },
     ];
 
-    const ASSET_PRICES = { chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000, gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000, mansion: 1_000_000_000_000 };
+    // ✅ Full list from market.html so net worth calculates correctly
+    const ASSET_PRICES = { 
+      af1: 150_000, shades: 500_000, chain: 5_000_000, iphone: 2_500_000, 
+      grillz: 10_000_000, rolex: 50_000_000, honda: 15_000_000, camry: 25_000_000, 
+      tesla: 500_000_000, gwag: 5_000_000_000, rr: 15_000_000_000, lambo: 50_000_000_000, 
+      lekki_flat: 100_000_000, ikeja_duplex: 300_000_000, ikoyi_penthouse: 1_500_000_000, 
+      yacht: 20_000_000_000, mansion: 1_000_000_000_000, bodyguard: 150_000_000, 
+      chef: 50_000_000, plate: 200_000_000, jet: 100_000_000_000, 
+      helicopter: 300_000_000_000, island: 2_000_000_000_000, 
+      football: 5_000_000_000_000, crypto: 10_000_000_000_000 
+    };
 
     const BUSINESS_FEED = [
       "Your Suya Spot just sold 200 sticks to a drunk guy 🍢",
@@ -178,7 +217,7 @@
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-        transactions: [], lastCollected: Date.now()
+        transactions: [], history: [], lastCollected: Date.now()
       };
     };
 
@@ -255,6 +294,9 @@
       const [feedMsg, setFeedMsg] = useState("Welcome to your business empire! Buy a business to start making passive income.");
       const [isCollecting, setIsCollecting] = useState(false);
 
+      // Drama State
+      const [dramaEvent, setDramaEvent] = useState(null);
+
       // ✅ Ticker for vault recalculation
       const [now, setNow] = useState(Date.now());
       useEffect(() => {
@@ -285,6 +327,7 @@
                   businesses: dbData.businesses || prev.businesses || {},
                   assets: dbData.assets || prev.assets || {},
                   transactions: dbData.transactions || [],
+                  history: dbData.history || [],
                   cash: dbData.cash !== undefined ? dbData.cash : prev.cash,
                   lastCollected: dbData.lastCollected || prev.lastCollected || Date.now()
                 });
@@ -297,7 +340,7 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-                transactions: [], lastCollected: Date.now()
+                transactions: [], history: [], lastCollected: Date.now()
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
@@ -348,6 +391,20 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
+      // ✅ LOG HISTORY HELPER
+      const logHistory = async (title, desc, amount) => {
+        if (!uid) return;
+        await db.collection("users").doc(uid).update({
+          history: firebase.firestore.FieldValue.arrayUnion({
+            title: title,
+            desc: desc,
+            amount: amount,
+            date: Date.now(),
+            category: 'activity'
+          })
+        }).catch(() => {});
+      };
+
       // ✅ VAULT — derived, recalculates every tick
       const vault = useMemo(() => {
         const safeBiz = s.businesses || {};
@@ -388,9 +445,82 @@
             lastCollected: collectNow,
             lastSeen: Date.now()
           }).catch(() => {});
+          
+          logHistory('Collected Vault', 'Collected ' + fmt(amount) + ' from businesses', amount);
         }
 
         setTimeout(() => setIsCollecting(false), 800);
+      };
+
+      // ✅ BUSINESS DRAMA CHECK
+      const checkBusinessDrama = () => {
+        const safeBiz = s.businesses || {};
+        const ownedIds = Object.keys(safeBiz).filter(id => safeBiz[id] > 0);
+        
+        if (ownedIds.length === 0) {
+          return notify('You need to buy a business first!', 'bad');
+        }
+
+        const randomId = ownedIds[Math.floor(Math.random() * ownedIds.length)];
+        const biz = BUSINESSES.find(b => b.id === randomId);
+        
+        const roll = Math.random();
+        let event = { type: 'good', title: '', msg: '', cash: 0, biz: null };
+
+        if (roll < 0.2) {
+          event = { type: 'bad', title: '😭 DISASTER!', msg: 'Area boys just burnt down your ' + biz.name + '! You lost the business.', cash: 0, biz: randomId };
+        } else if (roll < 0.35) {
+          const fine = Math.floor(biz.price * 0.2);
+          event = { type: 'bad', title: '🚨 SANCTION!', msg: 'Government officials shut down your ' + biz.name + ' and fined you ' + fmt(fine) + '.', cash: -fine, biz: null };
+        } else if (roll < 0.55) {
+          const val = Math.floor(biz.price * 0.5);
+          event = { type: 'neutral', title: '💸 FORCED SALE!', msg: 'You urgently needed cash and sold your ' + biz.name + ' for half price.', cash: val, biz: randomId };
+        } else if (roll < 0.85) {
+          const val = Math.floor(biz.price * 1.5);
+          event = { type: 'good', title: '🤝 BIG DEAL!', msg: 'A rich man bought your ' + biz.name + ' for 150% of its value!', cash: val, biz: randomId };
+        } else {
+          const val = Math.floor(biz.price * 0.5);
+          event = { type: 'good', title: '🎉 MIRACLE!', msg: 'A viral video featured your ' + biz.name + '! You made ' + fmt(val) + '.', cash: val, biz: null };
+        }
+
+        setDramaEvent(event);
+      };
+
+      const resolveDrama = async () => {
+        if (!dramaEvent) return;
+        const { cash, biz } = dramaEvent;
+        
+        let newBiz = Object.assign({}, s.businesses);
+        if (biz) {
+           newBiz[biz] -= 1;
+           if (newBiz[biz] <= 0) delete newBiz[biz];
+        }
+
+        setS(prev => {
+          const next = Object.assign({}, prev, {
+            cash: Math.max(0, (prev.cash || 0) + cash),
+            businesses: newBiz
+          });
+          try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+          return next;
+        });
+
+        if (cash > 0) AudioEngine.coin(); else AudioEngine.error();
+
+        if (uid) {
+          const updates = {
+            cash: firebase.firestore.FieldValue.increment(cash),
+            lastSeen: Date.now()
+          };
+          if (biz) {
+            updates['businesses.' + biz] = firebase.firestore.FieldValue.increment(-1);
+          }
+          await db.collection("users").doc(uid).update(updates).catch(() => {});
+          
+          logHistory(dramaEvent.title, dramaEvent.msg, cash);
+        }
+
+        setDramaEvent(null);
       };
 
       if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' },
@@ -458,6 +588,8 @@
           };
           updates['businesses.' + b.id] = firebase.firestore.FieldValue.increment(1);
           await db.collection("users").doc(uid).update(updates).catch(() => {});
+          
+          logHistory('Bought Business', 'Bought ' + b.name, -b.price);
         }
       };
 
@@ -513,7 +645,14 @@
                   className: 'w-full py-4 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black font-black text-[15px] shadow-[0_8px_24px_-8px_rgba(34,197,94,0.7)] active:scale-95 transition disabled:opacity-50 disabled:shadow-none ' + (vault >= 1 ? 'collect-btn' : '')
                 },
                   isCollecting ? 'Collecting...' : 'COLLECT ' + fmt(vault)
-                )
+                ),
+
+                // ✅ New Reality Check Button
+                h('button', {
+                  onClick: checkBusinessDrama,
+                  disabled: ownedCount === 0,
+                  className: 'w-full mt-2 py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/80 font-bold text-[12px] active:scale-95 transition disabled:opacity-40'
+                }, '🎲 Check Business Reality')
               )
             ),
 
@@ -633,6 +772,17 @@
                   h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
                 );
               })
+            )
+          ),
+
+          // ✅ DRAMA MODAL
+          dramaEvent && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md' }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-2xl animate-popIn text-center' },
+              h('div', { className: 'text-6xl mb-2' }, dramaEvent.type === 'good' ? '🎉' : dramaEvent.type === 'bad' ? '😭' : '💸'),
+              h('div', { className: 'text-[15px] font-black text-white font-display mb-2' }, dramaEvent.title),
+              h('p', { className: 'text-[12px] text-white/80 leading-relaxed mb-4' }, dramaEvent.msg),
+              h('button', { onClick: resolveDrama, className: 'w-full py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white font-bold text-[12px] active:scale-95 transition' }, 'Accept Fate')
             )
           ),
 
