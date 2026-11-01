@@ -94,6 +94,7 @@
 
     const CATEGORIES = ["All", "Street Flex", "Rides", "Real Estate", "Aje Status"];
 
+    // ✅ Added 10 new crazy assets
     const ASSETS = [
       { id: 'af1', name: 'Air Force 1', emoji: '👟', price: 150_000, tier: 'Starter', color: 'from-gray-400/20 to-gray-700/10', cat: 'Street Flex', desc: 'White on white. Clean. But if you step on my shoe, e go be fight!' },
       { id: 'shades', name: 'Designer Shades', emoji: '🕶️', price: 500_000, tier: 'Baller', color: 'from-black/40 to-gray-800/20', cat: 'Street Flex', desc: 'To hide your eyes from haters and police.' },
@@ -101,23 +102,29 @@
       { id: 'iphone', name: 'iPhone 15 Pro Max', emoji: '📱', price: 2_500_000, tier: 'Sharp', color: 'from-blue-400/20 to-blue-700/10', cat: 'Street Flex', desc: 'Titanium finish. Sharp. But if you drop am, your heart go break.' },
       { id: 'grillz', name: 'Gold Grillz', emoji: '🦷', price: 10_000_000, tier: 'Baller', color: 'from-amber-400/20 to-amber-700/10', cat: 'Street Flex', desc: 'Smile and blind them. Just no try bite meat with am.' },
       { id: 'rolex', name: 'Rolex', emoji: '⌚', price: 50_000_000, tier: 'Baller', color: 'from-amber-400/25 to-amber-700/10', cat: 'Street Flex', desc: 'Time is money. But make e no be fake from Computer Village.' },
+      { id: 'agbero_army', name: 'Personal Agbero Army', emoji: '🦍', price: 100_000_000, tier: 'Big Boy', color: 'from-slate-400/20 to-slate-700/10', cat: 'Street Flex', desc: '5 agberos to collect tax for you.' },
       { id: 'honda', name: 'Honda Accord', emoji: '🚗', price: 15_000_000, tier: 'Sharp', color: 'from-slate-400/20 to-slate-700/10', cat: 'Rides', desc: 'End of discussion. E dey spoil but e go still carry you go church.' },
       { id: 'camry', name: 'Toyota Camry', emoji: '🚘', price: 25_000_000, tier: 'Sharp', color: 'from-gray-400/20 to-gray-700/10', cat: 'Rides', desc: 'Muscle car for the big boys. Very reliable.' },
       { id: 'tesla', name: 'Tesla', emoji: '⚡', price: 500_000_000, tier: 'Sharp', color: 'from-red-500/20 to-red-700/10', cat: 'Rides', desc: 'Electric. Zero noise. But where you wan see charging station for Lagos?' },
       { id: 'gwag', name: 'G-Wagon', emoji: '🚙', price: 5_000_000_000, tier: 'Big Boy', color: 'from-slate-400/20 to-slate-700/10', cat: 'Rides', desc: 'Boxy but expensive. Fuel alone go finish your money.' },
       { id: 'rr', name: 'Range Rover', emoji: '🚐', price: 15_000_000_000, tier: 'Odogwu', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Rides', desc: 'The official car of the rich. E dey leak oil but na flex.' },
       { id: 'lambo', name: 'Lamborghini', emoji: '🏎️', price: 50_000_000_000, tier: 'Aje', color: 'from-yellow-400/20 to-yellow-700/10', cat: 'Rides', desc: 'Scissor doors. Pure flex. You no fit speed am for Third Mainland.' },
+      { id: 'traffic_lane', name: 'Private Traffic Lane', emoji: '🛣️', price: 500_000_000, tier: 'Odogwu', color: 'from-gray-400/20 to-gray-700/10', cat: 'Rides', desc: 'Bypass Lagos traffic permanently.' },
       { id: 'lekki_flat', name: 'Lekki 2-Bedroom', emoji: '🏢', price: 100_000_000, tier: 'Baller', color: 'from-amber-400/20 to-amber-700/10', cat: 'Real Estate', desc: 'Where the tech bros live. Rent go finish your salary.' },
       { id: 'ikeja_duplex', name: 'Ikeja Duplex', emoji: '🏡', price: 300_000_000, tier: 'Big Boy', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Real Estate', desc: 'Close to the airport. Every time you hear plane, you think say you don travel.' },
       { id: 'ikoyi_penthouse', name: 'Ikoyi Penthouse', emoji: '🏙️', price: 1_500_000_000, tier: 'Odogwu', color: 'from-cyan-400/20 to-cyan-700/10', cat: 'Real Estate', desc: 'High above the noise. Only politicians and yahoo boys dey here.' },
+      { id: 'landlord_house', name: 'Lagos Landlord Special', emoji: '🏚️', price: 50_000_000, tier: 'Sharp', color: 'from-slate-400/20 to-slate-700/10', cat: 'Real Estate', desc: 'Face-me-I-face-you but you are the boss.' },
       { id: 'yacht', name: 'Private Yacht', emoji: '🛥️', price: 20_000_000_000, tier: 'Odogwu', color: 'from-cyan-400/20 to-blue-700/10', cat: 'Real Estate', desc: 'Party on the water. But make water no enter your engine.' },
       { id: 'mansion', name: 'Banana Island Mansion', emoji: '🏰', price: 1_000_000_000_000, tier: 'Legend', color: 'from-pink-400/20 to-pink-700/10', cat: 'Real Estate', desc: 'The ultimate Lagos dream. You buy am, your village people go start to work overtime.' },
+      { id: 'lekki_bridge', name: 'Lekki-Ikoyi Bridge', emoji: '🌉', price: 500_000_000_000, tier: 'Legend', color: 'from-blue-400/20 to-blue-700/10', cat: 'Real Estate', desc: 'You own the toll gate now.' },
       { id: 'bodyguard', name: 'Personal Bodyguard', emoji: '💪🏾', price: 150_000_000, tier: 'Big Boy', color: 'from-red-400/20 to-red-700/10', cat: 'Aje Status', desc: 'Keep the area boys away. But if you offend politician, he no go fit save you.' },
       { id: 'chef', name: 'Private Chef', emoji: '👨🏾‍🍳', price: 50_000_000, tier: 'Baller', color: 'from-white/20 to-gray-700/10', cat: 'Aje Status', desc: 'Breakfast, lunch and dinner. You go still dey buy street suya.' },
       { id: 'plate', name: 'Custom Plate Number', emoji: '🔠', price: 200_000_000, tier: 'Sharp', color: 'from-blue-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'E.g. "BIG-BOY-1". Police go still stop you for check point.' },
+      { id: 'shrine', name: "Fela's Shrine VIP", emoji: '🎷', price: 1_000_000_000, tier: 'Baller', color: 'from-amber-400/20 to-amber-700/10', cat: 'Aje Status', desc: 'VIP table for life.' },
       { id: 'jet', name: 'Private Jet', emoji: '✈️', price: 100_000_000_000, tier: 'Aje', color: 'from-purple-400/20 to-purple-700/10', cat: 'Aje Status', desc: 'Fly above the traffic. No more LASTMA to disturb you.' },
       { id: 'helicopter', name: 'Helicopter', emoji: '🚁', price: 300_000_000_000, tier: 'Aje', color: 'from-indigo-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'Beat the traffic. But where you wan land am for Mushin?' },
       { id: 'island', name: 'Private Island', emoji: '🏝️', price: 2_000_000_000_000, tier: 'Legend', color: 'from-teal-400/20 to-teal-700/10', cat: 'Aje Status', desc: 'For when Lagos is too loud. You fit build your own country here.' },
+      { id: 'third_mainland', name: 'Third Mainland Bridge', emoji: '🌉', price: 10_000_000_000_000, tier: 'Legend', color: 'from-gray-400/20 to-gray-700/10', cat: 'Aje Status', desc: 'You own the longest bridge in Africa.' },
       { id: 'football', name: 'Football Club', emoji: '⚽', price: 5_000_000_000_000, tier: 'Legend', color: 'from-lime-400/20 to-lime-700/10', cat: 'Aje Status', desc: 'Buy a whole team. Make sure say dem no go lose every match.' },
       { id: 'crypto', name: 'Crypto Exchange', emoji: '🪙', price: 10_000_000_000_000, tier: 'Legend', color: 'from-orange-400/20 to-orange-700/10', cat: 'Aje Status', desc: 'Control the blockchain. But Binance fit still hack you.' },
     ];
@@ -145,7 +152,7 @@
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-        transactions: []
+        transactions: [], history: []
       };
     };
 
@@ -220,6 +227,14 @@
       const [activeTab, setActiveTab] = useState("All");
       const [isMaintenance, setIsMaintenance] = useState(false);
       const [feedMsg, setFeedMsg] = useState(MARKET_FEED[0]);
+      const [viewMode, setViewMode] = useState("store"); // "store" or "player"
+      
+      // P2P Market State
+      const [listings, setListings] = useState([]);
+      const [sellModal, setSellModal] = useState(false);
+      const [sellAsset, setSellAsset] = useState(null);
+      const [sellPrice, setSellPrice] = useState("");
+      const [isTransacting, setIsTransacting] = useState(false);
 
       useEffect(() => {
         const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
@@ -243,8 +258,8 @@
                 const newData = Object.assign({}, prev, dbData, {
                   businesses: dbData.businesses || prev.businesses || {},
                   assets: dbData.assets || prev.assets || {},
-                  travels: dbData.travels || prev.travels || [],
                   transactions: dbData.transactions || [],
+                  history: dbData.history || [],
                   cash: dbData.cash !== undefined ? dbData.cash : prev.cash
                 });
                 try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
@@ -256,7 +271,7 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-                transactions: []
+                transactions: [], history: []
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
@@ -266,6 +281,16 @@
         });
 
         return () => { authUnsub(); if (userUnsub) userUnsub(); unsubSettings(); };
+      }, []);
+
+      // P2P Real-time Listener
+      useEffect(() => {
+        const unsub = db.collection("market_listings").orderBy("createdAt", "desc").onSnapshot((snap) => {
+          const items = [];
+          snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+          setListings(items);
+        }, (e) => console.error("Listings error:", e));
+        return () => unsub();
       }, []);
 
       useEffect(() => {
@@ -289,10 +314,17 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
+      const logHistory = async (title, desc, amount) => {
+        if (!uid) return;
+        await db.collection("users").doc(uid).update({
+          history: firebase.firestore.FieldValue.arrayUnion({
+            title, desc, amount, date: Date.now(), category: 'activity'
+          })
+        }).catch(() => {});
+      };
+
       if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' },
-        h('div', { className: 'text-4xl' }, '⚠️'),
-        h('div', { className: 'font-bold' }, 'Auth Error'),
-        h('div', { className: 'text-sm' }, authError)
+        h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError)
       );
 
       if (isMaintenance) {
@@ -320,11 +352,9 @@
       if (netWorth > 1_000_000_000) flexTitle = "Odogwu Flexer";
       if (netWorth > 100_000_000_000) flexTitle = "Aje Butler";
 
+      // NPC Store Buy
       const buyAsset = async (a) => {
-        if (s.cash < a.price) {
-          AudioEngine.error();
-          return notify('Not enough Lagos Cash 💸. Go and hustle!', 'bad');
-        }
+        if (s.cash < a.price) { AudioEngine.error(); return notify('Not enough Lagos Cash 💸. Go and hustle!', 'bad'); }
 
         setS((p) => {
           const currentAssets = p.assets || {};
@@ -340,13 +370,8 @@
 
         AudioEngine.purchase();
         try { if (navigator.vibrate) navigator.vibrate(30); } catch(e) {}
-
-        let toastMsg = a.emoji + ' ' + a.name + ' acquired!';
-        if (a.id === 'gwag') toastMsg = 'G-Wagon acquired! Now you need ₦50k for fuel 😂';
-        else if (a.id === 'mansion') toastMsg = 'Banana Island Mansion! Your village people are already on the way 🧙🏾‍♂️';
-        else if (a.id === 'af1') toastMsg = 'Air Force 1. Clean! Don\'t enter mud.';
-        else if (a.id === 'rolex') toastMsg = 'Rolex! Hope e no be fake from Computer Village? 👀';
-        notify(toastMsg);
+        
+        notify(a.emoji + ' ' + a.name + ' acquired from NPC Store!');
 
         if (uid) {
           const updates = {
@@ -355,12 +380,150 @@
           };
           updates['assets.' + a.id] = firebase.firestore.FieldValue.increment(1);
           await db.collection("users").doc(uid).update(updates).catch(() => {});
+          logHistory('Bought Asset', 'Bought ' + a.name + ' from NPC', -a.price);
         }
       };
 
-      const filteredAssets = activeTab === "All"
-        ? ASSETS
-        : ASSETS.filter(a => a.cat === activeTab);
+      // P2P Market Sell
+      const openSellModal = (asset) => {
+        setSellAsset(asset);
+        setSellPrice(String(asset.price));
+        setSellModal(true);
+      };
+
+      const confirmSell = async () => {
+        if (!sellAsset || !sellPrice) return;
+        const price = Number(sellPrice);
+        if (price < 1000) return notify('Price must be at least ₦1,000', 'bad');
+        if ((s.assets[sellAsset.id] || 0) < 1) return notify('You do not own this item', 'bad');
+
+        setIsTransacting(true);
+        try {
+          const batch = db.batch();
+          const userRef = db.collection("users").doc(uid);
+          const listingRef = db.collection("market_listings").doc();
+
+          // Deduct asset from seller
+          batch.update(userRef, {
+            ['assets.' + sellAsset.id]: firebase.firestore.FieldValue.increment(-1)
+          });
+
+          // Create listing
+          batch.set(listingRef, {
+            listingId: listingRef.id,
+            sellerId: uid,
+            sellerName: s.name || 'Hustler',
+            assetId: sellAsset.id,
+            assetName: sellAsset.name,
+            emoji: sellAsset.emoji,
+            price: price,
+            createdAt: Date.now()
+          });
+
+          await batch.commit();
+          
+          setS(prev => {
+            const newAssets = Object.assign({}, prev.assets);
+            newAssets[sellAsset.id] -= 1;
+            if (newAssets[sellAsset.id] <= 0) delete newAssets[sellAsset.id];
+            return Object.assign({}, prev, { assets: newAssets });
+          });
+
+          AudioEngine.coin();
+          notify('Asset listed on Player Market! 🛒');
+          setSellModal(false);
+          setViewMode('player');
+        } catch (e) {
+          console.error(e);
+          notify('Failed to list item', 'bad');
+        } finally {
+          setIsTransacting(false);
+        }
+      };
+
+      // P2P Market Buy
+      const buyListing = async (listing) => {
+        if (listing.sellerId === uid) return notify('You cannot buy your own item', 'bad');
+        if (s.cash < listing.price) return notify('Not enough cash', 'bad');
+
+        setIsTransacting(true);
+        try {
+          await db.runTransaction(async (t) => {
+            const sellerRef = db.collection("users").doc(listing.sellerId);
+            const buyerRef = db.collection("users").doc(uid);
+            const listingRef = db.collection("market_listings").doc(listing.id);
+
+            const sellerDoc = await t.get(sellerRef);
+            const buyerDoc = await t.get(buyerRef);
+
+            if (!sellerDoc.exists || !buyerDoc.exists) throw new Error("User not found");
+
+            const sellerAssets = sellerDoc.data().assets || {};
+            if (!sellerAssets[listing.assetId] || sellerAssets[listing.assetId] <= 0) {
+              throw new Error("Seller no longer owns this asset");
+            }
+
+            if (buyerDoc.data().cash < listing.price) throw new Error("Not enough cash");
+
+            // Transfer Cash
+            t.update(buyerRef, {
+              cash: firebase.firestore.FieldValue.increment(-listing.price),
+              [`assets.${listing.assetId}`]: firebase.firestore.FieldValue.increment(1)
+            });
+            t.update(sellerRef, {
+              cash: firebase.firestore.FieldValue.increment(listing.price),
+              [`assets.${listing.assetId}`]: firebase.firestore.FieldValue.increment(-1)
+            });
+
+            t.delete(listingRef);
+          });
+
+          AudioEngine.purchase();
+          notify('Bought successfully from ' + listing.sellerName + '! 🎉');
+          logHistory('Bought Asset', 'Bought ' + listing.assetName + ' from ' + listing.sellerName, -listing.price);
+          setFlexAnim(listing.assetId);
+          setTimeout(() => setFlexAnim(null), 1500);
+
+        } catch (e) {
+          console.error(e);
+          notify(e.message, 'bad');
+        } finally {
+          setIsTransacting(false);
+        }
+      };
+
+      // P2P Cancel Listing
+      const cancelListing = async (listing) => {
+        if (listing.sellerId !== uid) return;
+        
+        setIsTransacting(true);
+        try {
+          const batch = db.batch();
+          const userRef = db.collection("users").doc(uid);
+          const listingRef = db.collection("market_listings").doc(listing.id);
+
+          batch.update(userRef, {
+            [`assets.${listing.assetId}`]: firebase.firestore.FieldValue.increment(1)
+          });
+          batch.delete(listingRef);
+          await batch.commit();
+
+          setS(prev => {
+            const newAssets = Object.assign({}, prev.assets);
+            newAssets[listing.assetId] = (newAssets[listing.assetId] || 0) + 1;
+            return Object.assign({}, prev, { assets: newAssets });
+          });
+
+          notify('Listing cancelled. Item returned to garage.');
+        } catch(e) {
+          console.error(e);
+          notify('Failed to cancel listing', 'bad');
+        } finally {
+          setIsTransacting(false);
+        }
+      };
+
+      const filteredAssets = activeTab === "All" ? ASSETS : ASSETS.filter(a => a.cat === activeTab);
 
       const NAV = [
         { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
@@ -396,31 +559,43 @@
           ),
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
-            s.cash < 10000 && h('div', { className: 'mt-3 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center gap-2' },
-              h('span', { className: 'text-lg animate-bounce' }, '😭'),
-              h('div', { className: 'text-[10px] font-bold text-red-400' }, 'Sapa dey worry you! Go to Hustle page make money before you buy flex.')
+            
+            // Toggle View Mode
+            h('div', { className: 'mt-3 flex gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06]' },
+              [
+                { id: 'store', label: '🏪 NPC Store' },
+                { id: 'player', label: '🤝 Player Market' }
+              ].map(tab => 
+                h('button', {
+                  key: tab.id,
+                  onClick: () => setViewMode(tab.id),
+                  className: 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ' + 
+                    (viewMode === tab.id ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-md' : 'text-white/50')
+                }, tab.label)
+              )
             ),
 
             h(Card, { className: 'relative overflow-hidden p-4 mt-3 hero-grid', gold: true },
               h('div', { className: 'absolute -top-16 -right-12 w-48 h-48 rounded-full bg-[#FFD60A]/25 blur-3xl pointer-events-none' }),
               h('div', { className: 'relative' },
                 h('div', { className: 'flex items-center justify-between' },
-                  h('div', { className: 'text-[9px] uppercase tracking-widest text-white/45 font-bold' }, 'Asset Value'),
-                  h('div', { className: 'text-2xl' }, '🛒')
+                  h('div', { className: 'text-[9px] uppercase tracking-widest text-white/45 font-bold' }, viewMode === 'store' ? 'Your Asset Value' : 'Player Listings'),
+                  h('div', { className: 'text-2xl' }, viewMode === 'store' ? '🛒' : '🤝')
                 ),
-                h('div', { className: 'text-3xl font-black tabular-nums font-display mt-1 text-gradient-gold' }, fmt(assetValue)),
-                h('div', { className: 'mt-2 flex items-center gap-3 text-[10px] font-bold text-white/45' },
-                  h('span', null,
-                    h('span', { className: 'text-[#FFD60A] font-black' }, String(ownedCount)),
-                    ' asset' + (ownedCount !== 1 ? 's' : '') + ' owned'
-                  ),
-                  h('span', { className: 'w-1 h-1 rounded-full bg-white/20' }),
-                  h('span', null,
-                    'Net Worth: ',
-                    h('span', { className: 'text-[#FFD60A] font-black tabular-nums' }, fmt(netWorth))
+                viewMode === 'store' ? 
+                  h(React.Fragment, null,
+                    h('div', { className: 'text-3xl font-black tabular-nums font-display mt-1 text-gradient-gold' }, fmt(assetValue)),
+                    h('div', { className: 'mt-2 flex items-center gap-3 text-[10px] font-bold text-white/45' },
+                      h('span', null, h('span', { className: 'text-[#FFD60A] font-black' }, String(ownedCount)), ' assets owned'),
+                      h('span', { className: 'w-1 h-1 rounded-full bg-white/20' }),
+                      h('span', null, 'Net Worth: ', h('span', { className: 'text-[#FFD60A] font-black tabular-nums' }, fmt(netWorth)))
+                    )
                   )
-                ),
-                h('div', { className: 'mt-2 text-[10px] font-bold text-white/50' }, 'Status: ' + flexTitle)
+                  :
+                  h(React.Fragment, null,
+                    h('div', { className: 'text-3xl font-black tabular-nums font-display mt-1 text-gradient-gold' }, listings.length + ' Listings'),
+                    h('div', { className: 'mt-2 text-[10px] font-bold text-white/45' }, 'Buy rare assets from other players instantly.')
+                  )
               )
             ),
 
@@ -431,104 +606,89 @@
               )
             ),
 
-            h('div', { className: 'mt-4 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar' },
-              CATEGORIES.map(cat =>
-                h('button', {
-                  key: cat,
-                  onClick: () => setActiveTab(cat),
-                  className: 'whitespace-nowrap px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all ' +
-                    (activeTab === cat
-                      ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.5)]'
-                      : 'bg-white/[0.06] text-white/50 border border-white/10')
-                }, cat)
-              )
-            ),
-
-            ownedCount > 0 && activeTab === 'All' && h(React.Fragment, null,
-              h(SectionTitle, {
-                right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A] flex items-center gap-1.5' },
-                  h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#FFD60A] animate-pulse glow-dot' }),
-                  'FLEX'
+            // NPC STORE VIEW
+            viewMode === 'store' && h('div', null,
+              h('div', { className: 'mt-4 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar' },
+                CATEGORIES.map(cat =>
+                  h('button', {
+                    key: cat,
+                    onClick: () => setActiveTab(cat),
+                    className: 'whitespace-nowrap px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all ' +
+                      (activeTab === cat ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.5)]' : 'bg-white/[0.06] text-white/50 border border-white/10')
+                  }, cat)
                 )
-              }, 'Your Garage'),
-              h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden' },
-                ASSETS.filter((a) => (safeAssets[a.id] || 0) > 0).map((a) => {
-                  const owned = safeAssets[a.id];
-                  return h('div', { key: a.id, className: 'px-3.5 py-2.5 flex items-center gap-3' },
-                    h('div', { className: 'w-9 h-9 rounded-lg bg-white/[0.06] grid place-items-center text-lg shrink-0' }, a.emoji),
-                    h('div', { className: 'flex-1 min-w-0' },
-                      h('div', { className: 'text-[12px] font-extrabold truncate font-display' }, a.name),
-                      h('div', { className: 'text-[10px] text-white/40 font-bold tabular-nums' }, '×' + owned + ' · ' + a.tier)
+              ),
+
+              ownedCount > 0 && h(React.Fragment, null,
+                h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A]' }, 'FLEX') }, 'Your Garage'),
+                h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden' },
+                  ASSETS.filter((a) => (safeAssets[a.id] || 0) > 0).map((a) => {
+                    const owned = safeAssets[a.id];
+                    return h('div', { key: a.id, className: 'px-3.5 py-2.5 flex items-center gap-3' },
+                      h('div', { className: 'w-9 h-9 rounded-lg bg-white/[0.06] grid place-items-center text-lg shrink-0' }, a.emoji),
+                      h('div', { className: 'flex-1 min-w-0' },
+                        h('div', { className: 'text-[12px] font-extrabold truncate font-display' }, a.name),
+                        h('div', { className: 'text-[10px] text-white/40 font-bold tabular-nums' }, '×' + owned)
+                      ),
+                      h('button', { onClick: () => openSellModal(a), className: 'text-[10px] font-black bg-[#FFD60A]/20 text-[#FFD60A] px-3 py-1.5 rounded-lg active:scale-95 transition' }, 'SELL')
+                    );
+                  })
+                )
+              ),
+
+              h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-white/30' }, filteredAssets.length + ' items') }, activeTab === "All" ? "NPC Store" : activeTab),
+              h('div', { className: 'space-y-2.5' },
+                filteredAssets.map((a) => {
+                  const owned = safeAssets[a.id] || 0;
+                  const canAfford = (s.cash || 0) >= a.price;
+                  const isHighTier = a.price >= 100_000_000_000;
+                  return h(Card, {
+                    key: a.id,
+                    className: 'relative overflow-hidden p-3 flex items-center gap-3 transition-all duration-300 ' +
+                      (owned > 0 ? 'border-[#FFD60A]/30 ' : '') +
+                      (isHighTier && owned > 0 ? 'shine ' : '')
+                  },
+                    h('div', { className: 'absolute inset-0 bg-gradient-to-br ' + a.color + ' pointer-events-none opacity-60' }),
+                    h('div', { className: 'relative w-14 h-14 rounded-xl bg-gradient-to-br from-white/[0.1] to-white/[0.02] border border-white/[0.08] grid place-items-center text-3xl shrink-0' },
+                      a.emoji,
+                      owned > 0 && h('span', { className: 'badge-owned absolute -top-1.5 -right-1.5 bg-gradient-to-br from-[#FFE566] to-[#FFB800] text-black text-[9px] font-black rounded-full min-w-[20px] h-5 px-1 grid place-items-center shadow-lg' }, '×' + owned)
                     ),
-                    h('div', { className: 'text-[11px] font-black text-[#FFD60A] tabular-nums shrink-0' }, fmt(a.price * owned))
+                    h('div', { className: 'relative flex-1 min-w-0' },
+                      h('div', { className: 'text-[13px] font-extrabold truncate font-display' }, a.name),
+                      h('div', { className: 'text-[10px] font-black text-white/70 tabular-nums mt-1' }, fmt(a.price))
+                    ),
+                    h('button', {
+                      onClick: () => buyAsset(a),
+                      disabled: !canAfford,
+                      className: 'relative shrink-0 rounded-lg text-[10.5px] font-black px-3 py-2.5 active:scale-95 transition-all ' +
+                        (canAfford ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_14px_-4px_rgba(255,214,10,0.7)]' : 'bg-white/[0.06] text-white/25 border border-white/[0.06]')
+                    }, canAfford ? 'BUY' : 'LOCKED')
                   );
                 })
               )
             ),
 
-            h(SectionTitle, {
-              right: h('span', { className: 'text-[10px] font-bold text-white/30' }, filteredAssets.length + ' items')
-            }, activeTab === "All" ? "Flex Market" : activeTab),
-
-            h('div', { className: 'space-y-2.5' },
-              filteredAssets.map((a) => {
-                const owned = safeAssets[a.id] || 0;
-                const canAfford = (s.cash || 0) >= a.price;
-                const justBought = flexAnim === a.id;
-                const isHighTier = a.price >= 100_000_000_000;
-                return h(Card, {
-                  key: a.id,
-                  className: 'relative overflow-hidden p-3 flex items-center gap-3 transition-all duration-300 ' +
-                    (owned > 0 ? 'border-[#FFD60A]/30 ' : '') +
-                    (justBought ? 'ring-2 ring-[#FFD60A] shadow-[0_0_30px_rgba(255,214,10,0.4)] scale-[1.01] ' : '') +
-                    (isHighTier && owned > 0 ? 'shine ' : '')
-                },
-                  h('div', { className: 'absolute inset-0 bg-gradient-to-br ' + a.color + ' pointer-events-none opacity-60' }),
-                  h('div', { className: 'relative w-14 h-14 rounded-xl bg-gradient-to-br from-white/[0.1] to-white/[0.02] border border-white/[0.08] grid place-items-center text-3xl shrink-0' },
-                    a.emoji,
-                    owned > 0 && h('span', { className: 'badge-owned absolute -top-1.5 -right-1.5 bg-gradient-to-br from-[#FFE566] to-[#FFB800] text-black text-[9px] font-black rounded-full min-w-[20px] h-5 px-1 grid place-items-center shadow-lg' }, '×' + owned)
+            // PLAYER MARKET VIEW
+            viewMode === 'player' && h('div', { className: 'mt-4 space-y-2.5' },
+              listings.length === 0 ? h('div', { className: 'text-center text-white/40 text-[11px] py-10' }, 'No one is selling anything right now. Be the first to list an item!') :
+              listings.map((l) => {
+                const isMe = l.sellerId === uid;
+                const canAfford = s.cash >= l.price;
+                return h(Card, { key: l.id, className: 'p-3 flex items-center gap-3' },
+                  h('div', { className: 'w-12 h-12 rounded-xl bg-white/[0.06] grid place-items-center text-2xl shrink-0' }, l.emoji),
+                  h('div', { className: 'flex-1 min-w-0' },
+                    h('div', { className: 'text-[12px] font-extrabold truncate font-display' }, l.assetName),
+                    h('div', { className: 'text-[9px] text-[#FFD60A] font-bold' }, 'Seller: ' + l.sellerName),
+                    h('div', { className: 'text-[11px] font-black text-white/80 tabular-nums mt-1' }, fmt(l.price))
                   ),
-                  h('div', { className: 'relative flex-1 min-w-0' },
-                    h('div', { className: 'text-[13px] font-extrabold truncate font-display' }, a.name),
-                    h('div', { className: 'text-[9px] text-white/40 truncate mb-1' }, a.desc),
-                    h('div', { className: 'flex items-center gap-2' },
-                      h('span', {
-                        className: 'text-[8.5px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ' +
-                          (a.tier === 'Legend' ? 'bg-pink-500/20 text-pink-300' :
-                           a.tier === 'Aje' ? 'bg-purple-500/20 text-purple-300' :
-                           a.tier === 'Odogwu' ? 'bg-cyan-500/20 text-cyan-300' :
-                           a.tier === 'Big Boy' ? 'bg-slate-400/20 text-slate-200' :
-                           a.tier === 'Sharp' ? 'bg-red-500/20 text-red-300' :
-                           a.tier === 'Baller' ? 'bg-amber-400/20 text-amber-300' :
-                           'bg-yellow-500/20 text-yellow-300')
-                      }, a.tier)
-                    ),
-                    h('div', { className: 'text-[10px] font-black text-white/70 tabular-nums mt-1' }, fmt(a.price))
-                  ),
-                  h('button', {
-                    onClick: () => buyAsset(a),
-                    disabled: !canAfford,
-                    className: 'relative shrink-0 rounded-lg text-[10.5px] font-black px-3 py-2.5 active:scale-95 transition-all ' +
-                      (canAfford
-                        ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_14px_-4px_rgba(255,214,10,0.7)]'
-                        : 'bg-white/[0.06] text-white/25 border border-white/[0.06]')
-                  }, canAfford ? 'FLEX' : 'LOCKED')
+                  isMe ? 
+                    h('button', { onClick: () => cancelListing(l), disabled: isTransacting, className: 'shrink-0 text-[10px] font-black bg-red-500/20 text-red-400 px-3 py-2 rounded-lg active:scale-95 transition disabled:opacity-50' }, 'CANCEL')
+                    :
+                    h('button', { onClick: () => buyListing(l), disabled: isTransacting || !canAfford, className: 'shrink-0 text-[10px] font-black bg-[#22C55E] text-black px-3 py-2 rounded-lg active:scale-95 transition disabled:opacity-50' }, 'BUY')
                 );
               })
-            ),
-
-            h(Card, { className: 'p-3.5 mt-4' },
-              h('div', { className: 'flex items-start gap-2' },
-                h('span', { className: 'text-base' }, '💎'),
-                h('p', { className: 'text-[10.5px] text-white/50 leading-relaxed' },
-                  'Assets no dey produce money — na ',
-                  h('span', { className: 'text-[#FFD60A] font-bold' }, 'pure status'),
-                  '. Every one you buy go add straight to your ',
-                  h('span', { className: 'text-[#FFD60A] font-bold' }, 'Net Worth'),
-                  ' and push you up the leaderboard. Banana Island Mansion na ₦1 Trillion — only true Aje fit afford am. 🏆'
-                )
-              )
             )
+
           ),
 
           h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
@@ -546,11 +706,35 @@
             )
           ),
 
+          // SELL MODAL
+          sellModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => !isTransacting && setSellModal(false) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 animate-popIn' },
+              h('div', { className: 'text-3xl text-center mb-2' }, '🏷️'),
+              h('div', { className: 'text-center text-[14px] font-black tracking-widest text-[#FFD60A] font-display' }, 'SELL ' + sellAsset.name.toUpperCase()),
+              h('p', { className: 'text-center text-[11px] text-white/50 mt-1 mb-4' }, 'Set a price for your item. Other players will see it in the Player Market.'),
+              
+              h('div', null,
+                h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Price (₦)'),
+                h('input', {
+                  type: 'number',
+                  value: sellPrice,
+                  onChange: (e) => setSellPrice(e.target.value),
+                  className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[16px] font-black text-white focus:border-[#FFD60A]/50 transition tabular-nums',
+                  autoFocus: true
+                })
+              ),
+              
+              h('div', { className: 'mt-5 flex gap-2' },
+                h('button', { onClick: () => setSellModal(false), disabled: isTransacting, className: 'flex-1 py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 text-[12px] font-bold' }, 'Cancel'),
+                h('button', { onClick: confirmSell, disabled: isTransacting, className: 'flex-1 py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black text-[12px] font-black' }, isTransacting ? 'Listing...' : 'List Item')
+              )
+            )
+          ),
+
           toast && h('div', {
             className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
-              (toast.kind === 'bad'
-                ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white'
-                : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')
+              (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')
           }, toast.msg)
         )
       );
