@@ -91,10 +91,10 @@
     const ENERGY_MS = 5 * 60 * 1000;
     const TOTAL_USERS = 256890;
     
-    const BASE_MIN_WITHDRAW = 10_000_000_000_000; // 10 Trillion
+    // Minimum is now 100 Trillion
+    const BASE_MIN_WITHDRAW = 100_000_000_000_000; 
     const REAL_PER_WITHDRAW = 10_000;
 
-    // ✅ FULL PRICE LISTS (Matches Market & Business)
     const BIZ_PRICES = { 
       water: 10_000, mai_shai: 50_000, corn: 100_000, shoe: 25_000, akara: 40_000, 
       phone_chg: 15_000, suya: 250_000, keke: 500_000, okada: 300_000, umbrella: 20_000, 
@@ -124,8 +124,8 @@
     };
 
     const FEED_MESSAGES = [
-      "Tunde just crossed 15T fake! E don blow 💸",
-      "Aje Butler withdrew ₦10,000 real! Odogwu 🤑",
+      "Tunde just crossed 150T fake! E don blow 💸",
+      "Aje Butler requested a ₦10,000 payout! Odogwu 🤑",
       "Bisi is climbing the ranks fast 🚀",
       "Emeka don buy G-Wagon, e dey flex 🚙",
       "Ngozi just hit Top 10! 🏆"
@@ -152,6 +152,7 @@
       n = Math.floor(n || 0);
       const s = n < 0 ? '-' : '';
       n = Math.abs(n);
+      if (n >= 1e15) return s + '₦' + (n / 1e15).toFixed(2) + 'Q'; 
       if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
       if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
       if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
@@ -191,7 +192,8 @@
       
       const out = [];
       for (let i = 0; i < 100; i++) {
-        const baseNw = Math.pow(10, 13.7 - i * 0.055);
+        // Top 1 is ~15 Quadrillion, Drops down to Billions at rank 100
+        const baseNw = Math.pow(10, 16.2 - i * 0.065);
         const drift = baseNw * (rnd() * 0.05); 
         
         out.push({
@@ -293,7 +295,7 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      // ✅ FIXED: Fetch more users and sort by true Net Worth
+      // Fetch Real Users — sorted by true Net Worth
       useEffect(() => {
         const fetchRealUsers = async () => {
           try {
@@ -335,7 +337,7 @@
         return () => clearInterval(iv);
       }, []);
 
-      // Tick: Energy regen only (cash handled by business.html vault)
+      // Tick: Energy regen only
       useEffect(() => {
         if (!uid) return;
         const iv = setInterval(() => {
@@ -377,12 +379,13 @@
       const board = allUsers.slice(0, 100);
 
       const withdrawalCount = s.withdrawals || 0;
+      // 1st = 100T, 2nd = 150T, 3rd = 200T, 4th = 250T, etc.
       const nextTarget = BASE_MIN_WITHDRAW * (1 + withdrawalCount * 0.5 + (withdrawalCount * withdrawalCount) * 0.1);
 
       const submitWithdrawal = async () => {
         if ((s.cash || 0) < nextTarget) { 
           AudioEngine.error(); 
-          return notify('You need ' + fmt(nextTarget) + ' to withdraw. Keep hustling! 😭', 'bad'); 
+          return notify('You need ' + fmt(nextTarget) + ' to request a payout. Keep hustling! 😭', 'bad'); 
         }
         if (!bankName.trim() || !accountNumber.trim() || !accountName.trim()) {
           return notify('Please fill all bank details', 'bad');
@@ -421,7 +424,7 @@
         setAccountName('');
         
         AudioEngine.coin();
-        notify('Withdrawal Request Submitted! You will be paid shortly. 💰');
+        notify('Payout Request Submitted! Processing takes 24-48 hours. ⏳');
         try { if (navigator.vibrate) navigator.vibrate(30); } catch(e) {}
       };
 
@@ -432,11 +435,10 @@
         const handler = PaystackPop.setup({
           key: paystackKey,
           email: `user_${uid}@lagoslife.com`,
-          amount: topUpAmount * 100, // Paystack uses kobo
+          amount: topUpAmount * 100,
           currency: 'NGN',
-          ref: 'LGM_' + Date.now() + '_' + Math.floor(Math.random() * 1000), 
+          ref: 'LGM_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
           callback: function(response) {
-            // Redirect to success page
             window.location.href = '/payment-success.html?reference=' + response.reference;
           },
           onClose: function() {
@@ -456,10 +458,10 @@
       ];
 
       let sapaTitle = "Mushin Under Bridge Tenant";
-      if (netWorth > 1_000_000_000) sapaTitle = "Upcoming Baller";
-      if (netWorth > 100_000_000_000) sapaTitle = "Odogwu of Lagos";
-      if (netWorth > 1_000_000_000_000) sapaTitle = "Aje Butler";
-      if (netWorth > 10_000_000_000_000) sapaTitle = "Confirmed Billionaire 💸";
+      if (netWorth > 1_000_000_000_000) sapaTitle = "Upcoming Baller";
+      if (netWorth > 100_000_000_000_000) sapaTitle = "Odogwu of Lagos";
+      if (netWorth > 1_000_000_000_000_000) sapaTitle = "Aje Butler";
+      if (netWorth > 10_000_000_000_000_000) sapaTitle = "Confirmed Quadrillionaire 💸";
 
       const statsData = [
         { label: 'Net Worth', value: fmt(netWorth) },
@@ -527,11 +529,11 @@
               )
             ),
 
-            h(SectionTitle, null, 'Wallet & Withdrawals'),
+            h(SectionTitle, null, 'Wallet & Payouts'),
             h(Card, { className: 'p-4' },
               h('div', { className: 'text-[11px] text-white/55 leading-relaxed' },
                 'Rate: ', h('span', { className: 'text-[#FFD60A] font-bold' }, fmt(nextTarget) + ' fake = ₦10,000 real'), h('br'),
-                'Minimum: ', h('span', { className: 'text-[#FFD60A] font-bold' }, fmt(nextTarget) + ' fake = ₦10,000 real')
+                'Payout Processing: ', h('span', { className: 'text-[#FFD60A] font-bold' }, '24-48 Hours (Manual Review)')
               ),
               h('div', { className: 'mt-3 h-2.5 rounded-full bg-white/10 overflow-hidden' },
                 h('div', { className: 'h-full bg-gradient-to-r from-[#22C55E] via-[#FFD60A] to-[#FFB800] rounded-full transition-all', style: { width: Math.min(100, ((s.cash || 0) / nextTarget) * 100) + '%' } })
@@ -541,11 +543,11 @@
                 h('span', null, fmt(nextTarget))
               ),
               h('div', { className: 'text-[9px] text-[#FFD60A] mt-1 font-bold italic' },
-                (s.cash || 0) < nextTarget ? '"Sapa dey hold you, keep hustling!"' : '"Almost don blow! Withdraw now!"'
+                (s.cash || 0) < nextTarget ? '"Sapa dey hold you, keep hustling!"' : '"Almost don blow! Request payout now!"'
               ),
-              h('button', { onClick: () => { if ((s.cash || 0) >= nextTarget) setWithdrawModal(true); else notify('You need ' + fmt(nextTarget) + ' to withdraw', 'bad'); }, disabled: (s.cash || 0) < nextTarget,
+              h('button', { onClick: () => { if ((s.cash || 0) >= nextTarget) setWithdrawModal(true); else notify('You need ' + fmt(nextTarget) + ' to request a payout', 'bad'); }, disabled: (s.cash || 0) < nextTarget,
                 className: 'w-full mt-3 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] py-3.5 text-[13px] font-black text-black active:scale-[0.97] transition disabled:from-white/[0.06] disabled:to-white/[0.06] disabled:text-white/30 font-display shadow-[0_8px_24px_-8px_rgba(34,197,94,0.6)] disabled:shadow-none' },
-                'Withdraw ₦10,000.00 Real'
+                '📥 Request ₦10,000 Payout'
               ),
 
               h('div', { className: 'mt-5 pt-4 border-t border-white/[0.08]' },
@@ -601,8 +603,8 @@
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setWithdrawModal(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-2xl animate-popIn' },
               h('div', { className: 'text-3xl text-center mb-2' }, '🏦'),
-              h('div', { className: 'text-center text-[14px] font-black tracking-widest text-[#FFD60A] font-display' }, 'WITHDRAWAL DETAILS'),
-              h('p', { className: 'text-center text-[10.5px] text-white/50 mt-1 mb-4' }, 'Enter your real bank details to receive ₦10,000.'),
+              h('div', { className: 'text-center text-[14px] font-black tracking-widest text-[#FFD60A] font-display' }, 'PAYOUT REQUEST'),
+              h('p', { className: 'text-center text-[10.5px] text-white/50 mt-1 mb-4' }, 'Enter your bank details. Payouts are manually verified and sent within 24-48 hours.'),
               
               h('div', { className: 'space-y-3' },
                 h('div', null,
@@ -621,7 +623,7 @@
               
               h('div', { className: 'mt-5 flex gap-2' },
                 h('button', { onClick: () => setWithdrawModal(false), className: 'flex-1 py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 text-[12px] font-bold' }, 'Cancel'),
-                h('button', { onClick: submitWithdrawal, className: 'flex-1 py-3 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black text-[12px] font-black' }, 'Submit')
+                h('button', { onClick: submitWithdrawal, className: 'flex-1 py-3 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black text-[12px] font-black' }, 'Submit Request')
               )
             )
           ),
