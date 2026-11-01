@@ -188,7 +188,8 @@
                   assets: dbData.assets || prev.assets || {},
                   street: dbData.street || prev.street || {},
                   heat: dbData.heat || prev.heat || 0,
-                  transactions: dbData.transactions || []
+                  transactions: dbData.transactions || [],
+                  history: dbData.history || []
                 });
                 try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
                 return newData;
@@ -199,7 +200,7 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-                transactions: [], heat: 0
+                transactions: [], history: [], heat: 0
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
@@ -218,6 +219,20 @@
       }, [toast]);
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+
+      // ✅ LOG HISTORY HELPER
+      const logHistory = async (title, desc, amount) => {
+        if (!uid) return;
+        await db.collection("users").doc(uid).update({
+          history: firebase.firestore.FieldValue.arrayUnion({
+            title: title,
+            desc: desc,
+            amount: amount,
+            date: Date.now(),
+            category: 'activity'
+          })
+        }).catch(() => {});
+      };
 
       // Energy regen only (cash handled by business.html vault)
       useEffect(() => {
@@ -390,6 +405,9 @@
             ['street.' + action.id]: Date.now(),
             lastSeen: Date.now()
           }).catch(() => {});
+          
+          // ✅ Log the action to History
+          logHistory(action.label, title + ': ' + msg, delta.cash || 0);
         }
 
         if (newHeat >= 100) {
@@ -402,11 +420,14 @@
         setS(p => (Object.assign({}, p, { cash: p.cash - bailAmount, heat: 0 })));
         setRaidModal(false);
         notify('Police took ' + fmt(bailAmount) + ' as bail! 😭', 'bad');
+        
         if (uid) {
           await db.collection("users").doc(uid).update({
             cash: firebase.firestore.FieldValue.increment(-bailAmount),
             heat: 0
           }).catch(() => {});
+          
+          logHistory('Police Raid', 'Paid bail money to Police', -bailAmount);
         }
       };
 
