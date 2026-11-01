@@ -9,12 +9,10 @@
   <meta name="google-adsense-account" content="ca-pub-2725978931260112">
   <title>Lagos Life Mini — Hustle or Nothing</title>
 
-  <!-- 🔥 SEO & GOOGLE SEARCH TAGS -->
   <meta name="description" content="The funniest Naija money game! Tap hustle, buy businesses, scam yahoo boys, and withdraw real money. Build your empire from Mushin to Banana Island." />
   <meta name="keywords" content="Lagos Life Mini, Nigerian game, tap game, play to earn, real money game, hustle game" />
   <link rel="canonical" href="https://lagoslifemini.online/" />
 
-  <!-- 🔥 WHATSAPP LINK PREVIEW (OPEN GRAPH) TAGS -->
   <meta property="og:title" content="Lagos Life Mini — Hustle or Nothing 🇳🇬" />
   <meta property="og:description" content="Tap your way to becoming an Aje Butler! Join the biggest Naija hustle game. Play now and win real money! 💸" />
   <meta property="og:url" content="https://lagoslifemini.online" />
@@ -23,16 +21,13 @@
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   
-  <!-- TWITTER / X CARD -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Lagos Life Mini — Hustle or Nothing 🇳🇬" />
   <meta name="twitter:description" content="Tap your way to becoming an Aje Butler! Join the biggest Naija hustle game. Play now and win real money! 💸" />
   <meta name="twitter:image" content="https://lagoslifemini.online/IMG_0484.jpeg" />
 
-  <!-- FAVICON -->
   <link rel="icon" type="image/jpeg" href="/IMG_0484.jpeg" />
 
-  <!-- SCRIPTS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
@@ -124,8 +119,13 @@
     const ENERGY_MS = 5 * 60 * 1000;
     const TOTAL_USERS = 256890;
     const BASE_TAP = 500;
+    const REFILL_COST_PER_POINT = 100;
+    const COMBO_WINDOW_MS = 800;
+    const COMBO_STEP = 0.1;
+    const COMBO_MAX = 3;
 
-    // ✅ FIXED: Full list matching market.html and business.html
+    const DAILY_REWARDS = [10000, 20000, 40000, 80000, 160000, 320000, 640000];
+
     const BIZ_PRICES = { 
       water: 10_000, mai_shai: 50_000, corn: 100_000, shoe: 25_000, akara: 40_000, 
       phone_chg: 15_000, suya: 250_000, keke: 500_000, okada: 300_000, umbrella: 20_000, 
@@ -186,12 +186,32 @@
       "No gree for anybody this year! 🚨"
     ];
 
+    const ACHIEVEMENTS = [
+      { id: 'first_tap',    icon: '👆', name: 'First Tap',     desc: 'Tap once',           check: (s) => (s.taps || 0) >= 1 },
+      { id: 'tap_100',      icon: '💪', name: 'Hustler',       desc: '100 taps',           check: (s) => (s.taps || 0) >= 100 },
+      { id: 'tap_1k',       icon: '🔥', name: 'Grinder',       desc: '1,000 taps',         check: (s) => (s.taps || 0) >= 1000 },
+      { id: 'tap_10k',      icon: '⚡', name: 'Machine',       desc: '10,000 taps',        check: (s) => (s.taps || 0) >= 10000 },
+      { id: 'first_biz',    icon: '🏪', name: 'Entrepreneur',  desc: 'Own 1 business',     check: (s) => Object.keys(s.businesses || {}).length >= 1 },
+      { id: 'biz_10',       icon: '🏢', name: 'Tycoon',        desc: 'Own 10 businesses',  check: (s) => Object.keys(s.businesses || {}).length >= 10 },
+      { id: 'first_asset',  icon: '👟', name: 'Stylish',       desc: 'Own 1 asset',        check: (s) => Object.keys(s.assets || {}).length >= 1 },
+      { id: 'millionaire',  icon: '💰', name: 'Millionaire',   desc: '₦1M net worth',      check: (s, nw) => nw >= 1e6 },
+      { id: 'billionaire',  icon: '💎', name: 'Billionaire',   desc: '₦1B net worth',      check: (s, nw) => nw >= 1e9 },
+      { id: 'trillionaire', icon: '👑', name: 'Trillionaire',  desc: '₦1T net worth',      check: (s, nw) => nw >= 1e12 },
+      { id: 'traveler',     icon: '✈️', name: 'Traveler',      desc: 'Travel once',        check: (s) => (s.travels || []).length >= 1 },
+      { id: 'world',        icon: '🌍', name: 'World Citizen', desc: 'Travel 5 places',    check: (s) => (s.travels || []).length >= 5 },
+    ];
+
     const getCachedData = () => {
       try {
         const cached = localStorage.getItem("lagos_user_data");
         if (cached) {
           const parsed = JSON.parse(cached);
-          return Object.assign({}, parsed, { transactions: parsed.transactions || [] });
+          return Object.assign({}, parsed, {
+            transactions: parsed.transactions || [],
+            lastClaimDate: parsed.lastClaimDate || null,
+            streakCount: parsed.streakCount || 0,
+            accountNumber: parsed.accountNumber || null
+          });
         }
       } catch (e) {}
       return {
@@ -199,7 +219,8 @@
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-        transactions: [], bankName: null
+        transactions: [], bankName: null,
+        lastClaimDate: null, streakCount: 0, accountNumber: null
       };
     };
 
@@ -262,6 +283,7 @@
         coin: () => { init(); tone(1046, 0.08, "square", sfxGain, 0, 0.15); tone(1318, 0.15, "square", sfxGain, 0.07, 0.15); },
         error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
         purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); },
+        achievement: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.1, 0.2); tone(783, 0.1, "triangle", sfxGain, 0.2, 0.2); tone(1046, 0.2, "triangle", sfxGain, 0.3, 0.2); },
         isPlaying: () => musicPlaying
       };
     })();
@@ -292,15 +314,35 @@
       const [isSending, setIsSending] = useState(false);
       const [verifiedBank, setVerifiedBank] = useState(null);
       const [isVerifying, setIsVerifying] = useState(false);
-      const [fakeAlert, setFakeAlert] = useState(null);
       
       const [txHistoryOpen, setTxHistoryOpen] = useState(false);
       const [musicOn, setMusicOn] = useState(false);
       const [isMaintenance, setIsMaintenance] = useState(false);
       const [quoteIndex, setQuoteIndex] = useState(0);
 
+      // ===== NEW FEATURE STATES =====
+      const [settingsOpen, setSettingsOpen] = useState(false);
+      const [receiptOpen, setReceiptOpen] = useState(false);
+      const [receiptUrl, setReceiptUrl] = useState(null);
+      const [achievementToast, setAchievementToast] = useState(null);
+      const [comboMult, setComboMult] = useState(1);
+      const [accountInput, setAccountInput] = useState('');
+
       const tapCounter = useRef(0);
       const pendingTaps = useRef({ cash: 0, energy: 0, taps: 0 });
+      const comboRef = useRef({ lastTap: 0, count: 0, timer: null });
+      const bankAutoShownRef = useRef(false);
+      const achievementsLock = useRef(new Set());
+
+      // ===== CLEANUP COMBO TIMER =====
+      useEffect(() => {
+        return () => { if (comboRef.current.timer) clearTimeout(comboRef.current.timer); };
+      }, []);
+
+      // ===== INIT ACCOUNT INPUT ON SETTINGS OPEN =====
+      useEffect(() => {
+        if (settingsOpen) setAccountInput(s.accountNumber || '');
+      }, [settingsOpen]);
 
       useEffect(() => {
         const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
@@ -330,6 +372,10 @@
                   travels: dbData.travels || prev.travels || [],
                   transactions: dbData.transactions || [],
                   bankName: dbData.bankName || prev.bankName || null,
+                  achievements: dbData.achievements || prev.achievements || [],
+                  lastClaimDate: dbData.lastClaimDate !== undefined ? dbData.lastClaimDate : (prev.lastClaimDate || null),
+                  streakCount: dbData.streakCount !== undefined ? dbData.streakCount : (prev.streakCount || 0),
+                  accountNumber: dbData.accountNumber || prev.accountNumber || null,
                   cash: (dbData.cash || 0) + pendingTaps.current.cash,
                   energy: (dbData.energy || 0) + pendingTaps.current.energy,
                   taps: (dbData.taps || 0) + pendingTaps.current.taps
@@ -343,7 +389,8 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-                transactions: [], bankName: null
+                transactions: [], bankName: null,
+                lastClaimDate: null, streakCount: 0, accountNumber: null, achievements: []
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
@@ -359,8 +406,10 @@
         };
       }, []);
 
+      // ===== AUTO-OPEN BANK PICKER (only once) =====
       useEffect(() => {
-        if (s && !s.bankName && !isMaintenance && !authError) {
+        if (!bankAutoShownRef.current && s && !s.bankName && !isMaintenance && !authError) {
+          bankAutoShownRef.current = true;
           setBankModalOpen(true);
         }
       }, [s.bankName, isMaintenance, authError]);
@@ -399,12 +448,6 @@
       }, [toast]);
 
       useEffect(() => {
-        if (!fakeAlert) return;
-        const t = setTimeout(() => setFakeAlert(null), 4000);
-        return () => clearTimeout(t);
-      }, [fakeAlert]);
-
-      useEffect(() => {
         const iv = setInterval(() => {
           setQuoteIndex(prev => (prev + 1) % FUNNY_QUOTES.length);
         }, 5000);
@@ -413,7 +456,7 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      // ✅ FIXED: Only energy regen here. Cash is handled by the Vault in business.html.
+      // ===== ENERGY REGEN =====
       useEffect(() => {
         if (!s) return;
         const iv = setInterval(() => {
@@ -439,44 +482,7 @@
         return () => clearInterval(iv);
       }, []);
 
-      const handleSaveBank = async (bank) => {
-        setS(prev => Object.assign({}, prev, { bankName: bank }));
-        setBankModalOpen(false);
-        notify('Bank updated: ' + bank + ' ✅');
-        if (uid) await db.collection("users").doc(uid).update({ bankName: bank }).catch(() => {});
-      };
-
-      const verifyBank = async () => {
-        if (!sendTo.trim()) return setVerifiedBank(null);
-        setIsVerifying(true);
-        try {
-          const snap = await db.collection("users").where("name", "==", sendTo.trim()).get();
-          if (!snap.empty) {
-            const userData = snap.docs[0].data();
-            if (userData.bankName) {
-              setVerifiedBank({ bank: userData.bankName, name: userData.name });
-            } else {
-              setVerifiedBank({ bank: 'Unknown Bank', name: userData.name });
-            }
-          } else {
-            setVerifiedBank(null);
-          }
-        } catch(e) {
-          setVerifiedBank(null);
-        }
-        setIsVerifying(false);
-      };
-
-      if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
-
-      if (isMaintenance) {
-        return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center bg-[#08080B]' },
-          h('div', { className: 'text-7xl animate-bounce' }, '🚧'),
-          h('h1', { className: 'text-2xl font-black text-[#FFD60A] font-display mt-4' }, 'GAME UNDER MAINTENANCE'),
-          h('p', { className: 'text-white/50 text-sm max-w-xs' }, 'We dey upgrade the game for you. Check back in a few minutes!')
-        );
-      }
-
+      // ===== DERIVED VALUES (need before achievements check) =====
       const safeBiz = s.businesses || {};
       const safeAssets = s.assets || {};
       const safeTravels = s.travels || [];
@@ -486,6 +492,143 @@
       const netWorth = Math.floor((s.cash || 0) + bizValue + assetValue);
       const tapBonus = safeTravels.reduce((a, id) => a + (DEST_BONUSES[id] || 0), 0);
       const TAP_VALUE = BASE_TAP + tapBonus;
+
+      // ===== ACHIEVEMENTS AUTO-UNLOCK =====
+      const achSig = [s.taps || 0, netWorth, Object.keys(safeBiz).length, Object.keys(safeAssets).length, safeTravels.length].join('|');
+      useEffect(() => {
+        if (!s || !uid) return;
+        const unlocked = s.achievements || [];
+        const newlyUnlocked = ACHIEVEMENTS.filter(a => 
+          !unlocked.includes(a.id) && 
+          !achievementsLock.current.has(a.id) && 
+          a.check(s, netWorth)
+        );
+        if (newlyUnlocked.length === 0) return;
+        
+        const newIds = newlyUnlocked.map(a => a.id);
+        newIds.forEach(id => achievementsLock.current.add(id));
+        setS(prev => Object.assign({}, prev, { achievements: [...(prev.achievements || []), ...newIds] }));
+        db.collection("users").doc(uid).update({
+          achievements: firebase.firestore.FieldValue.arrayUnion(...newIds)
+        }).catch(() => {});
+        AudioEngine.achievement();
+        setAchievementToast(newlyUnlocked[0]);
+        setTimeout(() => setAchievementToast(null), 3500);
+      }, [achSig, uid]);
+
+      // ===== DAILY REWARD LOGIC =====
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const canClaimDaily = s.lastClaimDate !== todayStr;
+      const nextStreak = s.lastClaimDate === yesterdayStr ? (s.streakCount || 0) + 1 : 1;
+      const dailyRewardAmount = DAILY_REWARDS[Math.min(nextStreak - 1, DAILY_REWARDS.length - 1)];
+
+      const claimDaily = async () => {
+        if (!canClaimDaily) return notify('Come back tomorrow 😴', 'bad');
+        const reward = dailyRewardAmount;
+        const newStreak = nextStreak;
+        setS(prev => Object.assign({}, prev, {
+          cash: prev.cash + reward,
+          lastClaimDate: todayStr,
+          streakCount: newStreak
+        }));
+        if (uid) {
+          await db.collection("users").doc(uid).update({
+            cash: firebase.firestore.FieldValue.increment(reward),
+            lastClaimDate: todayStr,
+            streakCount: newStreak
+          }).catch(() => {});
+        }
+        AudioEngine.coin();
+        notify('Day ' + newStreak + ' claimed! +' + fmt(reward));
+      };
+
+      // ===== ENERGY REFILL =====
+      const refillEnergy = async () => {
+        const missing = MAX_E - (s.energy || 0);
+        if (missing <= 0) return notify('Energy already full ⚡');
+        const cost = missing * REFILL_COST_PER_POINT;
+        if ((s.cash || 0) < cost) { AudioEngine.error(); return notify('You no get that money 💸', 'bad'); }
+        setS(prev => Object.assign({}, prev, { cash: prev.cash - cost, energy: MAX_E, lastEnergy: Date.now() }));
+        if (uid) {
+          await db.collection("users").doc(uid).update({
+            cash: firebase.firestore.FieldValue.increment(-cost),
+            energy: MAX_E,
+            lastEnergy: Date.now()
+          }).catch(() => {});
+        }
+        AudioEngine.purchase();
+        notify('Energy refilled! +' + missing + ' ⚡');
+      };
+
+      const handleSaveBank = async (bank) => {
+        setS(prev => Object.assign({}, prev, { bankName: bank }));
+        setBankModalOpen(false);
+        notify('Bank updated: ' + bank + ' ✅');
+        if (uid) await db.collection("users").doc(uid).update({ bankName: bank }).catch(() => {});
+      };
+
+      const saveAccountNumber = async () => {
+        const acct = (accountInput || '').replace(/\D/g, '').slice(0, 10);
+        if (acct.length !== 10) return notify('Enter 10-digit account number', 'bad');
+        setS(prev => Object.assign({}, prev, { accountNumber: acct }));
+        if (uid) await db.collection("users").doc(uid).update({ accountNumber: acct }).catch(() => {});
+        notify('Account saved ✅');
+      };
+
+      const verifyBank = async () => {
+        if (!sendTo.trim()) return setVerifiedBank(null);
+        setIsVerifying(true);
+        try {
+          const snap = await db.collection("users").where("name", "==", sendTo.trim()).get();
+          if (!snap.empty) {
+            const userData = snap.docs[0].data();
+            setVerifiedBank({ bank: userData.bankName || 'Unknown Bank', name: userData.name, accountNumber: userData.accountNumber || null });
+          } else {
+            setVerifiedBank(null);
+          }
+        } catch(e) { setVerifiedBank(null); }
+        setIsVerifying(false);
+      };
+
+      // ===== TAP WITH COMBO =====
+      const doTap = () => {
+        if (s.energy < 1) { AudioEngine.error(); return notify('No energy! Wait or refill ⚡', 'bad'); }
+        AudioEngine.tap();
+        try { if (navigator.vibrate) navigator.vibrate(8); } catch(e) {}
+        
+        const now = Date.now();
+        const c = comboRef.current;
+        if (now - c.lastTap < COMBO_WINDOW_MS) {
+          c.count = Math.min(c.count + 1, 25);
+        } else {
+          c.count = 1;
+        }
+        c.lastTap = now;
+
+        const mult = Math.min(COMBO_MAX, 1 + (c.count - 1) * COMBO_STEP);
+        const tapValue = Math.round(TAP_VALUE * mult);
+        setComboMult(mult);
+
+        if (c.timer) clearTimeout(c.timer);
+        c.timer = setTimeout(() => {
+          setComboMult(1);
+          comboRef.current.count = 0;
+        }, COMBO_WINDOW_MS);
+
+        const newEnergy = Math.max(0, s.energy - 1);
+        setS(prev => (Object.assign({}, prev, { cash: prev.cash + tapValue, energy: newEnergy, taps: prev.taps + 1 })));
+        
+        pendingTaps.current.cash += tapValue;
+        pendingTaps.current.energy -= 1;
+        pendingTaps.current.taps += 1;
+
+        const id = ++tapCounter.current;
+        setTapFloats((f) => [...f.slice(-6), { id, x: 40 + Math.random() * 20, amt: tapValue, mult }]);
+        setTimeout(() => setTapFloats((f) => f.filter((x) => x.id !== id)), 950);
+      };
+
+      // ===== SHARE CARD (unchanged) =====
       const rank = netWorth <= 0 ? TOTAL_USERS : Math.max(1, Math.floor(TOTAL_USERS - Math.min(1, Math.log10(netWorth + 1) / 13) * (TOTAL_USERS - 1)));
       const energyNextIn = s.energy >= MAX_E ? 0 : ENERGY_MS - ((Date.now() - s.lastEnergy) % ENERGY_MS);
 
@@ -496,66 +639,38 @@
       else if (netWorth > 100_000_000) playerStatus = "Upcoming Baller";
       else if (netWorth > 1_000_000) playerStatus = "Street Champion";
 
-      const doTap = () => {
-        if (s.energy < 1) { AudioEngine.error(); return notify('No energy! Wait or refill ⚡', 'bad'); }
-        AudioEngine.tap();
-        try { if (navigator.vibrate) navigator.vibrate(8); } catch(e) {}
-        
-        const newEnergy = Math.max(0, s.energy - 1);
-        setS(prev => (Object.assign({}, prev, { cash: prev.cash + TAP_VALUE, energy: newEnergy, taps: prev.taps + 1 })));
-        
-        pendingTaps.current.cash += TAP_VALUE;
-        pendingTaps.current.energy -= 1;
-        pendingTaps.current.taps += 1;
-
-        const id = ++tapCounter.current;
-        setTapFloats((f) => [...f.slice(-6), { id, x: 40 + Math.random() * 20, amt: TAP_VALUE }]);
-        setTimeout(() => setTapFloats((f) => f.filter((x) => x.id !== id)), 950);
-      };
-
       const generateShareCard = () => {
         const c = document.createElement('canvas');
         c.width = 1080; c.height = 1080;
         const ctx = c.getContext('2d');
-        
         const bg = ctx.createLinearGradient(0, 0, 1080, 1080);
         bg.addColorStop(0, '#0A0A10'); bg.addColorStop(1, '#1a1a22');
         ctx.fillStyle = bg; ctx.fillRect(0, 0, 1080, 1080);
-        
         const rad = ctx.createRadialGradient(540, 420, 0, 540, 420, 720);
         rad.addColorStop(0, 'rgba(255,214,10,0.28)'); rad.addColorStop(1, 'rgba(255,214,10,0)');
         ctx.fillStyle = rad; ctx.fillRect(0, 0, 1080, 1080);
-        
         ctx.strokeStyle = 'rgba(255,214,10,0.05)'; ctx.lineWidth = 2;
         for (let i = 0; i < 1080; i += 60) {
           ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1080); ctx.stroke();
           ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(1080, i); ctx.stroke();
         }
-        
         ctx.strokeStyle = 'rgba(255,214,10,0.35)'; ctx.lineWidth = 4;
         roundRect(ctx, 40, 40, 1000, 1000, 40); ctx.stroke();
-        
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FFD60A'; ctx.font = 'bold 34px Sora, Inter, sans-serif';
         ctx.fillText('🌴 LAGOS LIFE MINI', 540, 130);
-        
         ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 56px Sora, Inter, sans-serif';
         ctx.fillText(s.name || 'Aje Butler', 540, 260);
-        
         ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = 'bold 26px Inter, sans-serif';
         ctx.fillText('TOTAL NET WORTH', 540, 400);
-        
         const goldGrad = ctx.createLinearGradient(180, 460, 900, 580);
         goldGrad.addColorStop(0, '#FFE566'); goldGrad.addColorStop(0.5, '#FFD60A'); goldGrad.addColorStop(1, '#FFB800');
         ctx.fillStyle = goldGrad; ctx.font = 'bold 130px Sora, Inter, sans-serif';
         ctx.fillText(fmt(netWorth), 540, 530);
-        
         ctx.fillStyle = 'rgba(255,255,255,0.65)'; ctx.font = 'bold 30px Inter, sans-serif';
         ctx.fillText('Rank #' + rank.toLocaleString() + ' of ' + TOTAL_USERS.toLocaleString() + ' hustlers', 540, 610);
-        
         ctx.fillStyle = 'rgba(239, 68, 68, 0.9)'; ctx.font = 'bold 28px Inter, sans-serif';
         ctx.fillText('STATUS: ' + playerStatus, 540, 660);
-
         ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(120, 700); ctx.lineTo(960, 700); ctx.stroke();
         [{ label: 'CASH', value: fmt(s.cash) }, { label: 'BUSINESS', value: fmt(bizValue) }, { label: 'ASSETS', value: fmt(assetValue) }].forEach((st, i) => {
@@ -563,19 +678,13 @@
           ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = 'bold 22px Inter, sans-serif'; ctx.fillText(st.label, x, 760);
           ctx.fillStyle = '#FFD60A'; ctx.font = 'bold 38px Sora, Inter, sans-serif'; ctx.fillText(st.value, x, 812);
         });
-        
         ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.font = 'bold 26px Inter, sans-serif'; ctx.fillText('Hustle or Nothing 🇳🇬', 540, 890);
-        
         ctx.fillStyle = 'rgba(255,214,10,0.15)'; roundRect(ctx, 190, 940, 700, 70, 35); ctx.fill();
         ctx.strokeStyle = 'rgba(255,214,10,0.55)'; ctx.lineWidth = 2; ctx.stroke();
         ctx.fillStyle = '#FFD60A'; ctx.font = 'bold 28px Sora, Inter, sans-serif'; ctx.fillText('🔥 SHOW THIS TO YOUR FRIENDS & PEPPER THEM', 540, 986);
-        
         ctx.fillStyle = '#1C1C24'; roundRect(ctx, 340, 1025, 400, 40, 20); ctx.fill();
-        
-        // ✅ UPDATED DOMAIN HERE
         ctx.fillStyle = '#FFD60A'; ctx.font = 'bold 22px Inter, sans-serif'; 
         ctx.fillText('lagoslifemini.online', 540, 1053);
-        
         return c;
       };
 
@@ -606,10 +715,86 @@
       const shareToTikTok = async () => {
         const text = `I'm worth ${fmt(netWorth)} on Lagos Life Mini 🇳🇬🔥 Rank #${rank.toLocaleString()}. Can you beat me?`;
         try { if (navigator.clipboard) { await navigator.clipboard.writeText(text); notify('Caption copied! Paste am on TikTok 🎵'); } } catch(e) {}
-        const url = 'https://www.tiktok.com/';
-        try { window.open(url, '_blank'); } catch(e) {}
+        try { window.open('https://www.tiktok.com/', '_blank'); } catch(e) {}
       };
 
+      // ===== RECEIPT GENERATOR (NEW) =====
+      const generateReceipt = (fromName, toName, bank, accountNumber, amount, ref) => {
+        const c = document.createElement('canvas');
+        c.width = 1080; c.height = 1080;
+        const ctx = c.getContext('2d');
+        
+        const bg = ctx.createLinearGradient(0, 0, 1080, 1080);
+        bg.addColorStop(0, '#0A0A10'); bg.addColorStop(1, '#101A14');
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, 1080, 1080);
+        
+        const rad = ctx.createRadialGradient(540, 280, 0, 540, 280, 620);
+        rad.addColorStop(0, 'rgba(34,197,94,0.35)'); rad.addColorStop(1, 'rgba(34,197,94,0)');
+        ctx.fillStyle = rad; ctx.fillRect(0, 0, 1080, 1080);
+        
+        ctx.strokeStyle = 'rgba(255,214,10,0.03)'; ctx.lineWidth = 2;
+        for (let i = 0; i < 1080; i += 60) {
+          ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1080); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(1080, i); ctx.stroke();
+        }
+        
+        ctx.strokeStyle = 'rgba(34,197,94,0.5)'; ctx.lineWidth = 4;
+        roundRect(ctx, 40, 40, 1000, 1000, 40); ctx.stroke();
+        
+        // Success check
+        ctx.fillStyle = 'rgba(34,197,94,0.15)';
+        ctx.beginPath(); ctx.arc(540, 175, 55, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = 'rgba(34,197,94,0.7)'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(540, 175, 55, 0, Math.PI*2); ctx.stroke();
+        ctx.fillStyle = '#22C55E'; ctx.font = 'bold 60px Sora, Inter, sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('✓', 540, 197);
+        
+        ctx.fillStyle = '#22C55E'; ctx.font = 'bold 32px Sora, Inter, sans-serif';
+        ctx.fillText('TRANSFER SUCCESSFUL', 540, 280);
+        
+        // Amount
+        const goldGrad = ctx.createLinearGradient(180, 320, 900, 440);
+        goldGrad.addColorStop(0, '#FFE566'); goldGrad.addColorStop(0.5, '#FFD60A'); goldGrad.addColorStop(1, '#FFB800');
+        ctx.fillStyle = goldGrad; ctx.font = 'bold 130px Sora, Inter, sans-serif';
+        ctx.fillText('₦' + amount.toLocaleString(), 540, 420);
+        
+        ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = 'bold 24px Inter, sans-serif';
+        ctx.fillText('AMOUNT SENT', 540, 480);
+        
+        // Divider
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(120, 530); ctx.lineTo(960, 530); ctx.stroke();
+        
+        // Details
+        const details = [
+          ['FROM', fromName],
+          ['TO', toName],
+          ['BANK', bank],
+          ['ACCOUNT', accountNumber ? (accountNumber.slice(0,3) + '****' + accountNumber.slice(-3)) : '—'],
+          ['DATE', new Date().toLocaleString('en-NG')],
+          ['REF', 'LGM' + ref]
+        ];
+        details.forEach(([label, val], i) => {
+          const y = 600 + i * 62;
+          ctx.textAlign = 'left';
+          ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = 'bold 20px Inter, sans-serif';
+          ctx.fillText(label, 120, y);
+          ctx.textAlign = 'right';
+          ctx.fillStyle = '#FFFFFF'; ctx.font = 'bold 26px Sora, Inter, sans-serif';
+          ctx.fillText(String(val), 960, y);
+        });
+        
+        // Footer
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#FFD60A'; ctx.font = 'bold 22px Sora, Inter, sans-serif';
+        ctx.fillText('🌴 LAGOS LIFE MINI 🇳🇬', 540, 1010);
+        ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.font = 'bold 18px Inter, sans-serif';
+        ctx.fillText('lagoslifemini.online — Hustle or Nothing', 540, 1045);
+        
+        return c;
+      };
+
+      // ===== SEND MONEY (now generates receipt) =====
       const sendMoney = async () => {
         const user = sendTo.trim();
         const amt = Math.floor(Number(sendAmt));
@@ -646,7 +831,17 @@
           setSendAmt('');
           setVerifiedBank(null);
           
-          setFakeAlert({ sender: s.name, amount: amt, bank: recipientData.bankName || 'Opay', ref: txId.slice(-8) });
+          // Generate and show receipt
+          const canvas = generateReceipt(
+            s.name, 
+            user, 
+            recipientData.bankName || 'Opay',
+            recipientData.accountNumber || null,
+            amt, 
+            txId.slice(-8)
+          );
+          setReceiptUrl(canvas.toDataURL('image/png'));
+          setTimeout(() => setReceiptOpen(true), 250);
           
         } catch (e) {
           AudioEngine.error();
@@ -665,6 +860,16 @@
         { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
 
+      if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
+
+      if (isMaintenance) {
+        return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center bg-[#08080B]' },
+          h('div', { className: 'text-7xl animate-bounce' }, '🚧'),
+          h('h1', { className: 'text-2xl font-black text-[#FFD60A] font-display mt-4' }, 'GAME UNDER MAINTENANCE'),
+          h('p', { className: 'text-white/50 text-sm max-w-xs' }, 'We dey upgrade the game for you. Check back in a few minutes!')
+        );
+      }
+
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
 
@@ -673,6 +878,7 @@
             className: 'music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition backdrop-blur'
           }, h('span', { className: 'text-base' }, musicOn ? '🔊' : '🔇')),
 
+          // ===== HEADER with settings gear =====
           h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
             h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
               h('div', { className: 'flex items-center gap-2 min-w-0' },
@@ -684,7 +890,11 @@
               ),
               h('div', { className: 'flex items-center gap-1.5 shrink-0' },
                 h('div', { className: 'px-2 py-1 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-extrabold tabular-nums' }, '⚡ ' + (s.energy || 0)),
-                h('div', { className: 'px-2 py-1 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] text-[10px] font-extrabold tabular-nums' }, fmtReal(s.real || 0))
+                h('div', { className: 'px-2 py-1 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] text-[10px] font-extrabold tabular-nums' }, fmtReal(s.real || 0)),
+                h('button', {
+                  onClick: () => setSettingsOpen(true),
+                  className: 'w-7 h-7 rounded-lg bg-white/[0.06] border border-white/10 grid place-items-center active:scale-90 transition'
+                }, h('span', { className: 'text-[12px]' }, '⚙️'))
               )
             )
           ),
@@ -699,6 +909,7 @@
           ),
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
+            // Hero card
             h(Card, { className: 'relative overflow-hidden p-5 mt-3 hero-grid', gold: true },
               h('div', { className: 'absolute -top-24 -right-16 w-64 h-64 rounded-full bg-[#FFD60A]/25 blur-3xl pointer-events-none' }),
               h('div', { className: 'absolute -bottom-20 -left-10 w-48 h-48 rounded-full bg-[#FFB800]/15 blur-3xl pointer-events-none' }),
@@ -725,6 +936,7 @@
               )
             ),
 
+            // Quick actions
             h('div', { className: 'grid grid-cols-2 gap-2 mt-2' },
               h(Card, { className: 'p-3.5' },
                 h('div', { className: 'flex items-center justify-between' },
@@ -755,27 +967,94 @@
               )
             ),
 
+            // Tap button with combo
             h('div', { className: 'mt-8 flex flex-col items-center' },
               h('div', { className: 'relative' },
+                comboMult > 1 && h('div', { 
+                  className: 'absolute -top-8 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-[#FF6B00] to-[#FF0055] text-white text-[11px] font-black shadow-lg animate-popIn whitespace-nowrap z-20' 
+                }, '🔥 ' + comboMult.toFixed(1) + 'x COMBO!'),
                 h('button', { onClick: doTap, className: 'tap-btn w-56 h-56 grid place-items-center text-black' },
                   h('div', { className: 'text-center relative z-10' },
                     h('div', { className: 'text-5xl drop-shadow-md' }, '👊🏾'),
                     h('div', { className: 'text-2xl font-black tracking-tighter mt-1 font-display' }, 'HUSTLE'),
-                    h('div', { className: 'text-[11px] font-extrabold opacity-70 font-display' }, '+' + fmt(TAP_VALUE))
+                    h('div', { className: 'text-[11px] font-extrabold opacity-70 font-display' }, '+' + fmt(Math.round(TAP_VALUE * comboMult)))
                   )
                 ),
                 tapFloats.map((f) => h('span', { key: f.id, className: 'tap-float', style: { left: f.x + '%' } }, '+' + fmt(f.amt)))
               ),
+              // Energy bar with REFILL
               h('div', { className: 'mt-6 w-full flex items-center gap-2 text-[11px] font-bold text-white/50' },
                 h('span', { className: 'tabular-nums' }, '⚡ ' + (s.energy || 0) + '/' + MAX_E),
                 h('div', { className: 'flex-1 h-2 rounded-full bg-white/10 overflow-hidden' },
                   h('div', { className: 'h-full bg-gradient-to-r from-[#FFD60A] to-[#FFB800] rounded-full transition-all', style: { width: ((s.energy || 0) / MAX_E * 100) + '%' } })
                 ),
-                h('span', { className: 'tabular-nums' }, (s.energy || 0) >= MAX_E ? 'FULL' : mmss(energyNextIn))
+                (s.energy || 0) >= MAX_E ? 
+                  h('span', { className: 'tabular-nums text-[10px] text-[#22C55E]' }, 'FULL') :
+                  h('div', { className: 'flex items-center gap-1.5' },
+                    h('span', { className: 'tabular-nums text-[10px]' }, mmss(energyNextIn)),
+                    h('button', {
+                      onClick: refillEnergy,
+                      className: 'rounded-md bg-[#FFD60A] text-black px-2 py-1 text-[9px] font-black active:scale-95 transition shadow-[0_2px_8px_-2px_rgba(255,214,10,0.7)]'
+                    }, 'REFILL ₦' + ((MAX_E - s.energy) * REFILL_COST_PER_POINT).toLocaleString())
+                  )
               )
             ),
 
-            h('div', { className: 'mt-8 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.05] text-center overflow-hidden relative h-10' },
+            // Daily reward card
+            h(Card, { className: 'p-4 mt-4' },
+              h('div', { className: 'flex items-center justify-between mb-2' },
+                h('div', null,
+                  h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, '🎁 Daily Reward'),
+                  h('div', { className: 'text-[13px] font-black mt-0.5 font-display' }, 
+                    canClaimDaily ? 'Claim Day ' + nextStreak + ' → +' + fmt(dailyRewardAmount) : 'Come back tomorrow 😴'
+                  )
+                ),
+                h('button', { 
+                  onClick: claimDaily, 
+                  disabled: !canClaimDaily,
+                  className: 'rounded-lg px-4 py-2 text-[11px] font-black active:scale-95 transition ' + 
+                    (canClaimDaily ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_14px_-4px_rgba(255,214,10,0.7)]' : 'bg-white/[0.05] text-white/30')
+                }, canClaimDaily ? 'CLAIM' : '✓ Done')
+              ),
+              h('div', { className: 'flex gap-1 mt-3' },
+                DAILY_REWARDS.map((amt, i) => {
+                  const currentDay = Math.min(nextStreak, 7) - 1;
+                  const done = canClaimDaily ? i < currentDay : i <= (s.streakCount || 1) - 1;
+                  const isCurrent = canClaimDaily && i === currentDay;
+                  return h('div', {
+                    key: i,
+                    className: 'flex-1 h-1.5 rounded-full transition-all ' +
+                      (done ? 'bg-[#22C55E]' : isCurrent ? 'bg-[#FFD60A] animate-pulse' : 'bg-white/10')
+                  });
+                })
+              )
+            ),
+
+            // Achievements row
+            h(SectionTitle, {
+              right: h('span', { className: 'text-[10px] font-bold text-white/50' }, 
+                (s.achievements || []).length + '/' + ACHIEVEMENTS.length
+              )
+            }, 'Achievements'),
+            h('div', { className: 'flex gap-2 overflow-x-auto pb-1 -mx-1 px-1' },
+              ACHIEVEMENTS.map(a => {
+                const unlocked = (s.achievements || []).includes(a.id);
+                return h('div', { 
+                  key: a.id, 
+                  title: a.desc,
+                  className: 'shrink-0 w-[72px] rounded-xl p-2 flex flex-col items-center text-center transition-all ' + 
+                    (unlocked 
+                      ? 'bg-gradient-to-br from-[#FFE566]/25 to-[#FFB800]/10 border border-[#FFD60A]/40 shadow-[0_4px_14px_-4px_rgba(255,214,10,0.4)]' 
+                      : 'bg-white/[0.03] border border-white/[0.05] opacity-40'),
+                },
+                  h('div', { className: 'text-2xl' }, unlocked ? a.icon : '🔒'),
+                  h('div', { className: 'text-[8px] font-extrabold mt-1 leading-tight' }, a.name)
+                );
+              })
+            ),
+
+            // Quote
+            h('div', { className: 'mt-6 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.05] text-center overflow-hidden relative h-10' },
               h('div', { className: 'text-[11px] font-bold text-white/50 italic absolute w-full left-0 animate-slideDown', key: quoteIndex },
                 '"' + FUNNY_QUOTES[quoteIndex] + '"'
               )
@@ -793,13 +1072,68 @@
             )
           ),
 
+          // ===== SETTINGS MODAL (NEW) =====
+          settingsOpen && h('div', { className: 'fixed inset-0 z-[70] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setSettingsOpen(false) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn' },
+              h('div', { className: 'flex items-center justify-between border-b border-white/10 pb-3 mb-3' },
+                h('div', { className: 'text-[13px] font-black tracking-widest text-[#FFD60A] font-display' }, '⚙️ SETTINGS'),
+                h('button', { onClick: () => setSettingsOpen(false), className: 'text-white/50 text-xl leading-none' }, '×')
+              ),
+              h('div', { className: 'space-y-4 max-h-[65vh] overflow-y-auto pr-1' },
+                // Bank picker
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Your Bank (for fake alerts)'),
+                  h('div', { className: 'mt-1 text-[13px] font-black text-[#22C55E]' }, '🏦 ' + (s.bankName || 'Not set')),
+                  h('div', { className: 'mt-2 grid grid-cols-2 gap-1.5' },
+                    NIGERIAN_BANKS.map(b => 
+                      h('button', {
+                        key: b,
+                        onClick: () => handleSaveBank(b),
+                        className: 'px-2 py-1.5 rounded-lg text-[10px] font-extrabold active:scale-95 transition ' +
+                          (s.bankName === b ? 'bg-[#FFD60A] text-black shadow-[0_2px_10px_-2px_rgba(255,214,10,0.6)]' : 'bg-white/[0.05] border border-white/10 text-white/70 hover:bg-white/[0.08]')
+                      }, b)
+                    )
+                  )
+                ),
+                // Account number
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Account Number'),
+                  h('input', {
+                    type: 'tel',
+                    value: accountInput,
+                    onChange: (e) => setAccountInput(e.target.value.replace(/\D/g, '').slice(0, 10)),
+                    placeholder: '0123456789',
+                    maxLength: 10,
+                    className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[13px] font-extrabold text-white placeholder-white/25 focus:border-[#FFD60A]/50 transition tabular-nums'
+                  }),
+                  h('button', {
+                    onClick: saveAccountNumber,
+                    className: 'mt-1.5 w-full rounded-lg bg-white/[0.06] border border-white/10 py-2 text-[11px] font-extrabold text-white/80 active:scale-95 transition'
+                  }, 'Save Account Number')
+                ),
+                // Sound toggle
+                h('div', { className: 'flex items-center justify-between' },
+                  h('div', null,
+                    h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Sound'),
+                    h('div', { className: 'text-[11px] text-white/60 mt-0.5' }, musicOn ? 'Music On 🔊' : 'Music Off 🔇')
+                  ),
+                  h('button', {
+                    onClick: () => { const on = AudioEngine.toggle(); setMusicOn(on); },
+                    className: 'w-12 h-7 rounded-full relative transition ' + (musicOn ? 'bg-[#22C55E]' : 'bg-white/20'),
+                  }, h('div', { className: 'absolute top-0.5 w-6 h-6 rounded-full bg-white transition-all ' + (musicOn ? 'left-[26px]' : 'left-0.5') }))
+                )
+              )
+            )
+          ),
+
+          // ===== BANK MODAL (initial picker) =====
           bankModalOpen && h('div', { className: 'fixed inset-0 z-[70] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md' }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn' },
               h('div', { className: 'text-4xl text-center mb-2' }, '🏦'),
               h('div', { className: 'text-center text-[15px] font-black tracking-widest text-[#FFD60A] font-display' }, 'CHOOSE YOUR BANK'),
               h('p', { className: 'text-center text-[11px] text-white/50 mt-1 mb-4' }, 'Select the bank you want to use to receive fake alerts from other hustlers.'),
-              
               h('div', { className: 'space-y-1.5 max-h-[40vh] overflow-y-auto pr-1' },
                 NIGERIAN_BANKS.map(bank => 
                   h('button', {
@@ -812,13 +1146,13 @@
             )
           ),
 
+          // ===== SEND MONEY MODAL =====
           sendOpen && h('div', { className: 'fixed inset-0 z-50 grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/80 backdrop-blur-sm', onClick: () => !isSending && setSendOpen(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn' },
               h('div', { className: 'text-3xl text-center' }, '📤'),
               h('div', { className: 'text-center mt-2 text-[13px] font-black tracking-widest text-[#FFD60A] font-display' }, 'SEND LAGOS CASH'),
               h('p', { className: 'text-center text-[11px] text-white/50 mt-1' }, 'Send fake money to another hustler'),
-              
               h('div', { className: 'mt-4 space-y-3' },
                 h('div', null,
                   h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Recipient In-Game Name'),
@@ -831,20 +1165,18 @@
                     className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[13px] font-extrabold text-white placeholder-white/25 focus:border-[#FFD60A]/50 transition disabled:opacity-50'
                   }),
                   isVerifying && h('div', { className: 'text-[10px] text-[#FFD60A] mt-1 animate-pulse' }, 'Verifying...'),
-                  verifiedBank && h('div', { className: 'mt-1.5 px-3 py-2 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 flex items-center justify-between' },
-                    h('div', { className: 'flex items-center gap-1.5' },
-                      h('span', { className: 'text-[#22C55E] text-sm' }, '✅'),
-                      h('div', null,
-                        h('div', { className: 'text-[10px] text-white/60 font-bold' }, 'Verified Account'),
-                        h('div', { className: 'text-[12px] text-[#22C55E] font-black font-display' }, verifiedBank.bank)
-                      )
+                  verifiedBank && h('div', { className: 'mt-1.5 px-3 py-2 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 flex items-center gap-1.5' },
+                    h('span', { className: 'text-[#22C55E] text-sm' }, '✅'),
+                    h('div', null,
+                      h('div', { className: 'text-[10px] text-white/60 font-bold' }, 'Verified Account'),
+                      h('div', { className: 'text-[12px] text-[#22C55E] font-black font-display' }, verifiedBank.bank)
                     )
                   )
                 ),
                 h('div', null,
                   h('div', { className: 'flex justify-between items-end' },
                     h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Amount'),
-                    !s.bankName && h('button', { onClick: () => setBankModalOpen(true), className: 'text-[9px] text-[#FFD60A] underline' }, 'Setup your bank')
+                    !s.bankName && h('button', { onClick: () => { setSendOpen(false); setSettingsOpen(true); }, className: 'text-[9px] text-[#FFD60A] underline' }, 'Setup your bank')
                   ),
                   h('input', {
                     type: 'number', value: sendAmt, onChange: (e) => setSendAmt(e.target.value), placeholder: 'Minimum ₦100', disabled: isSending,
@@ -860,24 +1192,43 @@
             )
           ),
 
-          fakeAlert && h('div', { className: 'fixed top-4 left-0 right-0 z-[100] px-4 animate-slideDown flex justify-center' },
-            h('div', { className: 'w-full max-w-sm bg-[#1C1C24] rounded-2xl p-4 shadow-2xl border border-white/20 flex items-start gap-3' },
-              h('div', { className: 'w-10 h-10 rounded-full bg-[#22C55E]/20 grid place-items-center shrink-0' },
-                h('span', { className: 'text-xl' }, '💸')
+          // ===== RECEIPT MODAL (NEW) =====
+          receiptOpen && receiptUrl && h('div', { className: 'fixed inset-0 z-[80] grid place-items-center p-4' },
+            h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setReceiptOpen(false) }),
+            h('div', { className: 'relative w-full max-w-sm animate-popIn' },
+              h('div', { className: 'rounded-2xl overflow-hidden border border-[#22C55E]/40 shadow-[0_0_60px_-10px_rgba(34,197,94,0.5)]' },
+                h('img', { src: receiptUrl, alt: 'Transfer receipt', className: 'w-full block' })
               ),
-              h('div', { className: 'flex-1' },
-                h('div', { className: 'flex justify-between items-start' },
-                  h('div', { className: 'text-[13px] font-black text-white' }, fakeAlert.bank + ' Alert'),
-                  h('div', { className: 'text-[9px] text-white/40' }, 'Just now')
-                ),
-                h('div', { className: 'text-[11px] text-white/60 mt-0.5' }, 'Credit Alert'),
-                h('div', { className: 'text-[16px] font-black text-[#22C55E] mt-1' }, '₦' + fakeAlert.amount.toLocaleString()),
-                h('div', { className: 'text-[10px] text-white/50 mt-1' }, 'From: ' + fakeAlert.sender),
-                h('div', { className: 'text-[9px] text-white/30 mt-1' }, 'Ref: LGM' + fakeAlert.ref)
-              )
+              h('div', { className: 'mt-3 grid grid-cols-2 gap-2' },
+                h('button', { 
+                  onClick: () => {
+                    const a = document.createElement('a');
+                    a.href = receiptUrl; a.download = 'lagos-receipt-' + Date.now() + '.png';
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                    notify('Receipt downloaded ✅');
+                  }, 
+                  className: 'rounded-xl bg-white/[0.06] border border-white/10 py-3 text-[12px] font-extrabold text-white/85 active:scale-95 transition' 
+                }, '⬇️ Download'),
+                h('button', { 
+                  onClick: async () => {
+                    try {
+                      const blob = await (await fetch(receiptUrl)).blob();
+                      const file = new File([blob], 'receipt.png', { type: 'image/png' });
+                      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file], title: 'Transfer Receipt' });
+                      } else {
+                        notify('Use Download instead 📥', 'bad');
+                      }
+                    } catch(e) {}
+                  },
+                  className: 'rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] py-3 text-[12px] font-black text-black active:scale-95 transition shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)]' 
+                }, '📤 Share')
+              ),
+              h('button', { onClick: () => setReceiptOpen(false), className: 'mt-2 w-full rounded-xl bg-white/[0.04] border border-white/10 py-2.5 text-[11px] font-extrabold text-white/60 active:scale-95 transition' }, 'Close')
             )
           ),
 
+          // ===== TX HISTORY =====
           txHistoryOpen && h('div', { className: 'fixed inset-0 z-50 grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/80 backdrop-blur-sm', onClick: () => setTxHistoryOpen(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn' },
@@ -906,6 +1257,7 @@
             )
           ),
 
+          // ===== SHARE MODAL =====
           shareOpen && shareUrl && h('div', { className: 'fixed inset-0 z-50 grid place-items-center p-4' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setShareOpen(false) }),
             h('div', { className: 'relative w-full max-w-sm animate-popIn' },
@@ -920,6 +1272,18 @@
             )
           ),
 
+          // ===== ACHIEVEMENT TOAST (NEW) =====
+          achievementToast && h('div', { className: 'fixed top-20 left-1/2 -translate-x-1/2 z-[95] px-4 animate-slideDown pointer-events-none' },
+            h('div', { className: 'bg-gradient-to-r from-[#FFD60A] to-[#FFB800] text-black px-5 py-3 rounded-2xl shadow-[0_8px_30px_-6px_rgba(255,214,10,0.8)] flex items-center gap-3 min-w-[220px]' },
+              h('div', { className: 'text-2xl' }, achievementToast.icon),
+              h('div', null,
+                h('div', { className: 'text-[9px] font-black uppercase tracking-widest opacity-60' }, 'Achievement Unlocked!'),
+                h('div', { className: 'text-[13px] font-black font-display' }, achievementToast.name)
+              )
+            )
+          ),
+
+          // ===== NAV =====
           h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
               NAV.map((n) => {
@@ -935,6 +1299,7 @@
             )
           ),
 
+          // ===== TOAST =====
           toast && h('div', {
             className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
               (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')
