@@ -139,7 +139,7 @@
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], isVip: false,
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-        transactions: []
+        transactions: [], history: []
       };
     };
 
@@ -211,6 +211,7 @@
                   assets: dbData.assets || prev.assets || {},
                   travels: dbData.travels || prev.travels || [],
                   transactions: dbData.transactions || [],
+                  history: dbData.history || [],
                   isVip: dbData.isVip || false
                 });
                 try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
@@ -222,7 +223,7 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], isVip: false,
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-                transactions: []
+                transactions: [], history: []
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
@@ -241,6 +242,20 @@
       }, [toast]);
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+
+      // ✅ LOG HISTORY HELPER
+      const logHistory = async (title, desc, amount) => {
+        if (!uid) return;
+        await db.collection("users").doc(uid).update({
+          history: firebase.firestore.FieldValue.arrayUnion({
+            title: title,
+            desc: desc,
+            amount: amount,
+            date: Date.now(),
+            category: 'activity'
+          })
+        }).catch(() => {});
+      };
 
       // Energy regen ONLY (cash handled by business.html vault)
       useEffect(() => {
@@ -301,6 +316,9 @@
               travels: firebase.firestore.FieldValue.arrayUnion(d.id),
               lastSeen: Date.now()
             }).catch(() => {});
+
+            // Log to History
+            logHistory('Japa to ' + d.short, 'Travelled to ' + d.short + '. Event: ' + event.msg, -d.cost + (event.cash || 0));
           }
           return;
         }
@@ -332,6 +350,9 @@
               travels: firebase.firestore.FieldValue.arrayUnion(d.id),
               lastSeen: Date.now()
             }).catch(() => {});
+
+            // Log to History
+            logHistory('Japa to ' + d.short, 'Travelled to ' + d.short + '. Event: ' + event.msg, -d.cost + (event.cash || 0));
           }
         }, 2500);
       };
