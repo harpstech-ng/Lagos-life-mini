@@ -8,6 +8,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Lagos Life Mini — Hustle</title>
 
+  <!-- 🔥 GOOGLE ADSENSE SCRIPT 🔥 -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2725978931260112" crossorigin="anonymous"></script>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
@@ -17,9 +20,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
-  <!-- AdsGram SDK (Telegram-only). On web, watchAd() falls back to test-mode timer. -->
-  <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -72,6 +72,17 @@
 </head>
 <body>
   <div id="root"></div>
+
+  <!-- 🔥 ADSENSE BANNER AD 🔥 -->
+  <div style="display: flex; justify-content: center; margin: 20px 0; position: relative; z-index: 50; padding-bottom: 100px;">
+    <ins class="adsbygoogle"
+         style="display:inline-block;width:240px;height:60px"
+         data-ad-client="ca-pub-2725978931260112"
+         data-ad-slot="1563979555"></ins>
+  </div>
+  <script>
+    (adsbygoogle = window.adsbygoogle || []).push({});
+  </script>
 
   <script>
     window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
@@ -281,7 +292,6 @@
       const [eventHistory, setEventHistory] = useState([]);
       
       const [isWatchingAd, setIsWatchingAd] = useState(false);
-      const [adTimer, setAdTimer] = useState(5);
       const [hasJoinedWA, setHasJoinedWA] = useState(localStorage.getItem('joined_wa') === 'true');
       
       const [isMaintenance, setIsMaintenance] = useState(false);
@@ -497,49 +507,48 @@
         setEvent(EVENTS[Math.floor(Math.random() * EVENTS.length)]);
       };
 
-      // WATCH AD — tries AdsGram (Telegram), falls back to test-mode timer on web
+      // 🔥 GOOGLE ADSENSE H5 GAMES - WATCH AD FUNCTION 🔥
       const watchAd = async () => {
         if (isWatchingAd) return;
         setIsWatchingAd(true);
         AudioEngine.tap();
 
-        const grantReward = (testMode) => {
-          updateUser({ cash: s.cash + 300000 });
-          AudioEngine.coin();
-          notify('Ad watched! +₦300,000 💰' + (testMode ? ' (Test Mode)' : ''));
-          try { if (navigator.vibrate) navigator.vibrate(30); } catch(e) {}
-        };
-
-        // Try AdsGram only if we're likely inside Telegram
-        const inTelegram = !!(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData);
-        if (window.Adsgram && inTelegram) {
+        if (typeof adBreak === 'function') {
           try {
-            const AdController = window.Adsgram.init({ blockId: "55961" });
-            const result = await AdController.show();
-            if (result && result.done) {
-              grantReward(false);
-            } else {
-              notify('You skipped the ad. No reward.', 'bad');
-            }
-            setIsWatchingAd(false);
-            return;
+            adBreak({
+              type: 'reward',
+              name: 'hustle-reward',
+              beforeAd: () => {
+                // Pause music when ad starts
+                try { AudioEngine.stopMusic(); } catch(e) {}
+              },
+              afterAd: () => {
+                // Resume music after ad ends
+                try { AudioEngine.startMusic(); } catch(e) {}
+              },
+              adBreakDone: (placementInfo) => {
+                // Grant reward if they finish the ad
+                if (placementInfo.breakStatus === 'viewed') {
+                  updateUser({ cash: s.cash + 300000 });
+                  AudioEngine.coin();
+                  notify('Ad watched! +₦300,000 💰');
+                  try { if (navigator.vibrate) navigator.vibrate(30); } catch(e) {}
+                } else {
+                  notify('You skipped the ad. No reward.', 'bad');
+                }
+                setIsWatchingAd(false);
+              }
+            });
           } catch (error) {
-            console.warn("AdsGram error, falling back to test mode:", error);
-          }
-        }
-
-        // Web fallback: 5-second test timer
-        setAdTimer(5);
-        let timer = 5;
-        const iv = setInterval(() => {
-          timer--;
-          setAdTimer(timer);
-          if (timer <= 0) {
-            clearInterval(iv);
+            console.error("AdSense H5 Error:", error);
+            notify('Ad failed to load. Try again later.', 'bad');
             setIsWatchingAd(false);
-            grantReward(true);
           }
-        }, 1000);
+        } else {
+          // If AdSense is blocked or not loaded yet
+          notify('Ad network not ready. Check your internet or Adblocker.', 'bad');
+          setIsWatchingAd(false);
+        }
       };
 
       const joinWA = () => {
@@ -663,7 +672,7 @@
                 h('button', { onClick: watchAd, disabled: isWatchingAd,
                   className: 'w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition-all tabular-nums ' + 
                   (!isWatchingAd ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.6)]' : 'bg-white/[0.06] text-white/50 border border-white/[0.06]') },
-                  isWatchingAd ? adTimer + 's' : 'Watch'
+                  isWatchingAd ? '...' : 'Watch'
                 )
               ),
               h(Card, { className: 'p-2.5 flex flex-col items-center text-center' },
