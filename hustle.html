@@ -8,9 +8,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Lagos Life Mini — Hustle</title>
 
-  <!-- 🔥 GOOGLE ADSENSE SCRIPT 🔥 -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2725978931260112" crossorigin="anonymous"></script>
-
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
@@ -58,9 +55,13 @@
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+    @keyframes confettiFall { 0% { transform: translateY(-20vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(105vh) rotate(720deg); opacity: 0; } }
+    @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px) rotate(-2deg); } 75% { transform: translateX(4px) rotate(2deg); } }
     .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
     .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .animate-shake { animation: shake 0.15s ease-in-out; }
+    .confetti-piece { position: fixed; top: 0; width: 10px; height: 10px; border-radius: 2px; pointer-events: none; z-index: 9999; animation: confettiFall 2.5s linear forwards; }
     .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
@@ -68,21 +69,13 @@
     
     .sapa-btn { background: radial-gradient(circle at 30% 20%, #6b7280 0%, #4b5563 35%, #374151 70%, #1f2937 100%); box-shadow: 0 0 0 1px rgba(255,255,255,0.1) inset, 0 -8px 0 rgba(0,0,0,0.25) inset, 0 12px 0 rgba(0,0,0,0.55), 0 20px 50px -10px rgba(0,0,0,0.8); }
     .sapa-btn::after { background: radial-gradient(circle, rgba(107,114,128,0.3), transparent 70%); }
+
+    .spin-reel { display: flex; transition: transform 2.5s cubic-bezier(0.15, 0.85, 0.25, 1); }
+    .boss-shake { animation: shake 0.1s ease-in-out; }
   </style>
 </head>
 <body>
   <div id="root"></div>
-
-  <!-- 🔥 ADSENSE BANNER AD 🔥 -->
-  <div style="display: flex; justify-content: center; margin: 20px 0; position: relative; z-index: 50; padding-bottom: 100px;">
-    <ins class="adsbygoogle"
-         style="display:inline-block;width:240px;height:60px"
-         data-ad-client="ca-pub-2725978931260112"
-         data-ad-slot="1563979555"></ins>
-  </div>
-  <script>
-    (adsbygoogle = window.adsbygoogle || []).push({});
-  </script>
 
   <script>
     window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
@@ -112,6 +105,37 @@
     const BASE_TAP = 500;
     const EVENT_CHANCE = 0.055;
 
+    const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/LMbBqxYsoZUEkTC4PbbzA7';
+    const WHATSAPP_CHANNEL_URL = 'https://whatsapp.com/channel/0029VbBlJUeFy72KIFuQoP38';
+
+    const COMBO_WINDOW_MS = 800;
+    const COMBO_STEP = 0.2;
+    const COMBO_MAX = 5;
+
+    const SPIN_COOLDOWN_MS = 60 * 60 * 1000;
+    const SPIN_PRIZES = [
+      { amount: 50000,   chance: 30 },
+      { amount: 100000,  chance: 25 },
+      { amount: 250000,  chance: 20 },
+      { amount: 500000,  chance: 15 },
+      { amount: 1000000, chance: 7 },
+      { amount: 5000000, chance: 2.5 },
+      { amount: 50000000, chance: 0.5 },
+    ];
+
+    const DAILY_REWARDS = [10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+    const BOSS_DURATION_MS = 15000;
+    const BOSS_MAX_HP = 100;
+    const BOSS_REWARD_PER_HIT = 3000;
+    const BOSS_KILL_BONUS = 500000;
+    const BOSS_COOLDOWN_MS = 5 * 60 * 1000;
+
+    const BOOSTS = [
+      { id: 'x2', mult: 2, duration: 5 * 60 * 1000, cost: 200000, label: '2x Tap', durLabel: '5 min' },
+      { id: 'x3', mult: 3, duration: 5 * 60 * 1000, cost: 500000, label: '3x Tap', durLabel: '5 min' },
+      { id: 'x5', mult: 5, duration: 3 * 60 * 1000, cost: 1500000, label: '5x Tap', durLabel: '3 min' },
+    ];
+
     const BIZ_PER_HR = { water: 2_000, suya: 40_000, keke: 75_000, phone: 350_000, danfo: 800_000, wash: 4_000_000, bet9ja: 9_000_000, lounge: 90_000_000, oil: 1_000_000_000 };
     const DEST_BONUSES = { ikeja: 0, accra: 100, dubai: 500, uk: 1000, canada: 2000, usa: 5000, space: 25000 };
 
@@ -129,7 +153,16 @@
         const cached = localStorage.getItem("lagos_user_data");
         if (cached) {
           const parsed = JSON.parse(cached);
-          return Object.assign({}, parsed, { transactions: parsed.transactions || [], referrals: parsed.referrals || 0 });
+          return Object.assign({}, parsed, {
+            transactions: parsed.transactions || [],
+            referrals: parsed.referrals || 0,
+            lastSpinAt: parsed.lastSpinAt || 0,
+            lastClaimDate: parsed.lastClaimDate || null,
+            streakCount: parsed.streakCount || 0,
+            boostUntil: parsed.boostUntil || 0,
+            boostMult: parsed.boostMult || 1,
+            lastBossAt: parsed.lastBossAt || 0
+          });
         }
       } catch (e) {}
       return {
@@ -137,7 +170,9 @@
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-        transactions: [], referrals: 0
+        transactions: [], referrals: 0,
+        lastSpinAt: 0, lastClaimDate: null, streakCount: 0,
+        boostUntil: 0, boostMult: 1, lastBossAt: 0
       };
     };
 
@@ -269,7 +304,9 @@
         tap: () => { init(); if(ctx.state==="suspended") ctx.resume(); tone(880, 0.09, "triangle", sfxGain, 0, 0.28); },
         coin: () => { init(); tone(1046, 0.08, "square", sfxGain, 0, 0.15); tone(1318, 0.15, "square", sfxGain, 0.07, 0.15); },
         error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
-        purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); }
+        purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); },
+        jackpot: () => { init(); [523, 659, 783, 1046, 1318].forEach((f,i) => tone(f, 0.2, "triangle", sfxGain, i*0.08, 0.25)); },
+        boss: () => { init(); tone(110, 0.1, "sawtooth", sfxGain, 0, 0.2); tone(87, 0.15, "sawtooth", sfxGain, 0.05, 0.2); }
       };
     })();
 
@@ -282,6 +319,41 @@
         right
       );
 
+    const Confetti = ({ trigger }) => {
+      const [pieces, setPieces] = useState([]);
+      useEffect(() => {
+        if (!trigger) return;
+        const colors = ['#FFD60A','#FFB800','#22C55E','#EF4444','#3B82F6','#A855F7','#FF6B00'];
+        const arr = Array.from({ length: 40 }, (_, i) => ({
+          id: i + '-' + Date.now(),
+          left: Math.random() * 100,
+          delay: Math.random() * 0.3,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          rotate: Math.random() * 360,
+          width: 6 + Math.random() * 8,
+          height: 6 + Math.random() * 8,
+        }));
+        setPieces(arr);
+        const t = setTimeout(() => setPieces([]), 3000);
+        return () => clearTimeout(t);
+      }, [trigger]);
+      if (pieces.length === 0) return null;
+      return h(React.Fragment, null,
+        pieces.map(p => h('div', {
+          key: p.id,
+          className: 'confetti-piece',
+          style: {
+            left: p.left + '%',
+            backgroundColor: p.color,
+            width: p.width + 'px',
+            height: p.height + 'px',
+            animationDelay: p.delay + 's',
+            transform: 'rotate(' + p.rotate + 'deg)'
+          }
+        }))
+      );
+    };
+
     function App() {
       const [s, setS] = useState(getCachedData);
       const [uid, setUid] = useState(null);
@@ -290,16 +362,44 @@
       const [tapFloats, setTapFloats] = useState([]);
       const [event, setEvent] = useState(null);
       const [eventHistory, setEventHistory] = useState([]);
-      
-      const [isWatchingAd, setIsWatchingAd] = useState(false);
-      const [hasJoinedWA, setHasJoinedWA] = useState(localStorage.getItem('joined_wa') === 'true');
-      
       const [isMaintenance, setIsMaintenance] = useState(false);
       const [sapaScamOpen, setSapaScamOpen] = useState(false);
+      const [hasJoinedWA, setHasJoinedWA] = useState(localStorage.getItem('joined_wa_group') === 'true');
+      const [hasJoinedChannel, setHasJoinedChannel] = useState(localStorage.getItem('joined_wa_channel') === 'true');
+
+      // New feature states
+      const [comboMult, setComboMult] = useState(1);
+      const [spinOpen, setSpinOpen] = useState(false);
+      const [isSpinning, setIsSpinning] = useState(false);
+      const [spinResult, setSpinResult] = useState(null);
+      const [bossOpen, setBossOpen] = useState(false);
+      const [bossActive, setBossActive] = useState(false);
+      const [bossHP, setBossHP] = useState(BOSS_MAX_HP);
+      const [bossTimeLeft, setBossTimeLeft] = useState(BOSS_DURATION_MS);
+      const [bossHits, setBossHits] = useState(0);
+      const [confettiTrigger, setConfettiTrigger] = useState(0);
+      const [boostOpen, setBoostOpen] = useState(false);
+      const [now, setNow] = useState(Date.now());
 
       const tapCounter = useRef(0);
       const lastEventAt = useRef(0);
       const pendingTaps = useRef({ cash: 0, energy: 0, taps: 0 });
+      const comboRef = useRef({ lastTap: 0, count: 0, timer: null });
+      const bossTimerRef = useRef(null);
+      const bossIntervalRef = useRef(null);
+
+      useEffect(() => {
+        const iv = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(iv);
+      }, []);
+
+      useEffect(() => {
+        return () => {
+          if (comboRef.current.timer) clearTimeout(comboRef.current.timer);
+          if (bossTimerRef.current) clearTimeout(bossTimerRef.current);
+          if (bossIntervalRef.current) clearInterval(bossIntervalRef.current);
+        };
+      }, []);
 
       useEffect(() => {
         const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
@@ -329,6 +429,12 @@
                   travels: dbData.travels || prev.travels || [],
                   transactions: dbData.transactions || [],
                   referrals: dbData.referrals || 0,
+                  lastSpinAt: dbData.lastSpinAt !== undefined ? dbData.lastSpinAt : (prev.lastSpinAt || 0),
+                  lastClaimDate: dbData.lastClaimDate !== undefined ? dbData.lastClaimDate : (prev.lastClaimDate || null),
+                  streakCount: dbData.streakCount !== undefined ? dbData.streakCount : (prev.streakCount || 0),
+                  boostUntil: dbData.boostUntil !== undefined ? dbData.boostUntil : (prev.boostUntil || 0),
+                  boostMult: dbData.boostMult !== undefined ? dbData.boostMult : (prev.boostMult || 1),
+                  lastBossAt: dbData.lastBossAt !== undefined ? dbData.lastBossAt : (prev.lastBossAt || 0),
                   cash: (dbData.cash || 0) + pendingTaps.current.cash,
                   energy: (dbData.energy || 0) + pendingTaps.current.energy,
                   taps: (dbData.taps || 0) + pendingTaps.current.taps
@@ -342,7 +448,9 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-                transactions: [], referrals: 0
+                transactions: [], referrals: 0,
+                lastSpinAt: 0, lastClaimDate: null, streakCount: 0,
+                boostUntil: 0, boostMult: 1, lastBossAt: 0
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
@@ -363,9 +471,7 @@
         const syncInterval = setInterval(async () => {
           const toSync = Object.assign({}, pendingTaps.current);
           if (toSync.cash === 0 && toSync.energy === 0 && toSync.taps === 0) return;
-          
           pendingTaps.current = { cash: 0, energy: 0, taps: 0 };
-
           try {
             await db.collection("users").doc(uid).update({
               cash: firebase.firestore.FieldValue.increment(toSync.cash),
@@ -424,7 +530,6 @@
             }
             const perHr = Object.entries(prev.businesses || {}).reduce((a, kv) => a + kv[1] * (BIZ_PER_HR[kv[0]] || 0), 0);
             const newCash = (prev.cash || 0) + perHr / 3600;
-            
             if (perHr > 0) {
               db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600) }).catch(() => {});
             }
@@ -447,29 +552,63 @@
       const energyNextIn = s.energy >= MAX_E ? 0 : ENERGY_MS - ((Date.now() - s.lastEnergy) % ENERGY_MS);
       const tapBonus = (s.travels || []).reduce((a, id) => a + (DEST_BONUSES[id] || 0), 0);
       const TAP_VALUE = BASE_TAP + tapBonus;
-
       const currentRank = [...STREET_RANKS].reverse().find(r => (s.taps || 0) >= r.min) || STREET_RANKS[0];
+
+      // Boost
+      const boostActive = (s.boostUntil || 0) > Date.now();
+      const boostMult = boostActive ? (s.boostMult || 1) : 1;
+      const boostRemaining = boostActive ? (s.boostUntil - Date.now()) : 0;
+
+      // Spin
+      const spinCooldownLeft = Math.max(0, SPIN_COOLDOWN_MS - (Date.now() - (s.lastSpinAt || 0)));
+      const canSpin = spinCooldownLeft === 0;
+
+      // Daily
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const canClaimDaily = s.lastClaimDate !== todayStr;
+      const nextStreak = s.lastClaimDate === yesterdayStr ? (s.streakCount || 0) + 1 : 1;
+      const dailyRewardAmount = DAILY_REWARDS[Math.min(nextStreak - 1, DAILY_REWARDS.length - 1)];
+
+      // Boss
+      const bossCooldownLeft = Math.max(0, BOSS_COOLDOWN_MS - (Date.now() - (s.lastBossAt || 0)));
+      const canFightBoss = bossCooldownLeft === 0;
+
+      const fireConfetti = () => setConfettiTrigger(t => t + 1);
 
       const doTap = () => {
         if (s.energy < 1) { AudioEngine.error(); return notify('No energy! Refill or wait ⚡', 'bad'); }
         AudioEngine.tap();
         try { if (navigator.vibrate) navigator.vibrate(8); } catch(e) {}
         
+        const now = Date.now();
+        const c = comboRef.current;
+        if (now - c.lastTap < COMBO_WINDOW_MS) {
+          c.count = Math.min(c.count + 1, 25);
+        } else {
+          c.count = 1;
+        }
+        c.lastTap = now;
+        const mult = Math.min(COMBO_MAX, 1 + (c.count - 1) * COMBO_STEP);
+        setComboMult(mult);
+        if (c.timer) clearTimeout(c.timer);
+        c.timer = setTimeout(() => { setComboMult(1); comboRef.current.count = 0; }, COMBO_WINDOW_MS);
+
+        const tapValue = Math.round(TAP_VALUE * mult * boostMult);
         const newEnergy = Math.max(0, s.energy - 1);
-        setS(prev => (Object.assign({}, prev, { cash: prev.cash + TAP_VALUE, energy: newEnergy, taps: prev.taps + 1 })));
+        setS(prev => (Object.assign({}, prev, { cash: prev.cash + tapValue, energy: newEnergy, taps: prev.taps + 1 })));
         
-        pendingTaps.current.cash += TAP_VALUE;
+        pendingTaps.current.cash += tapValue;
         pendingTaps.current.energy -= 1;
         pendingTaps.current.taps += 1;
 
         const id = ++tapCounter.current;
-        setTapFloats((f) => [...f.slice(-6), { id, x: 40 + Math.random() * 20, amt: TAP_VALUE }]);
+        setTapFloats((f) => [...f.slice(-6), { id, x: 40 + Math.random() * 20, amt: tapValue }]);
         setTimeout(() => setTapFloats((f) => f.filter((x) => x.id !== id)), 950);
 
-        const now = Date.now();
-        
-        if (Math.random() < EVENT_CHANCE && !event && !sapaScamOpen && now - lastEventAt.current > 8000) {
-          lastEventAt.current = now;
+        const now2 = Date.now();
+        if (Math.random() < EVENT_CHANCE && !event && !sapaScamOpen && now2 - lastEventAt.current > 8000) {
+          lastEventAt.current = now2;
           setTimeout(() => {
             setEvent(EVENTS[Math.floor(Math.random() * EVENTS.length)]);
             try { if (navigator.vibrate) navigator.vibrate(20); } catch(e) {}
@@ -507,58 +646,29 @@
         setEvent(EVENTS[Math.floor(Math.random() * EVENTS.length)]);
       };
 
-      // 🔥 GOOGLE ADSENSE H5 GAMES - WATCH AD FUNCTION 🔥
-      const watchAd = async () => {
-        if (isWatchingAd) return;
-        setIsWatchingAd(true);
-        AudioEngine.tap();
-
-        if (typeof adBreak === 'function') {
-          try {
-            adBreak({
-              type: 'reward',
-              name: 'hustle-reward',
-              beforeAd: () => {
-                // Pause music when ad starts
-                try { AudioEngine.stopMusic(); } catch(e) {}
-              },
-              afterAd: () => {
-                // Resume music after ad ends
-                try { AudioEngine.startMusic(); } catch(e) {}
-              },
-              adBreakDone: (placementInfo) => {
-                // Grant reward if they finish the ad
-                if (placementInfo.breakStatus === 'viewed') {
-                  updateUser({ cash: s.cash + 300000 });
-                  AudioEngine.coin();
-                  notify('Ad watched! +₦300,000 💰');
-                  try { if (navigator.vibrate) navigator.vibrate(30); } catch(e) {}
-                } else {
-                  notify('You skipped the ad. No reward.', 'bad');
-                }
-                setIsWatchingAd(false);
-              }
-            });
-          } catch (error) {
-            console.error("AdSense H5 Error:", error);
-            notify('Ad failed to load. Try again later.', 'bad');
-            setIsWatchingAd(false);
-          }
-        } else {
-          // If AdSense is blocked or not loaded yet
-          notify('Ad network not ready. Check your internet or Adblocker.', 'bad');
-          setIsWatchingAd(false);
-        }
+      // ===== JOIN WHATSAPP GROUP (replaces watch ad) =====
+      const joinWAGroup = () => {
+        if (hasJoinedWA) return notify('You already claimed this bonus!', 'bad');
+        try { window.open(WHATSAPP_GROUP_URL, '_blank', 'noopener,noreferrer'); } catch(e) {}
+        notify('Verifying join...', 'good');
+        setTimeout(() => {
+          updateUser({ cash: s.cash + 300000 });
+          localStorage.setItem('joined_wa_group', 'true');
+          setHasJoinedWA(true);
+          AudioEngine.jackpot();
+          fireConfetti();
+          notify('Welcome to the group! +₦300,000 💬');
+        }, 2000);
       };
 
-      const joinWA = () => {
-        if (hasJoinedWA) return notify('You already claimed this bonus!', 'bad');
-        try { window.open('https://whatsapp.com/channel/0029VbBlJUeFy72KIFuQoP38', '_blank'); } catch(e) {}
+      const joinWAChannel = () => {
+        if (hasJoinedChannel) return notify('You already claimed this bonus!', 'bad');
+        try { window.open(WHATSAPP_CHANNEL_URL, '_blank', 'noopener,noreferrer'); } catch(e) {}
         notify('Verifying join...', 'good');
         setTimeout(() => {
           updateUser({ cash: s.cash + 100000 });
-          localStorage.setItem('joined_wa', 'true');
-          setHasJoinedWA(true);
+          localStorage.setItem('joined_wa_channel', 'true');
+          setHasJoinedChannel(true);
           AudioEngine.purchase();
           notify('Thanks for joining! +₦100,000 💬');
         }, 2000);
@@ -567,7 +677,6 @@
       const shareReferral = () => {
         const refLink = window.location.origin + '/login.html?ref=' + uid;
         const text = 'Join me on Lagos Life Mini and let\'s hustle together! 🇳🇬🔥 Tap the link to play and we both get ₦50,000 bonus: ' + refLink;
-        
         if (navigator.share) {
           navigator.share({ title: 'Lagos Life Mini', text: text, url: refLink }).catch(() => {});
         } else if (navigator.clipboard) {
@@ -588,6 +697,104 @@
         notify('Scam! You just paid processing fee for fake alert 😭', 'bad');
       };
 
+      // ===== LUCKY SPIN =====
+      const handleSpin = () => {
+        if (isSpinning) return;
+        if (!canSpin) return notify('Spin dey cool down: ' + mmss(spinCooldownLeft), 'bad');
+        setIsSpinning(true);
+        setSpinResult(null);
+        AudioEngine.tap();
+        const rand = Math.random() * 100;
+        let cumulative = 0;
+        let prize = SPIN_PRIZES[0].amount;
+        for (const p of SPIN_PRIZES) {
+          cumulative += p.chance;
+          if (rand < cumulative) { prize = p.amount; break; }
+        }
+        setTimeout(() => {
+          setSpinResult(prize);
+          setIsSpinning(false);
+          updateUser({ cash: s.cash + prize, lastSpinAt: Date.now() });
+          if (prize >= 1000000) { AudioEngine.jackpot(); fireConfetti(); }
+          else AudioEngine.coin();
+        }, 2000);
+      };
+
+      // ===== DAILY STREAK =====
+      const claimDaily = () => {
+        if (!canClaimDaily) return notify('Come back tomorrow 😴', 'bad');
+        const reward = dailyRewardAmount;
+        const newStreak = nextStreak;
+        updateUser({
+          cash: s.cash + reward,
+          energy: newStreak >= 7 ? MAX_E : s.energy,
+          lastClaimDate: todayStr,
+          streakCount: newStreak
+        });
+        if (newStreak >= 7) { AudioEngine.jackpot(); fireConfetti(); }
+        else AudioEngine.coin();
+        notify('Day ' + newStreak + ' claimed! +' + fmt(reward));
+      };
+
+      // ===== BOSS FIGHT =====
+      const startBossFight = () => {
+        if (!canFightBoss) return notify('Boss dey recover: ' + mmss(bossCooldownLeft), 'bad');
+        setBossOpen(true);
+        setBossHP(BOSS_MAX_HP);
+        setBossHits(0);
+        setBossTimeLeft(BOSS_DURATION_MS);
+        setBossActive(true);
+        AudioEngine.boss();
+        let timeLeft = BOSS_DURATION_MS;
+        bossIntervalRef.current = setInterval(() => {
+          timeLeft -= 100;
+          setBossTimeLeft(Math.max(0, timeLeft));
+          if (timeLeft <= 0) {
+            clearInterval(bossIntervalRef.current);
+            setBossActive(false);
+          }
+        }, 100);
+      };
+
+      const hitBoss = () => {
+        if (!bossActive) return;
+        const newHP = Math.max(0, bossHP - 1);
+        setBossHP(newHP);
+        setBossHits(h => h + 1);
+        AudioEngine.tap();
+        try { if (navigator.vibrate) navigator.vibrate(10); } catch(e) {}
+        if (newHP === 0) {
+          clearInterval(bossIntervalRef.current);
+          setBossActive(false);
+        }
+      };
+
+      const finishBoss = () => {
+        const killed = bossHP <= 0;
+        const baseReward = bossHits * BOSS_REWARD_PER_HIT;
+        const totalReward = baseReward + (killed ? BOSS_KILL_BONUS : 0);
+        updateUser({ cash: s.cash + totalReward, lastBossAt: Date.now() });
+        setBossOpen(false);
+        setBossHP(BOSS_MAX_HP);
+        setBossHits(0);
+        if (killed) { AudioEngine.jackpot(); fireConfetti(); }
+        else AudioEngine.coin();
+        notify((killed ? '🏆 BOSS KILLED! ' : 'Boss survived. ') + '+' + fmt(totalReward), killed ? 'good' : 'good');
+      };
+
+      // ===== BOOST SHOP =====
+      const buyBoost = (b) => {
+        if (s.cash < b.cost) { AudioEngine.error(); return notify('You no get ' + fmt(b.cost), 'bad'); }
+        updateUser({
+          cash: s.cash - b.cost,
+          boostUntil: Date.now() + b.duration,
+          boostMult: b.mult
+        });
+        AudioEngine.purchase();
+        notify(b.label + ' active for ' + b.durLabel + ' ⚡');
+        setBoostOpen(false);
+      };
+
       const NAV = [
         { id: 'home', label: 'Home', icon: '🏠', href: 'index.html' },
         { id: 'hustle', label: 'Hustle', icon: '👊', href: 'hustle.html' },
@@ -600,6 +807,7 @@
       const eventColorClass = (c) => c === 'red' ? 'from-[#F87171] to-[#EF4444]' : 'from-[#34D976] to-[#22C55E]';
 
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
+        h(Confetti, { trigger: confettiTrigger }),
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
           h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
             h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
@@ -615,6 +823,16 @@
                 h('div', { className: 'px-2 py-1 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] text-[10px] font-extrabold tabular-nums' }, fmtReal(s.real || 0))
               )
             )
+          ),
+
+          // Active boost banner
+          boostActive && h('div', { className: 'mx-4 mt-3 px-3 py-2 rounded-xl bg-gradient-to-r from-[#FF6B00]/25 to-[#FF0055]/25 border border-[#FF6B00]/40 flex items-center justify-between' },
+            h('div', { className: 'flex items-center gap-2' },
+              h('span', { className: 'text-lg animate-pulse' }, '⚡'),
+              h('div', { className: 'text-[11px] font-black text-[#FFB800]' }, boostMult + 'x BOOST ACTIVE'),
+              h('div', { className: 'text-[10px] text-white/50 tabular-nums' }, mmss(boostRemaining))
+            ),
+            h('button', { onClick: () => setBoostOpen(true), className: 'text-[10px] text-white/70 underline' }, 'Extend')
           ),
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
@@ -640,6 +858,9 @@
 
             h('div', { className: 'mt-6 flex flex-col items-center' },
               h('div', { className: 'relative' },
+                comboMult > 1 && h('div', { 
+                  className: 'absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-[#FF6B00] to-[#FF0055] text-white text-[12px] font-black shadow-lg animate-popIn whitespace-nowrap z-20'
+                }, '🔥 ' + comboMult.toFixed(1) + 'x COMBO'),
                 h('button', { 
                   onClick: doTap, 
                   className: 'tap-btn w-64 h-64 grid place-items-center text-black ' + (s.cash < 10000 ? 'sapa-btn' : '') 
@@ -647,7 +868,7 @@
                   h('div', { className: 'text-center relative z-10' },
                     h('div', { className: 'text-6xl drop-shadow-md' }, s.cash < 10000 ? '😭' : '👊🏾'),
                     h('div', { className: 'text-2xl font-black tracking-tighter mt-1 font-display' }, s.cash < 10000 ? 'SAPA' : 'HUSTLE'),
-                    h('div', { className: 'text-[11px] font-extrabold opacity-70 font-display' }, '+' + fmt(TAP_VALUE))
+                    h('div', { className: 'text-[11px] font-extrabold opacity-70 font-display' }, '+' + fmt(Math.round(TAP_VALUE * comboMult * boostMult)))
                   )
                 ),
                 tapFloats.map((f) => h('span', { key: f.id, className: 'tap-float', style: { left: f.x + '%' } }, '+' + fmt(f.amt)))
@@ -663,26 +884,91 @@
               )
             ),
 
+            // ===== DAILY STREAK =====
+            h(Card, { className: 'p-4 mt-4' },
+              h('div', { className: 'flex items-center justify-between mb-2' },
+                h('div', null,
+                  h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, '🎁 Daily Streak'),
+                  h('div', { className: 'text-[13px] font-black mt-0.5 font-display' }, 
+                    canClaimDaily ? 'Day ' + nextStreak + ' → +' + fmt(dailyRewardAmount) : 'Come back tomorrow 😴'
+                  )
+                ),
+                h('button', { 
+                  onClick: claimDaily, 
+                  disabled: !canClaimDaily,
+                  className: 'rounded-lg px-4 py-2 text-[11px] font-black active:scale-95 transition ' + 
+                    (canClaimDaily ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_14px_-4px_rgba(255,214,10,0.7)]' : 'bg-white/[0.05] text-white/30')
+                }, canClaimDaily ? 'CLAIM' : '✓ Done')
+              ),
+              h('div', { className: 'flex gap-1 mt-3' },
+                DAILY_REWARDS.map((amt, i) => {
+                  const currentDay = Math.min(nextStreak, 7) - 1;
+                  const done = canClaimDaily ? i < currentDay : i <= (s.streakCount || 1) - 1;
+                  const isCurrent = canClaimDaily && i === currentDay;
+                  return h('div', {
+                    key: i,
+                    className: 'flex-1 h-1.5 rounded-full transition-all ' +
+                      (done ? 'bg-[#22C55E]' : isCurrent ? 'bg-[#FFD60A] animate-pulse' : 'bg-white/10')
+                  });
+                })
+              )
+            ),
+
+            // ===== LUCKY SPIN + BOOST SHOP + BOSS FIGHT =====
+            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A]' }, 'Mini-games') }, 'Play & Win'),
+            h('div', { className: 'grid grid-cols-3 gap-2' },
+              h(Card, { className: 'p-3 flex flex-col items-center text-center' },
+                h('div', { className: 'text-3xl mb-1' }, '🎡'),
+                h('div', { className: 'text-[11px] font-black font-display' }, 'Lucky Spin'),
+                h('div', { className: 'text-[9px] text-[#FFD60A] font-bold mb-2 tabular-nums' }, canSpin ? 'Free' : mmss(spinCooldownLeft)),
+                h('button', { onClick: () => setSpinOpen(true), disabled: !canSpin,
+                  className: 'w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition ' +
+                  (canSpin ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.6)]' : 'bg-white/[0.06] text-white/50 border border-white/[0.06]') },
+                  canSpin ? 'SPIN' : 'WAIT'
+                )
+              ),
+              h(Card, { className: 'p-3 flex flex-col items-center text-center' },
+                h('div', { className: 'text-3xl mb-1' }, '💥'),
+                h('div', { className: 'text-[11px] font-black font-display' }, 'Boss Fight'),
+                h('div', { className: 'text-[9px] text-[#EF4444] font-bold mb-2 tabular-nums' }, canFightBoss ? 'Ready' : mmss(bossCooldownLeft)),
+                h('button', { onClick: startBossFight, disabled: !canFightBoss,
+                  className: 'w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition ' +
+                  (canFightBoss ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white shadow-[0_4px_12px_-4px_rgba(239,68,68,0.6)]' : 'bg-white/[0.06] text-white/50 border border-white/[0.06]') },
+                  canFightBoss ? 'FIGHT' : 'WAIT'
+                )
+              ),
+              h(Card, { className: 'p-3 flex flex-col items-center text-center' },
+                h('div', { className: 'text-3xl mb-1' }, '⚡'),
+                h('div', { className: 'text-[11px] font-black font-display' }, 'Boost'),
+                h('div', { className: 'text-[9px] text-[#22C55E] font-bold mb-2' }, 'Up to 5x'),
+                h('button', { onClick: () => setBoostOpen(true),
+                  className: 'w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black shadow-[0_4px_12px_-4px_rgba(34,197,94,0.6)]' },
+                  'SHOP'
+                )
+              )
+            ),
+
+            // ===== BONUSES =====
             h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A]' }, 'Free Money') }, 'Bonuses'),
             h('div', { className: 'grid grid-cols-3 gap-2' },
               h(Card, { className: 'p-2.5 flex flex-col items-center text-center' },
-                h('div', { className: 'text-2xl mb-1' }, '📺'),
-                h('div', { className: 'text-[11px] font-black font-display' }, 'Watch Ad'),
+                h('div', { className: 'text-2xl mb-1' }, '💬'),
+                h('div', { className: 'text-[11px] font-black font-display' }, 'Join Group'),
                 h('div', { className: 'text-[9px] text-[#22C55E] font-bold mb-2' }, '+₦300K'),
-                h('button', { onClick: watchAd, disabled: isWatchingAd,
-                  className: 'w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition-all tabular-nums ' + 
-                  (!isWatchingAd ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.6)]' : 'bg-white/[0.06] text-white/50 border border-white/[0.06]') },
-                  isWatchingAd ? '...' : 'Watch'
-                )
-              ),
-              h(Card, { className: 'p-2.5 flex flex-col items-center text-center' },
-                h('div', { className: 'text-2xl mb-1' }, '🟢'),
-                h('div', { className: 'text-[11px] font-black font-display' }, 'WhatsApp'),
-                h('div', { className: 'text-[9px] text-[#22C55E] font-bold mb-2' }, '+₦100K'),
-                h('button', { onClick: joinWA, disabled: hasJoinedWA,
+                h('button', { onClick: joinWAGroup, disabled: hasJoinedWA,
                   className: 'w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition-all tabular-nums ' + 
                   (!hasJoinedWA ? 'bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black shadow-[0_4px_12px_-4px_rgba(34,197,94,0.6)]' : 'bg-white/[0.06] text-white/50 border border-white/[0.06]') },
                   hasJoinedWA ? '✅' : 'Join'
+                )
+              ),
+              h(Card, { className: 'p-2.5 flex flex-col items-center text-center' },
+                h('div', { className: 'text-2xl mb-1' }, '📢'),
+                h('div', { className: 'text-[11px] font-black font-display' }, 'Channel'),
+                h('div', { className: 'text-[9px] text-[#22C55E] font-bold mb-2' }, '+₦100K'),
+                h('button', { onClick: joinWAChannel, disabled: hasJoinedChannel,
+                  className: 'w-full rounded-lg text-[10px] font-black py-2 active:scale-95 transition-all tabular-nums ' + 
+                  (!hasJoinedChannel ? 'bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black shadow-[0_4px_12px_-4px_rgba(34,197,94,0.6)]' : 'bg-white/[0.06] text-white/50 border border-white/[0.06]') },
+                  hasJoinedChannel ? '✅' : 'Join'
                 )
               ),
               h(Card, { className: 'p-2.5 flex flex-col items-center text-center' },
@@ -725,6 +1011,7 @@
             )
           ),
 
+          // ===== EVENT MODAL =====
           event && h('div', { className: 'fixed inset-0 z-50 grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/85 backdrop-blur-sm' }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn' },
@@ -744,13 +1031,92 @@
             )
           ),
 
+          // ===== SPIN MODAL =====
+          spinOpen && h('div', { className: 'fixed inset-0 z-[70] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => !isSpinning && setSpinOpen(false) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.5)] animate-popIn text-center' },
+              h('div', { className: 'text-4xl mb-1' }, '🎡'),
+              h('div', { className: 'text-[15px] font-black tracking-widest text-[#FFD60A] font-display' }, 'LUCKY SPIN'),
+              h('div', { className: 'text-[11px] text-white/50 mt-1' }, 'Win up to ₦50,000,000'),
+              
+              h('div', { className: 'my-5 h-32 rounded-2xl bg-gradient-to-br from-[#FFE566]/20 to-[#FFB800]/5 border border-[#FFD60A]/30 grid place-items-center overflow-hidden' },
+                isSpinning ? h('div', { className: 'text-5xl animate-spin' }, '🎰') :
+                spinResult ? h('div', null,
+                  h('div', { className: 'text-[10px] uppercase tracking-widest text-white/50 font-bold' }, 'You won'),
+                  h('div', { className: 'text-3xl font-black text-gradient-gold font-display tabular-nums mt-1' }, fmt(spinResult))
+                ) : h('div', { className: 'text-5xl' }, '🍀')
+              ),
+
+              h('button', { 
+                onClick: handleSpin, 
+                disabled: !canSpin || isSpinning,
+                className: 'w-full rounded-xl py-3 text-[13px] font-black active:scale-95 transition font-display ' +
+                  (canSpin && !isSpinning ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)]' : 'bg-white/[0.06] text-white/40 border border-white/10')
+              }, isSpinning ? 'Spinning...' : canSpin ? '🎰 SPIN NOW (FREE)' : 'Next spin in ' + mmss(spinCooldownLeft)),
+
+              h('button', { onClick: () => setSpinOpen(false), disabled: isSpinning, className: 'mt-2 w-full rounded-xl bg-white/[0.04] border border-white/10 py-2.5 text-[11px] font-extrabold text-white/60 disabled:opacity-40' }, 'Close')
+            )
+          ),
+
+          // ===== BOOST SHOP MODAL =====
+          boostOpen && h('div', { className: 'fixed inset-0 z-[70] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setBoostOpen(false) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#22C55E]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(34,197,94,0.4)] animate-popIn' },
+              h('div', { className: 'flex items-center justify-between border-b border-white/10 pb-3 mb-3' },
+                h('div', { className: 'text-[13px] font-black tracking-widest text-[#22C55E] font-display' }, '⚡ BOOST SHOP'),
+                h('button', { onClick: () => setBoostOpen(false), className: 'text-white/50 text-xl leading-none' }, '×')
+              ),
+              h('p', { className: 'text-[11px] text-white/50 mb-3' }, 'Buy temporary tap multipliers to hustle faster.'),
+              h('div', { className: 'space-y-2' },
+                BOOSTS.map(b => h('button', {
+                  key: b.id,
+                  onClick: () => buyBoost(b),
+                  disabled: s.cash < b.cost,
+                  className: 'w-full rounded-xl bg-white/[0.04] border border-white/10 p-3 flex items-center justify-between active:scale-95 transition disabled:opacity-40'
+                },
+                  h('div', { className: 'text-left' },
+                    h('div', { className: 'text-[13px] font-black font-display' }, b.label),
+                    h('div', { className: 'text-[10px] text-white/40' }, 'For ' + b.durLabel)
+                  ),
+                  h('div', { className: 'text-[13px] font-black text-[#FFD60A] tabular-nums' }, fmt(b.cost))
+                ))
+              )
+            )
+          ),
+
+          // ===== BOSS FIGHT MODAL =====
+          bossOpen && h('div', { className: 'fixed inset-0 z-[70] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-gradient-to-b from-[#1a0a0a] to-black' }),
+            h('div', { className: 'relative w-full max-w-sm' },
+              h('div', { className: 'flex items-center justify-between mb-3' },
+                h('div', { className: 'text-[11px] font-black text-[#EF4444] font-display' }, bossActive ? '⚔️ FIGHT!' : 'FIGHT OVER'),
+                h('div', { className: 'text-[12px] font-black tabular-nums text-white' }, (bossTimeLeft/1000).toFixed(1) + 's')
+              ),
+              h('div', { className: 'rounded-2xl bg-gradient-to-b from-[#2a0a0a] to-[#1a0505] border border-[#EF4444]/40 p-5 text-center' },
+                h('div', { className: 'text-6xl mb-3 ' + (bossActive ? 'animate-bounce' : '') }, bossActive ? '👹' : bossHP <= 0 ? '💀' : '😤'),
+                h('div', { className: 'text-[13px] font-black tracking-widest text-[#EF4444] font-display mb-3' }, bossHP <= 0 ? 'BOSS DEFEATED!' : 'AGBERO KING'),
+                h('div', { className: 'h-3 rounded-full bg-black/50 overflow-hidden mb-1' },
+                  h('div', { className: 'h-full bg-gradient-to-r from-[#F87171] to-[#EF4444] transition-all', style: { width: (bossHP / BOSS_MAX_HP * 100) + '%' } })
+                ),
+                h('div', { className: 'text-[10px] text-white/50 tabular-nums' }, bossHP + ' / ' + BOSS_MAX_HP + ' HP — ' + bossHits + ' hits'),
+                bossActive ? h('button', { 
+                  onClick: hitBoss, 
+                  className: 'mt-4 w-full rounded-2xl bg-gradient-to-b from-[#F87171] to-[#EF4444] py-6 text-[16px] font-black text-white active:scale-95 transition shadow-[0_8px_24px_-8px_rgba(239,68,68,0.8)] font-display' 
+                }, '👊 PUNCH!') : h('button', { 
+                  onClick: finishBoss, 
+                  className: 'mt-4 w-full rounded-2xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] py-3 text-[13px] font-black text-black active:scale-95 transition shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)] font-display'
+                }, 'COLLECT ₦' + ((bossHits * BOSS_REWARD_PER_HIT) + (bossHP <= 0 ? BOSS_KILL_BONUS : 0)).toLocaleString())
+              )
+            )
+          ),
+
+          // ===== SAPA SCAM =====
           sapaScamOpen && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md' }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-green-500/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(34,197,94,0.4)] animate-popIn text-center' },
               h('div', { className: 'text-6xl mb-2 animate-bounce' }, '🎁'),
               h('div', { className: 'text-[15px] font-black text-green-400 font-display mb-2' }, 'CONGRATULATIONS!'),
               h('p', { className: 'text-[12px] text-white/70 mb-4' }, 'You just won ₦1,000,000 in the Lagos Life Mini daily draw! Click below to claim your prize.'),
-              
               h('div', { className: 'space-y-2' },
                 h('button', { onClick: handleScamClaim, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-green-400 to-green-600 text-black font-black text-[13px] active:scale-95 transition' }, 'Claim ₦1,000,000 (Pay ₦5k fee)'),
                 h('button', { onClick: () => setSapaScamOpen(false), className: 'w-full py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/50 font-bold text-[11px]' }, 'I no fall for am (Close)')
