@@ -94,8 +94,34 @@
     const BASE_MIN_WITHDRAW = 10_000_000_000_000; // 10 Trillion
     const REAL_PER_WITHDRAW = 10_000;
 
-    const BIZ_PRICES = { water: 10_000, suya: 250_000, keke: 500_000, phone: 2_000_000, danfo: 5_000_000, wash: 25_000_000, bet9ja: 50_000_000, lounge: 500_000_000, oil: 5_000_000_000 };
-    const ASSET_PRICES = { chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000, gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000, mansion: 1_000_000_000_000 };
+    // ✅ FULL PRICE LISTS (Matches Market & Business)
+    const BIZ_PRICES = { 
+      water: 10_000, mai_shai: 50_000, corn: 100_000, shoe: 25_000, akara: 40_000, 
+      phone_chg: 15_000, suya: 250_000, keke: 500_000, okada: 300_000, umbrella: 20_000, 
+      phone_acc: 2_000_000, barber: 1_500_000, salon: 3_000_000, tailor: 2_500_000, 
+      vulcan: 800_000, provision: 1_200_000, danfo: 5_000_000, wash: 8_000_000, 
+      pos: 4_000_000, eggs: 600_000, bet9ja: 50_000_000, cyber: 15_000_000, 
+      fastfood: 30_000_000, laundry: 20_000_000, pharmacy: 25_000_000, gym: 40_000_000, 
+      restaurant: 80_000_000, event: 150_000_000, hotel: 300_000_000, blocks: 200_000_000, 
+      lounge: 500_000_000, club: 1_000_000_000, car_deal: 2_500_000_000, 
+      real_estate: 5_000_000_000, logistics: 3_000_000_000, school: 1_500_000_000, 
+      hospital: 4_000_000_000, supermarket: 1_200_000_000, printing: 800_000_000, 
+      tech: 8_000_000_000, oil: 50_000_000_000, jet: 150_000_000_000, 
+      yacht: 80_000_000_000, import: 200_000_000_000, diamond: 500_000_000_000, 
+      gold: 1_000_000_000_000, telecom: 2_000_000_000_000, security: 300_000_000_000, 
+      construction: 800_000_000_000, political: 5_000_000_000_000 
+    };
+    
+    const ASSET_PRICES = { 
+      af1: 150_000, shades: 500_000, chain: 5_000_000, iphone: 2_500_000, 
+      grillz: 10_000_000, rolex: 50_000_000, honda: 15_000_000, camry: 25_000_000, 
+      tesla: 500_000_000, gwag: 5_000_000_000, rr: 15_000_000_000, lambo: 50_000_000_000, 
+      lekki_flat: 100_000_000, ikeja_duplex: 300_000_000, ikoyi_penthouse: 1_500_000_000, 
+      yacht: 20_000_000_000, mansion: 1_000_000_000_000, bodyguard: 150_000_000, 
+      chef: 50_000_000, plate: 200_000_000, jet: 100_000_000_000, 
+      helicopter: 300_000_000_000, island: 2_000_000_000_000, 
+      football: 5_000_000_000_000, crypto: 10_000_000_000_000 
+    };
 
     const FEED_MESSAGES = [
       "Tunde just crossed 15T fake! E don blow 💸",
@@ -267,11 +293,11 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      // Fetch Real Users
+      // ✅ FIXED: Fetch more users and sort by true Net Worth
       useEffect(() => {
         const fetchRealUsers = async () => {
           try {
-            const snap = await db.collection("users").orderBy("cash", "desc").limit(20).get();
+            const snap = await db.collection("users").orderBy("cash", "desc").limit(100).get();
             const users = [];
             snap.forEach(doc => {
               const data = doc.data();
@@ -287,7 +313,8 @@
                 gold: data.goldName
               });
             });
-            setRealUsers(users);
+            users.sort((a, b) => b.nw - a.nw);
+            setRealUsers(users.slice(0, 20));
           } catch (e) {
             console.error("Error fetching real users:", e);
           }
@@ -409,7 +436,7 @@
           currency: 'NGN',
           ref: 'LGM_' + Date.now() + '_' + Math.floor(Math.random() * 1000), 
           callback: function(response) {
-            // 🔥 NEW: Redirect to success page instead of inline verification
+            // Redirect to success page
             window.location.href = '/payment-success.html?reference=' + response.reference;
           },
           onClose: function() {
