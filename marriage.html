@@ -194,6 +194,7 @@
                 const dbData = doc.data();
                 const newData = Object.assign({}, prev, dbData, {
                   transactions: dbData.transactions || [],
+                  history: dbData.history || [],
                   marriage: dbData.marriage || { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 },
                   gender: dbData.gender || 'boy'
                 });
@@ -206,7 +207,7 @@
                 cash: 25000, real: 0, energy: 100,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
-                transactions: [], marriage: { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 }, gender: 'boy'
+                transactions: [], history: [], marriage: { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 }, gender: 'boy'
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
@@ -250,7 +251,7 @@
         return () => unsub();
       }, [uid]);
 
-      // Chat Listener (Sorted client-side to avoid missing index errors)
+      // Chat Listener
       useEffect(() => {
         if (!activeChatUser || !uid) return;
         const chatId = [uid, activeChatUser.id].sort().join('_');
@@ -276,11 +277,31 @@
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
       const addFeed = (msg) => setFeed(prev => [{ id: Date.now(), msg }, ...prev].slice(0, 10));
 
+      // ✅ SAFE UPDATE USER (Prevents Wallet Wipe)
       const updateUser = async (data) => {
         setS(prev => Object.assign({}, prev, data));
         if (uid) {
-          await db.collection("users").doc(uid).update(Object.assign({}, data, { lastSeen: Date.now() })).catch(() => {});
+          const updates = Object.assign({}, data);
+          // SAFE FIX: Use increment for cash
+          if (updates.cash !== undefined) {
+            updates.cash = firebase.firestore.FieldValue.increment(updates.cash - (s.cash || 0));
+          }
+          await db.collection("users").doc(uid).update(Object.assign(updates, { lastSeen: Date.now() })).catch(() => {});
         }
+      };
+
+      // ✅ LOG HISTORY HELPER
+      const logHistory = async (title, desc, amount) => {
+        if (!uid) return;
+        await db.collection("users").doc(uid).update({
+          history: firebase.firestore.FieldValue.arrayUnion({
+            title: title,
+            desc: desc,
+            amount: amount,
+            date: Date.now(),
+            category: 'activity'
+          })
+        }).catch(() => {});
       };
 
       const sendMessage = async () => {
@@ -307,6 +328,7 @@
         await db.collection("messages").add({
           chatId, senderId: 'SYSTEM', senderName: 'SYSTEM', text: '🎁 ' + (s.name || 'You') + ' just sent a ₦1M gift!', createdAt: Date.now()
         });
+        logHistory('Sent Gift', 'Sent ₦1M gift to ' + activeChatUser.name, -1000000);
         notify('Gift sent! ₦1M 💸');
       };
 
@@ -339,6 +361,7 @@
         AudioEngine.wedding();
         notify('You accepted ' + prop.fromName + '\'s proposal! 💍');
         addFeed('💍 WEDDING BELLS: ' + prop.fromName + ' and ' + (s.name || 'You') + ' are now married!');
+        logHistory('Marriage', 'Married ' + prop.fromName, 0);
         setActiveTab('dashboard');
       };
 
@@ -356,6 +379,7 @@
         });
         notify('Deposited ₦1M to Joint Account');
         AudioEngine.coin();
+        logHistory('Joint Account', 'Deposited ₦1M to joint account', -1000000);
       };
 
       const runAwayJoint = async () => {
@@ -374,6 +398,7 @@
         }
         AudioEngine.error();
         addFeed('🚨 OPPRESSION: ' + (s.name || 'You') + ' just ran away with the joint account money!');
+        logHistory('Run Away', 'Ran away with joint account money', amount);
         notify('You ran away with the joint money! 💸');
       };
 
@@ -390,14 +415,17 @@
           AudioEngine.gavel();
           notify('WAHALA! You got caught cheating! 🚨', 'bad');
           addFeed('🚨 ' + s.marriage.spouseName + ' caught ' + (s.name || 'You') + ' cheating in Victoria Island! Court case don start!');
+          logHistory('Caught Cheating', 'Got caught cheating, now in divorce court', 0);
         } else if (roll < 0.6) {
           notify('Side chick is blackmailing you for ₦2M! 💸', 'bad');
           updateUser({ cash: Math.max(0, s.cash - 2000000), clout: (s.clout || 0) + 100 });
           addFeed('🤫 ' + (s.name || 'You') + ' paid off a side chick to keep quiet. Silent moves!');
+          logHistory('Blackmail', 'Side chick blackmailed you', -2000000);
         } else {
           updateUser({ clout: (s.clout || 0) + 100 });
           AudioEngine.coin();
           notify('You cheated and got away with it. +100 Clout 😈');
+          logHistory('Cheated', 'Cheated and got away with it', 0);
         }
       };
 
@@ -406,6 +434,7 @@
           notify('You caught your spouse cheating! 😱', 'bad');
           addFeed('🕵🏾‍♂️ PI caught ' + s.marriage.spouseName + ' cheating with the gateman!');
           updateUser({ marriage: { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 } });
+          logHistory('Divorce', 'Caught spouse cheating, divorced', 0);
         } else {
           notify('Your spouse is loyal. No cheating found.');
         }
@@ -416,6 +445,7 @@
         updateUser({ cash: s.cash - 2000000, clout: (s.clout || 0) + 50 });
         notify('Mama G collected ₦2M. She blessed you.');
         addFeed('👩🏾‍🦳 Mama G just collected ₦2M aso ebi money from ' + (s.name || 'You'));
+        logHistory('Mama G', 'Paid Mama G for aso ebi', -2000000);
       };
 
       const babyMama = () => {
@@ -423,6 +453,7 @@
         updateUser({ cash: s.cash - 500000 });
         notify('Baby Mama collected ₦500k. Drama avoided.');
         addFeed('👶🏾 ' + (s.name || 'You') + ' paid ₦500k to baby mama for school fees.');
+        logHistory('Baby Mama', 'Paid baby mama school fees', -500000);
       };
 
       const anniversary = () => {
@@ -431,6 +462,7 @@
         AudioEngine.wedding();
         notify('You bought spouse a G-Wagon! +500 Clout 👑');
         addFeed('🚙 ' + (s.name || 'You') + ' just bought a G-Wagon for his wife for their anniversary!');
+        logHistory('Anniversary', 'Bought spouse a G-Wagon', -10000000);
       };
 
       const settleOutOfCourt = async () => {
@@ -445,6 +477,7 @@
         AudioEngine.coin();
         notify('You settled the judge with ₦5M. 🤫');
         addFeed('⚖️ ' + (s.name || 'You') + ' settled divorce out of court for ₦5M.');
+        logHistory('Divorce Court', 'Settled out of court', -5000000);
       };
 
       const faceTheJudge = () => {
@@ -462,6 +495,7 @@
             updateUser({ cash: s.cash - lostCash, marriage: { status: 'single', spouseId: null, spouseName: null, jointAccount: 0 } });
             setCourtResult({ guilty: true, lostCash: lostCash, msg: 'Guilty! The Judge ordered you to give ' + s.marriage.spouseName + ' 50% of your cash!' });
             addFeed('⚖️ COURT ORDER: ' + (s.name || 'You') + ' is guilty of cheating! He lost ' + fmt(lostCash));
+            logHistory('Divorce Court', 'Found guilty, lost 50% cash', -lostCash);
           } else {
             if (s.marriage.spouseId && s.marriage.spouseId.indexOf('test_') === -1) {
               await db.collection("users").doc(s.marriage.spouseId).update({
@@ -472,6 +506,7 @@
             setCourtResult({ guilty: false, lostCash: 0, msg: 'Not Guilty! The Judge believed your lies. ' + s.marriage.spouseName + ' got nothing!' });
             AudioEngine.coin();
             addFeed('⚖️ ' + (s.name || 'You') + ' was found NOT GUILTY of cheating.');
+            logHistory('Divorce Court', 'Found not guilty', 0);
           }
         }, 1500);
       };
