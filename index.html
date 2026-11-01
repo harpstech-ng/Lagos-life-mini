@@ -320,7 +320,6 @@
       const [isMaintenance, setIsMaintenance] = useState(false);
       const [quoteIndex, setQuoteIndex] = useState(0);
 
-      // ===== NEW FEATURE STATES =====
       const [settingsOpen, setSettingsOpen] = useState(false);
       const [receiptOpen, setReceiptOpen] = useState(false);
       const [receiptUrl, setReceiptUrl] = useState(null);
@@ -334,12 +333,10 @@
       const bankAutoShownRef = useRef(false);
       const achievementsLock = useRef(new Set());
 
-      // ===== CLEANUP COMBO TIMER =====
       useEffect(() => {
         return () => { if (comboRef.current.timer) clearTimeout(comboRef.current.timer); };
       }, []);
 
-      // ===== INIT ACCOUNT INPUT ON SETTINGS OPEN =====
       useEffect(() => {
         if (settingsOpen) setAccountInput(s.accountNumber || '');
       }, [settingsOpen]);
@@ -406,7 +403,6 @@
         };
       }, []);
 
-      // ===== AUTO-OPEN BANK PICKER (only once) =====
       useEffect(() => {
         if (!bankAutoShownRef.current && s && !s.bankName && !isMaintenance && !authError) {
           bankAutoShownRef.current = true;
@@ -456,7 +452,6 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      // ===== ENERGY REGEN =====
       useEffect(() => {
         if (!s) return;
         const iv = setInterval(() => {
@@ -482,7 +477,6 @@
         return () => clearInterval(iv);
       }, []);
 
-      // ===== DERIVED VALUES (need before achievements check) =====
       const safeBiz = s.businesses || {};
       const safeAssets = s.assets || {};
       const safeTravels = s.travels || [];
@@ -493,7 +487,6 @@
       const tapBonus = safeTravels.reduce((a, id) => a + (DEST_BONUSES[id] || 0), 0);
       const TAP_VALUE = BASE_TAP + tapBonus;
 
-      // ===== ACHIEVEMENTS AUTO-UNLOCK =====
       const achSig = [s.taps || 0, netWorth, Object.keys(safeBiz).length, Object.keys(safeAssets).length, safeTravels.length].join('|');
       useEffect(() => {
         if (!s || !uid) return;
@@ -516,7 +509,6 @@
         setTimeout(() => setAchievementToast(null), 3500);
       }, [achSig, uid]);
 
-      // ===== DAILY REWARD LOGIC =====
       const todayStr = new Date().toISOString().slice(0, 10);
       const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
       const canClaimDaily = s.lastClaimDate !== todayStr;
@@ -543,7 +535,6 @@
         notify('Day ' + newStreak + ' claimed! +' + fmt(reward));
       };
 
-      // ===== ENERGY REFILL =====
       const refillEnergy = async () => {
         const missing = MAX_E - (s.energy || 0);
         if (missing <= 0) return notify('Energy already full ⚡');
@@ -591,7 +582,6 @@
         setIsVerifying(false);
       };
 
-      // ===== TAP WITH COMBO =====
       const doTap = () => {
         if (s.energy < 1) { AudioEngine.error(); return notify('No energy! Wait or refill ⚡', 'bad'); }
         AudioEngine.tap();
@@ -628,7 +618,6 @@
         setTimeout(() => setTapFloats((f) => f.filter((x) => x.id !== id)), 950);
       };
 
-      // ===== SHARE CARD (unchanged) =====
       const rank = netWorth <= 0 ? TOTAL_USERS : Math.max(1, Math.floor(TOTAL_USERS - Math.min(1, Math.log10(netWorth + 1) / 13) * (TOTAL_USERS - 1)));
       const energyNextIn = s.energy >= MAX_E ? 0 : ENERGY_MS - ((Date.now() - s.lastEnergy) % ENERGY_MS);
 
@@ -718,7 +707,7 @@
         try { window.open('https://www.tiktok.com/', '_blank'); } catch(e) {}
       };
 
-      // ===== RECEIPT GENERATOR (NEW) =====
+      // ===== RECEIPT GENERATOR (FIXED — handles 50T+ without cutting off) =====
       const generateReceipt = (fromName, toName, bank, accountNumber, amount, ref) => {
         const c = document.createElement('canvas');
         c.width = 1080; c.height = 1080;
@@ -752,18 +741,29 @@
         ctx.fillStyle = '#22C55E'; ctx.font = 'bold 32px Sora, Inter, sans-serif';
         ctx.fillText('TRANSFER SUCCESSFUL', 540, 280);
         
-        // Amount
-        const goldGrad = ctx.createLinearGradient(180, 320, 900, 440);
-        goldGrad.addColorStop(0, '#FFE566'); goldGrad.addColorStop(0.5, '#FFD60A'); goldGrad.addColorStop(1, '#FFB800');
-        ctx.fillStyle = goldGrad; ctx.font = 'bold 130px Sora, Inter, sans-serif';
-        ctx.fillText('₦' + amount.toLocaleString(), 540, 420);
-        
+        // ===== AMOUNT — abbreviation hero + full number below =====
         ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = 'bold 24px Inter, sans-serif';
-        ctx.fillText('AMOUNT SENT', 540, 480);
-        
+        ctx.fillText('AMOUNT SENT', 540, 360);
+
+        const goldGrad = ctx.createLinearGradient(180, 400, 900, 520);
+        goldGrad.addColorStop(0, '#FFE566'); goldGrad.addColorStop(0.5, '#FFD60A'); goldGrad.addColorStop(1, '#FFB800');
+        ctx.fillStyle = goldGrad;
+
+        const shortAmt = fmt(amount);
+        let fs = 130;
+        ctx.font = 'bold ' + fs + 'px Sora, Inter, sans-serif';
+        while (ctx.measureText(shortAmt).width > 880 && fs > 60) {
+          fs -= 5;
+          ctx.font = 'bold ' + fs + 'px Sora, Inter, sans-serif';
+        }
+        ctx.fillText(shortAmt, 540, 470);
+
+        ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = 'bold 28px Inter, sans-serif';
+        ctx.fillText('₦' + amount.toLocaleString(), 540, 520);
+
         // Divider
         ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(120, 530); ctx.lineTo(960, 530); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(120, 560); ctx.lineTo(960, 560); ctx.stroke();
         
         // Details
         const details = [
@@ -775,7 +775,7 @@
           ['REF', 'LGM' + ref]
         ];
         details.forEach(([label, val], i) => {
-          const y = 600 + i * 62;
+          const y = 620 + i * 62;
           ctx.textAlign = 'left';
           ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.font = 'bold 20px Inter, sans-serif';
           ctx.fillText(label, 120, y);
@@ -794,7 +794,6 @@
         return c;
       };
 
-      // ===== SEND MONEY (now generates receipt) =====
       const sendMoney = async () => {
         const user = sendTo.trim();
         const amt = Math.floor(Number(sendAmt));
@@ -831,7 +830,6 @@
           setSendAmt('');
           setVerifiedBank(null);
           
-          // Generate and show receipt
           const canvas = generateReceipt(
             s.name, 
             user, 
@@ -878,7 +876,6 @@
             className: 'music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition backdrop-blur'
           }, h('span', { className: 'text-base' }, musicOn ? '🔊' : '🔇')),
 
-          // ===== HEADER with settings gear =====
           h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
             h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
               h('div', { className: 'flex items-center gap-2 min-w-0' },
@@ -909,7 +906,6 @@
           ),
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
-            // Hero card
             h(Card, { className: 'relative overflow-hidden p-5 mt-3 hero-grid', gold: true },
               h('div', { className: 'absolute -top-24 -right-16 w-64 h-64 rounded-full bg-[#FFD60A]/25 blur-3xl pointer-events-none' }),
               h('div', { className: 'absolute -bottom-20 -left-10 w-48 h-48 rounded-full bg-[#FFB800]/15 blur-3xl pointer-events-none' }),
@@ -936,7 +932,6 @@
               )
             ),
 
-            // Quick actions
             h('div', { className: 'grid grid-cols-2 gap-2 mt-2' },
               h(Card, { className: 'p-3.5' },
                 h('div', { className: 'flex items-center justify-between' },
@@ -967,7 +962,6 @@
               )
             ),
 
-            // Tap button with combo
             h('div', { className: 'mt-8 flex flex-col items-center' },
               h('div', { className: 'relative' },
                 comboMult > 1 && h('div', { 
@@ -982,7 +976,6 @@
                 ),
                 tapFloats.map((f) => h('span', { key: f.id, className: 'tap-float', style: { left: f.x + '%' } }, '+' + fmt(f.amt)))
               ),
-              // Energy bar with REFILL
               h('div', { className: 'mt-6 w-full flex items-center gap-2 text-[11px] font-bold text-white/50' },
                 h('span', { className: 'tabular-nums' }, '⚡ ' + (s.energy || 0) + '/' + MAX_E),
                 h('div', { className: 'flex-1 h-2 rounded-full bg-white/10 overflow-hidden' },
@@ -1000,7 +993,6 @@
               )
             ),
 
-            // Daily reward card
             h(Card, { className: 'p-4 mt-4' },
               h('div', { className: 'flex items-center justify-between mb-2' },
                 h('div', null,
@@ -1030,7 +1022,6 @@
               )
             ),
 
-            // Achievements row
             h(SectionTitle, {
               right: h('span', { className: 'text-[10px] font-bold text-white/50' }, 
                 (s.achievements || []).length + '/' + ACHIEVEMENTS.length
@@ -1053,7 +1044,6 @@
               })
             ),
 
-            // Quote
             h('div', { className: 'mt-6 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.05] text-center overflow-hidden relative h-10' },
               h('div', { className: 'text-[11px] font-bold text-white/50 italic absolute w-full left-0 animate-slideDown', key: quoteIndex },
                 '"' + FUNNY_QUOTES[quoteIndex] + '"'
@@ -1072,7 +1062,6 @@
             )
           ),
 
-          // ===== SETTINGS MODAL (NEW) =====
           settingsOpen && h('div', { className: 'fixed inset-0 z-[70] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setSettingsOpen(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn' },
@@ -1081,7 +1070,6 @@
                 h('button', { onClick: () => setSettingsOpen(false), className: 'text-white/50 text-xl leading-none' }, '×')
               ),
               h('div', { className: 'space-y-4 max-h-[65vh] overflow-y-auto pr-1' },
-                // Bank picker
                 h('div', null,
                   h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Your Bank (for fake alerts)'),
                   h('div', { className: 'mt-1 text-[13px] font-black text-[#22C55E]' }, '🏦 ' + (s.bankName || 'Not set')),
@@ -1096,7 +1084,6 @@
                     )
                   )
                 ),
-                // Account number
                 h('div', null,
                   h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Account Number'),
                   h('input', {
@@ -1112,7 +1099,6 @@
                     className: 'mt-1.5 w-full rounded-lg bg-white/[0.06] border border-white/10 py-2 text-[11px] font-extrabold text-white/80 active:scale-95 transition'
                   }, 'Save Account Number')
                 ),
-                // Sound toggle
                 h('div', { className: 'flex items-center justify-between' },
                   h('div', null,
                     h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Sound'),
@@ -1127,7 +1113,6 @@
             )
           ),
 
-          // ===== BANK MODAL (initial picker) =====
           bankModalOpen && h('div', { className: 'fixed inset-0 z-[70] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md' }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn' },
@@ -1146,7 +1131,6 @@
             )
           ),
 
-          // ===== SEND MONEY MODAL =====
           sendOpen && h('div', { className: 'fixed inset-0 z-50 grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/80 backdrop-blur-sm', onClick: () => !isSending && setSendOpen(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn' },
@@ -1192,7 +1176,6 @@
             )
           ),
 
-          // ===== RECEIPT MODAL (NEW) =====
           receiptOpen && receiptUrl && h('div', { className: 'fixed inset-0 z-[80] grid place-items-center p-4' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setReceiptOpen(false) }),
             h('div', { className: 'relative w-full max-w-sm animate-popIn' },
@@ -1228,7 +1211,6 @@
             )
           ),
 
-          // ===== TX HISTORY =====
           txHistoryOpen && h('div', { className: 'fixed inset-0 z-50 grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/80 backdrop-blur-sm', onClick: () => setTxHistoryOpen(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn' },
@@ -1257,7 +1239,6 @@
             )
           ),
 
-          // ===== SHARE MODAL =====
           shareOpen && shareUrl && h('div', { className: 'fixed inset-0 z-50 grid place-items-center p-4' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setShareOpen(false) }),
             h('div', { className: 'relative w-full max-w-sm animate-popIn' },
@@ -1272,7 +1253,6 @@
             )
           ),
 
-          // ===== ACHIEVEMENT TOAST (NEW) =====
           achievementToast && h('div', { className: 'fixed top-20 left-1/2 -translate-x-1/2 z-[95] px-4 animate-slideDown pointer-events-none' },
             h('div', { className: 'bg-gradient-to-r from-[#FFD60A] to-[#FFB800] text-black px-5 py-3 rounded-2xl shadow-[0_8px_30px_-6px_rgba(255,214,10,0.8)] flex items-center gap-3 min-w-[220px]' },
               h('div', { className: 'text-2xl' }, achievementToast.icon),
@@ -1283,7 +1263,6 @@
             )
           ),
 
-          // ===== NAV =====
           h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
               NAV.map((n) => {
@@ -1299,7 +1278,6 @@
             )
           ),
 
-          // ===== TOAST =====
           toast && h('div', {
             className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
               (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')
