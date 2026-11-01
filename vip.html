@@ -124,7 +124,7 @@
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
         taps: 0, clout: 0, goldName: false, isVip: false, vipTitle: 'Big Boy', lastSeen: Date.now(),
-        transactions: []
+        transactions: [], history: []
       };
     };
 
@@ -174,7 +174,6 @@
       const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
       
-      // REAL FIRESTORE CHAT STATE
       const [chatMessages, setChatMessages] = useState([]);
       const [chatInput, setChatInput] = useState('');
       const chatEndRef = useRef(null);
@@ -209,6 +208,7 @@
                 const dbData = doc.data();
                 const newData = Object.assign({}, prev, dbData, {
                   transactions: dbData.transactions || [],
+                  history: dbData.history || [],
                   isVip: dbData.isVip || false,
                   vipTitle: dbData.vipTitle || 'Big Boy'
                 });
@@ -221,7 +221,7 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, isVip: false, vipTitle: 'Big Boy', lastSeen: Date.now(),
-                transactions: []
+                transactions: [], history: []
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
@@ -233,18 +233,16 @@
         return () => { authUnsub(); if (userUnsub) userUnsub(); };
       }, []);
 
-      // 📡 REAL-TIME CHAT LISTENER
       useEffect(() => {
         if (!uid || !s.isVip) return;
         
-        // Listen to last 50 messages
         const unsub = db.collection("vip_chat")
           .orderBy("createdAt", "desc")
           .limit(50)
           .onSnapshot((snap) => {
             const msgs = [];
             snap.forEach(doc => msgs.push({ id: doc.id, ...doc.data() }));
-            setChatMessages(msgs.reverse()); // Oldest at top
+            setChatMessages(msgs.reverse());
             setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
           }, (err) => console.error("Chat error:", err));
 
@@ -257,7 +255,6 @@
         return () => clearTimeout(t);
       }, [toast]);
 
-      // Random Oppression Feed
       useEffect(() => {
         const iv = setInterval(() => {
           setFeedMsg(OPPRESSION_FEED[Math.floor(Math.random() * OPPRESSION_FEED.length)]);
@@ -266,7 +263,6 @@
         return () => clearInterval(iv);
       }, []);
 
-      // Fake Bots writing to Firestore
       useEffect(() => {
         if (!s.isVip) return;
         const iv = setInterval(async () => {
@@ -287,17 +283,40 @@
             text: msg,
             createdAt: Date.now()
           }).catch(() => {});
-        }, 25000); // every 25 seconds (so it doesn't spam too fast)
+        }, 25000);
         return () => clearInterval(iv);
       }, [s.isVip]);
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
+      // ✅ SAFE UPDATE USER — Prevents wallet wipe
       const updateUser = async (data) => {
         setS(prev => Object.assign({}, prev, data));
         if (uid) {
-          await db.collection("users").doc(uid).update(Object.assign({}, data, { lastSeen: Date.now() })).catch(() => {});
+          const updates = Object.assign({}, data);
+          // Use increment for cash and real
+          if (updates.cash !== undefined) {
+            updates.cash = firebase.firestore.FieldValue.increment(updates.cash - (s.cash || 0));
+          }
+          if (updates.real !== undefined) {
+            updates.real = firebase.firestore.FieldValue.increment(updates.real - (s.real || 0));
+          }
+          await db.collection("users").doc(uid).update(Object.assign(updates, { lastSeen: Date.now() })).catch(() => {});
         }
+      };
+
+      // ✅ LOG HISTORY HELPER
+      const logHistory = async (title, desc, amount) => {
+        if (!uid) return;
+        await db.collection("users").doc(uid).update({
+          history: firebase.firestore.FieldValue.arrayUnion({
+            title: title,
+            desc: desc,
+            amount: amount,
+            date: Date.now(),
+            category: 'activity'
+          })
+        }).catch(() => {});
       };
 
       const topUpReal = () => {
@@ -329,6 +348,7 @@
           goldName: true 
         });
         
+        logHistory('VIP Entry', 'Paid ₦5,000 to enter Big Boys Lounge', -VIP_COST);
         AudioEngine.vip();
         notify('👑 WELCOME TO THE BIG BOYS LOUNGE!');
         try { if (navigator.vibrate) navigator.vibrate(40); } catch(e) {}
@@ -353,6 +373,7 @@
       const buyDrinks = () => {
         if ((s.real || 0) < 500) { AudioEngine.error(); return notify('Need ₦500 real 💸', 'bad'); }
         updateUser({ real: s.real - 500, clout: (s.clout || 0) + 200 });
+        logHistory('Bought Drinks', 'Bought a round of drinks for the lounge', -500);
         AudioEngine.coin();
         db.collection("vip_chat").add({
           uid: 'system', senderName: 'SYSTEM', emoji: '🍾',
@@ -365,6 +386,7 @@
       const hireBodyguard = () => {
         if ((s.real || 0) < 1000) { AudioEngine.error(); return notify('Need ₦1,000 real 💸', 'bad'); }
         updateUser({ real: s.real - 1000, clout: (s.clout || 0) + 300 });
+        logHistory('Hired Bodyguards', 'Hired 5 bodyguards for the lounge', -1000);
         AudioEngine.vip();
         db.collection("vip_chat").add({
           uid: 'system', senderName: 'SYSTEM', emoji: '🛡️',
@@ -377,6 +399,7 @@
       const hijackDJ = () => {
         if ((s.real || 0) < 200) { AudioEngine.error(); return notify('Need ₦200 real 💸', 'bad'); }
         updateUser({ real: s.real - 200, clout: (s.clout || 0) + 100 });
+        logHistory('Hijacked DJ', 'Hijacked the DJ booth', -200);
         AudioEngine.vip();
         db.collection("vip_chat").add({
           uid: 'system', senderName: 'SYSTEM', emoji: '🎧',
@@ -389,6 +412,7 @@
       const shutDownClub = () => {
         if ((s.real || 0) < 2000) { AudioEngine.error(); return notify('Need ₦2,000 real 💸', 'bad'); }
         updateUser({ real: s.real - 2000, clout: (s.clout || 0) + 1000 });
+        logHistory('Shut Down Club', 'Shut down the entire club', -2000);
         AudioEngine.error();
         setFlashScreen(true);
         setTimeout(() => setFlashScreen(false), 2000);
@@ -404,6 +428,7 @@
         if (!customTitle.trim()) return notify('Enter a title first', 'bad');
         if ((s.real || 0) < 500) { AudioEngine.error(); return notify('Need ₦500 real 💸', 'bad'); }
         updateUser({ real: s.real - 500, vipTitle: customTitle });
+        logHistory('VIP Title', 'Changed VIP title to ' + customTitle, -500);
         notify('Title updated to ' + customTitle + ' 👑');
         AudioEngine.coin();
       };
@@ -411,6 +436,7 @@
       const sprayMoney = () => {
         if (s.cash < sprayAmt) { AudioEngine.error(); return notify('You no get money for spray 💸', 'bad'); }
         updateUser({ cash: s.cash - sprayAmt, clout: (s.clout || 0) + 500 });
+        logHistory('Sprayed Money', 'Sprayed ' + fmt(sprayAmt) + ' in the lounge', -sprayAmt);
         AudioEngine.coin();
         db.collection("vip_chat").add({
           uid: 'system', senderName: 'SYSTEM', emoji: '💸',
@@ -423,6 +449,7 @@
       const buyTable = () => {
         if (s.cash < 50000000) { AudioEngine.error(); return notify('Need ₦50M fake 💸', 'bad'); }
         updateUser({ cash: s.cash - 50000000, clout: (s.clout || 0) + 300 });
+        logHistory('Bought VIP Table', 'Bought the biggest VIP table', -50000000);
         AudioEngine.vip();
         db.collection("vip_chat").add({
           uid: 'system', senderName: 'SYSTEM', emoji: '🪑',
@@ -435,6 +462,7 @@
       const sendSapaAlert = () => {
         if (s.cash < 5000000) { AudioEngine.error(); return notify('Need ₦5M fake 💸', 'bad'); }
         updateUser({ cash: s.cash - 5000000, clout: (s.clout || 0) + 100 });
+        logHistory('Sapa Alert', 'Sent a Sapa Alert to the lounge', -5000000);
         AudioEngine.error();
         db.collection("vip_chat").add({
           uid: 'system', senderName: 'SYSTEM', emoji: '😂',
@@ -610,7 +638,6 @@
             h(Card, { className: 'p-3 h-80 flex flex-col' },
               h('div', { className: 'flex-1 overflow-y-auto space-y-3 mb-2 pr-1' },
                 
-                // REAL CHAT MESSAGES
                 chatMessages.map((chat, i) => {
                   const isSystem = chat.uid === 'system';
                   if (isSystem) {
