@@ -125,9 +125,52 @@
     const TOTAL_USERS = 256890;
     const BASE_TAP = 500;
 
-    const BIZ_PRICES = { water: 10_000, suya: 250_000, keke: 500_000, phone: 2_000_000, danfo: 5_000_000, wash: 25_000_000, bet9ja: 50_000_000, lounge: 500_000_000, oil: 5_000_000_000 };
-    const BIZ_PER_HR = { water: 2_000, suya: 40_000, keke: 75_000, phone: 350_000, danfo: 800_000, wash: 4_000_000, bet9ja: 9_000_000, lounge: 90_000_000, oil: 1_000_000_000 };
-    const ASSET_PRICES = { chain: 5_000_000, rolex: 50_000_000, tesla: 500_000_000, gwag: 5_000_000_000, yacht: 20_000_000_000, jet: 100_000_000_000, mansion: 1_000_000_000_000 };
+    // ✅ FIXED: Full list matching market.html and business.html
+    const BIZ_PRICES = { 
+      water: 10_000, mai_shai: 50_000, corn: 100_000, shoe: 25_000, akara: 40_000, 
+      phone_chg: 15_000, suya: 250_000, keke: 500_000, okada: 300_000, umbrella: 20_000, 
+      phone_acc: 2_000_000, barber: 1_500_000, salon: 3_000_000, tailor: 2_500_000, 
+      vulcan: 800_000, provision: 1_200_000, danfo: 5_000_000, wash: 8_000_000, 
+      pos: 4_000_000, eggs: 600_000, bet9ja: 50_000_000, cyber: 15_000_000, 
+      fastfood: 30_000_000, laundry: 20_000_000, pharmacy: 25_000_000, gym: 40_000_000, 
+      restaurant: 80_000_000, event: 150_000_000, hotel: 300_000_000, blocks: 200_000_000, 
+      lounge: 500_000_000, club: 1_000_000_000, car_deal: 2_500_000_000, 
+      real_estate: 5_000_000_000, logistics: 3_000_000_000, school: 1_500_000_000, 
+      hospital: 4_000_000_000, supermarket: 1_200_000_000, printing: 800_000_000, 
+      tech: 8_000_000_000, oil: 50_000_000_000, jet: 150_000_000_000, 
+      yacht: 80_000_000_000, import: 200_000_000_000, diamond: 500_000_000_000, 
+      gold: 1_000_000_000_000, telecom: 2_000_000_000_000, security: 300_000_000_000, 
+      construction: 800_000_000_000, political: 5_000_000_000_000 
+    };
+    
+    const BIZ_PER_HR = { 
+      water: 2_000, mai_shai: 8_000, corn: 15_000, shoe: 4_000, akara: 7_000, 
+      phone_chg: 3_000, suya: 40_000, keke: 75_000, okada: 50_000, umbrella: 5_000, 
+      phone_acc: 350_000, barber: 250_000, salon: 500_000, tailor: 400_000, 
+      vulcan: 120_000, provision: 200_000, danfo: 800_000, wash: 1_500_000, 
+      pos: 700_000, eggs: 100_000, bet9ja: 9_000_000, cyber: 2_500_000, 
+      fastfood: 5_000_000, laundry: 3_500_000, pharmacy: 4_500_000, gym: 7_000_000, 
+      restaurant: 14_000_000, event: 25_000_000, hotel: 50_000_000, blocks: 35_000_000, 
+      lounge: 90_000_000, club: 180_000_000, car_deal: 450_000_000, 
+      real_estate: 900_000_000, logistics: 550_000_000, school: 280_000_000, 
+      hospital: 700_000_000, supermarket: 220_000_000, printing: 150_000_000, 
+      tech: 1_500_000_000, oil: 10_000_000_000, jet: 30_000_000_000, 
+      yacht: 15_000_000_000, import: 40_000_000_000, diamond: 100_000_000_000, 
+      gold: 200_000_000_000, telecom: 400_000_000_000, security: 60_000_000_000, 
+      construction: 150_000_000_000, political: 1_000_000_000_000 
+    };
+    
+    const ASSET_PRICES = { 
+      af1: 150_000, shades: 500_000, chain: 5_000_000, iphone: 2_500_000, 
+      grillz: 10_000_000, rolex: 50_000_000, honda: 15_000_000, camry: 25_000_000, 
+      tesla: 500_000_000, gwag: 5_000_000_000, rr: 15_000_000_000, lambo: 50_000_000_000, 
+      lekki_flat: 100_000_000, ikeja_duplex: 300_000_000, ikoyi_penthouse: 1_500_000_000, 
+      yacht: 20_000_000_000, mansion: 1_000_000_000_000, bodyguard: 150_000_000, 
+      chef: 50_000_000, plate: 200_000_000, jet: 100_000_000_000, 
+      helicopter: 300_000_000_000, island: 2_000_000_000_000, 
+      football: 5_000_000_000_000, crypto: 10_000_000_000_000 
+    };
+    
     const DEST_BONUSES = { ikeja: 0, accra: 100, dubai: 500, uk: 1000, canada: 2000, usa: 5000, space: 25000 };
 
     const NIGERIAN_BANKS = [
@@ -370,6 +413,7 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
+      // ✅ FIXED: Only energy regen here. Cash is handled by the Vault in business.html.
       useEffect(() => {
         if (!s) return;
         const iv = setInterval(() => {
@@ -384,16 +428,7 @@
               lastEnergy = energy >= MAX_E ? now : lastEnergy + gained * ENERGY_MS;
               if (uid) db.collection("users").doc(uid).update({ energy, lastEnergy }).catch(() => {});
             }
-          }
-          
-          const perHr = Object.entries(s.businesses || {}).reduce((a, kv) => a + kv[1] * (BIZ_PER_HR[kv[0]] || 0), 0);
-          const newCash = s.cash + perHr / 3600;
-          
-          if (energy !== s.energy || perHr > 0) {
-            setS(prev => (Object.assign({}, prev, { energy: energy, lastEnergy: lastEnergy, cash: newCash })));
-            if (uid && perHr > 0) {
-              db.collection("users").doc(uid).update({ cash: firebase.firestore.FieldValue.increment(perHr / 3600) }).catch(() => {});
-            }
+            setS(prev => (Object.assign({}, prev, { energy: energy, lastEnergy: lastEnergy })));
           }
         }, 1000);
         return () => clearInterval(iv);
