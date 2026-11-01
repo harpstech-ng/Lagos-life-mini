@@ -232,7 +232,7 @@
         fetchUsers();
       }, [uid]);
 
-      // Chat messages listener — removed orderBy to avoid composite index requirement
+      // Chat messages listener
       useEffect(() => {
         if (!activeChat || !uid) return;
         const chatId = [uid, activeChat.id].sort().join('_');
@@ -259,10 +259,15 @@
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
       const addFeed = (msg) => setFeed(prev => [{ id: Date.now(), msg }, ...prev].slice(0, 10));
 
+      // ✅ SAFE UPDATE USER — prevents wallet wipe
       const updateUser = async (data) => {
         setS(prev => Object.assign({}, prev, data));
         if (uid) {
-          await db.collection("users").doc(uid).update(Object.assign({}, data, { lastSeen: Date.now() })).catch(() => {});
+          const updates = Object.assign({}, data);
+          if (updates.cash !== undefined) {
+            updates.cash = firebase.firestore.FieldValue.increment(updates.cash - (s.cash || 0));
+          }
+          await db.collection("users").doc(uid).update(Object.assign(updates, { lastSeen: Date.now() })).catch(() => {});
         }
       };
 
@@ -272,7 +277,7 @@
         AudioEngine.tap();
       };
 
-      // NPC babe bill timer — now guarded against real-babe relationships
+      // NPC babe bill timer
       useEffect(() => {
         if (activeTab !== 'npc' || s.babe?.status !== 'dating' || s.babe?.isReal) {
           if (timerRef.current) clearInterval(timerRef.current);
@@ -379,7 +384,6 @@
       const babeName = s.babe?.name || 'Babe';
       const isRealBabe = !!s.babe?.isReal;
 
-      // Gender modal (in case someone bypassed login quiz)
       if (uid && !s.gender) {
         return h('div', { className: 'min-h-screen flex flex-col items-center justify-center p-6 text-center' },
           h('div', { className: 'text-6xl mb-4' }, '❤️'),
