@@ -192,6 +192,7 @@
                 const dbData = doc.data();
                 const newData = Object.assign({}, prev, dbData, {
                   transactions: dbData.transactions || [],
+                  history: dbData.history || [],
                   madnessScore: dbData.madnessScore || 0
                 });
                 try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
@@ -203,7 +204,7 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
-                transactions: [], madnessScore: 0
+                transactions: [], history: [], madnessScore: 0
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
@@ -243,11 +244,30 @@
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
       const addFeed = (msg) => setFeed(prev => [{ id: Date.now(), msg }, ...prev].slice(0, 10));
 
+      // ✅ SAFE UPDATE USER — Prevents wallet wipe
       const updateUser = async (data) => {
         setS(prev => Object.assign({}, prev, data));
         if (uid) {
-          await db.collection("users").doc(uid).update(Object.assign({}, data, { lastSeen: Date.now() })).catch(() => {});
+          const updates = Object.assign({}, data);
+          if (updates.cash !== undefined) {
+            updates.cash = firebase.firestore.FieldValue.increment(updates.cash - (s.cash || 0));
+          }
+          await db.collection("users").doc(uid).update(Object.assign(updates, { lastSeen: Date.now() })).catch(() => {});
         }
+      };
+
+      // ✅ LOG HISTORY HELPER
+      const logHistory = async (title, desc, amount) => {
+        if (!uid) return;
+        await db.collection("users").doc(uid).update({
+          history: firebase.firestore.FieldValue.arrayUnion({
+            title: title,
+            desc: desc,
+            amount: amount,
+            date: Date.now(),
+            category: 'activity'
+          })
+        }).catch(() => {});
       };
 
       const triggerShake = () => {
@@ -275,6 +295,7 @@
                 AudioEngine.error();
                 notify('You were not bailed. You lost ₦500k! 😭', 'bad');
                 addFeed('🚐 ' + (s.name || 'You') + ' was kidnapped in One Chance and no one paid the ransom. Lost ₦500k!');
+                logHistory('Kidnapped', 'Kidnapped in One Chance. No one paid ransom.', -500000);
                 return 0;
               }
               return prev - 1;
@@ -293,6 +314,7 @@
         AudioEngine.coin();
         notify('Ransom paid. They released you 🚐');
         addFeed('🚐 ' + (s.name || 'You') + ' paid ₦2M ransom to kidnappers and escaped!');
+        logHistory('Ransom Paid', 'Paid ₦2M ransom to kidnappers', -2000000);
       };
 
       const fightKidnappers = () => {
@@ -305,11 +327,13 @@
           updateUser({ cash: s.cash + 1000000, clout: (s.clout || 0) + 200, madnessScore: (s.madnessScore || 0) + 2 });
           notify('You fought them and won! +₦1M and +200 Clout 🥊');
           addFeed('🚐 ' + (s.name || 'You') + ' fought the kidnappers, collected their money, and escaped!');
+          logHistory('Fought Kidnappers', 'Fought kidnappers and won ₦1M', 1000000);
         } else {
           AudioEngine.error();
           updateUser({ cash: s.cash - 1000000, energy: 0 });
           notify('They beat you and threw you out. -₦1M and -100 Energy 😭', 'bad');
           addFeed('🚐 ' + (s.name || 'You') + ' tried to fight kidnappers and got beaten mercilessly.');
+          logHistory('Fought Kidnappers', 'Fought kidnappers and lost', -1000000);
         }
       };
 
@@ -331,6 +355,7 @@
         
         notify('RITUAL SUCCESSFUL! +₦10M 🩸');
         addFeed('🩸 ' + (s.name || 'You') + ' just used ' + selectedVictim.name + ' for money ritual! ' + selectedVictim.name + ' lost ₦1M!');
+        logHistory('Money Ritual', 'Used ' + selectedVictim.name + ' for ritual. Made ₦10M.', 9950000);
         try { if (navigator.vibrate) navigator.vibrate(50); } catch(e) {}
         setSelectedVictim(null);
       };
@@ -366,6 +391,7 @@
               AudioEngine.error();
               notify('You fainted! Hospital bill is ₦100k 😭', 'bad');
               addFeed('🍃 ' + (s.name || 'You') + ' fainted after smoking loud and paid ₦100k hospital bill!');
+              logHistory('Smoked Loud', 'Fainted and paid ₦100k hospital bill', -110000);
               return 0;
             }
             return prev - 1;
@@ -388,11 +414,13 @@
             updateUser({ cash: s.cash + 500000, clout: (s.clout || 0) + 100, madnessScore: (s.madnessScore || 0) + 2 });
             notify('You won the street fight! +₦500k 🥊');
             addFeed('🥊 ' + (s.name || 'You') + ' just knocked out an Area Boy in a street fight and won ₦500k!');
+            logHistory('Street Fight', 'Won a street fight against Area Boy', 500000);
           } else {
             AudioEngine.error();
             updateUser({ energy: 0 });
             notify('You lost the fight and got hospitalized. -100 Energy 😭', 'bad');
             addFeed('🥊 ' + (s.name || 'You') + ' got beaten by an Area Boy in a street fight.');
+            logHistory('Street Fight', 'Lost a street fight and got hospitalized', 0);
           }
         }, 2000);
       };
@@ -403,6 +431,7 @@
         AudioEngine.ritual();
         notify('Pastor prayed for you. Deliverance successful! 🧙🏾‍♂️');
         addFeed('🧙🏾‍♂️ ' + (s.name || 'You') + ' paid ₦200k for deliverance from village people.');
+        logHistory('Deliverance', 'Paid for deliverance from village people', -200000);
       };
 
       if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
@@ -546,7 +575,7 @@
               h('div', { className: 'space-y-2' },
                 h('button', { onClick: payRansom, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[13px] active:scale-95 transition' }, 'Pay ₦2M Ransom'),
                 h('button', { onClick: fightKidnappers, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-red-500 to-red-700 text-white font-black text-[13px] active:scale-95 transition' }, 'Fight Them! (30% Win)'),
-                h('button', { onClick: () => { clearInterval(timerRef.current); setKidnapModal(false); updateUser({ cash: s.cash - 500000 }); notify('You escaped but lost ₦500k!', 'bad'); }, className: 'w-full py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/50 font-bold text-[11px]' }, 'Struggle and jump out (Lose ₦500k)')
+                h('button', { onClick: () => { clearInterval(timerRef.current); setKidnapModal(false); updateUser({ cash: s.cash - 500000 }); notify('You escaped but lost ₦500k!', 'bad'); logHistory('Kidnapped (Escaped)', 'Jumped out of kidnappers bus', -500000); }, className: 'w-full py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/50 font-bold text-[11px]' }, 'Struggle and jump out (Lose ₦500k)')
               )
             )
           ),
