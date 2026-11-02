@@ -506,21 +506,25 @@
         })();
       }, [uid]);
 
-          const createRoom = async () => {
+              const createRoom = async () => {
       const target = opponentName.trim();
       if (!target) return notify('Enter opponent username', 'bad');
       if (target.toLowerCase() === (s.name || '').toLowerCase()) return notify('You cannot play against yourself 😂', 'bad');
       const amt = Math.floor(Number(stake));
       const field = isReal ? 'real' : 'cash';
-      if ((s[field] || 0) < amt) { AudioEngine.error(); return notify('Not enough balance 💸', 'bad'); }
+      
+      const currentBal = Number(s[field] || 0);
+      if (currentBal < amt) {
+        AudioEngine.error();
+        return notify('Not enough balance 💸 (Have: ' + fmt(currentBal) + ', Need: ' + fmt(amt) + ')', 'bad');
+      }
       
       try {
-        notify('Checking player & generating...', 'good');
+        notify('Generating invite link...', 'good');
         
-        // Double-check user exists in Firestore directly to bypass any UI state lag
+        // Verify user exists
         const snap = await db.collection("users").where("name", "==", target).limit(1).get();
         if (snap.empty) {
-          setUserCheck({ status: 'notfound' });
           return notify('Opponent username not found in database ❌', 'bad');
         }
         
@@ -529,7 +533,9 @@
         await db.runTransaction(async (tx) => {
           const userRef = db.collection("users").doc(uid);
           const userDoc = await tx.get(userRef);
-          if ((userDoc.data()[field] || 0) < amt) throw new Error('Not enough balance');
+          const freshBal = Number(userDoc.data()?.[field] || 0);
+          
+          if (freshBal < amt) throw new Error('Not enough balance in account');
           
           tx.update(userRef, {
             [field]: firebase.firestore.FieldValue.increment(-amt) });
