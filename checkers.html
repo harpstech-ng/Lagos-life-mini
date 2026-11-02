@@ -506,58 +506,67 @@
         })();
       }, [uid]);
 
-      const createRoom = async () => {
-        const target = opponentName.trim();
-        if (!target) return notify('Enter opponent username', 'bad');
-        if (userCheck.status !== 'found') return notify('Username must exist in the game', 'bad');
-        if (target.toLowerCase() === (s.name || '').toLowerCase()) return notify('You cannot play against yourself 😂', 'bad');
-        const amt = Math.floor(Number(stake));
-        const field = isReal ? 'real' : 'cash';
-        if ((s[field] || 0) < amt) { AudioEngine.error(); return notify('Not enough balance 💸', 'bad'); }
-
-        try {
-          const code = genCode();
-          let newRoomId;
-          await db.runTransaction(async (tx) => {
-            const userRef = db.collection("users").doc(uid);
-            const userDoc = await tx.get(userRef);
-            if ((userDoc.data()[field] || 0) < amt) throw new Error('Not enough balance');
-
-            tx.update(userRef, { [field]: firebase.firestore.FieldValue.increment(-amt) });
-            const newRef = db.collection("game_rooms").doc();
-            newRoomId = newRef.id;
-            tx.set(newRef, {
-              gameType: 'checkers',
-              isPrivate: true,
-              inviteCode: code,
-              targetName: target,
-              stake: amt,
-              isReal: isReal,
-              hostId: uid,
-              hostName: s.name || 'Host',
-              guestId: null,
-              guestName: null,
-              status: 'waiting',
-              turn: 'host',
-              board: CHECKERS_INITIAL,
-              winner: null,
-              messages: [],
-              history: [],
-              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-              lastMoveAt: firebase.firestore.FieldValue.serverTimestamp(),
-              lastSeenHost: Date.now(),
-              lastSeenGuest: null
-            });
-          });
-          setRoomId(newRoomId);
-          setInviteCode(code);
-          setView('waiting');
-          AudioEngine.copy();
-          notify('Room created! Share the link 🎟️');
-        } catch (e) {
-          notify('Failed: ' + e.message, 'bad');
+          const createRoom = async () => {
+      const target = opponentName.trim();
+      if (!target) return notify('Enter opponent username', 'bad');
+      if (target.toLowerCase() === (s.name || '').toLowerCase()) return notify('You cannot play against yourself 😂', 'bad');
+      const amt = Math.floor(Number(stake));
+      const field = isReal ? 'real' : 'cash';
+      if ((s[field] || 0) < amt) { AudioEngine.error(); return notify('Not enough balance 💸', 'bad'); }
+      
+      try {
+        notify('Checking player & generating...', 'good');
+        
+        // Double-check user exists in Firestore directly to bypass any UI state lag
+        const snap = await db.collection("users").where("name", "==", target).limit(1).get();
+        if (snap.empty) {
+          setUserCheck({ status: 'notfound' });
+          return notify('Opponent username not found in database ❌', 'bad');
         }
-      };
+        
+        const code = genCode();
+        let newRoomId;
+        await db.runTransaction(async (tx) => {
+          const userRef = db.collection("users").doc(uid);
+          const userDoc = await tx.get(userRef);
+          if ((userDoc.data()[field] || 0) < amt) throw new Error('Not enough balance');
+          
+          tx.update(userRef, {
+            [field]: firebase.firestore.FieldValue.increment(-amt) });
+          const newRef = db.collection("game_rooms").doc();
+          newRoomId = newRef.id;
+          tx.set(newRef, {
+            gameType: 'checkers',
+            isPrivate: true,
+            inviteCode: code,
+            targetName: target,
+            stake: amt,
+            isReal: isReal,
+            hostId: uid,
+            hostName: s.name || 'Host',
+            guestId: null,
+            guestName: null,
+            status: 'waiting',
+            turn: 'host',
+            board: CHECKERS_INITIAL,
+            winner: null,
+            messages: [],
+            history: [],
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastMoveAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastSeenHost: Date.now(),
+            lastSeenGuest: null
+          });
+        });
+        setRoomId(newRoomId);
+        setInviteCode(code);
+        setView('waiting');
+        AudioEngine.copy();
+        notify('Room created! Share the link 🎟️');
+      } catch (e) {
+        notify('Failed: ' + e.message, 'bad');
+      }
+    };
 
       const acceptInvite = async () => {
         if (!joinRoom) return;
