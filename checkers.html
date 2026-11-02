@@ -37,14 +37,18 @@
     @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes pulseRing { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,214,10,0.7); } 50% { box-shadow: 0 0 0 12px rgba(255,214,10,0); } }
-    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes glow { 0%, 100% { box-shadow: 0 0 20px rgba(255,214,10,0.5); } 50% { box-shadow: 0 0 40px rgba(255,214,10,0.9); } }
+    @keyframes countdownPop { 0% { transform: scale(2); opacity: 0; } 30% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+    @keyframes floatEmoji { 0%,100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-10px) rotate(6deg); } }
 
     .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
-    .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
     .animate-pulseRing { animation: pulseRing 2s ease-in-out infinite; }
     .animate-glow { animation: glow 2s ease-in-out infinite; }
+    .animate-countdownPop { animation: countdownPop 0.5s ease-out; }
+    .animate-shake { animation: shake 0.4s; }
+    .animate-floatEmoji { animation: floatEmoji 3s ease-in-out infinite; }
 
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
     input, textarea { -webkit-user-select: text; user-select: text; }
@@ -72,15 +76,9 @@
       font-weight: 900;
       text-shadow: 0 1px 2px rgba(255,255,255,0.4);
     }
-
-    .cell-selected {
-      box-shadow: inset 0 0 0 4px #FFD60A, 0 0 25px rgba(255,214,10,0.9);
-      animation: glow 1s ease-in-out infinite;
-    }
+    .cell-selected { box-shadow: inset 0 0 0 4px #FFD60A, 0 0 25px rgba(255,214,10,0.9); animation: glow 1s ease-in-out infinite; }
     .cell-valid { box-shadow: inset 0 0 0 3px #22C55E, inset 0 0 15px rgba(34,197,94,0.5); }
     .cell-capture { box-shadow: inset 0 0 0 3px #EF4444, inset 0 0 15px rgba(239,68,68,0.5); }
-    .cell-last-from { box-shadow: inset 0 0 0 2px rgba(255,214,10,0.4); }
-    .cell-last-to { box-shadow: inset 0 0 0 3px rgba(255,214,10,0.7); }
   </style>
 </head>
 <body>
@@ -94,7 +92,6 @@
     const { useState, useEffect, useRef } = React;
     const h = React.createElement;
 
-    // ========== FIREBASE ==========
     const firebaseConfig = {
       apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
       authDomain: "lagos-life-a8706.firebaseapp.com",
@@ -108,12 +105,24 @@
     const db = firebase.firestore();
     const auth = firebase.auth();
 
-    // ========== CONSTANTS ==========
-    const HOUSE_FEE = 0.30;
+    const houseFeeFor = (isReal) => isReal ? 0.25 : 0;
+    const winPayout = (stake, isReal) => Math.floor(stake * 2 * (1 - houseFeeFor(isReal)));
+
     const FAKE_STAKES = [1_000_000, 10_000_000, 50_000_000, 100_000_000];
     const REAL_STAKES = [100, 500, 1000, 5000];
     const ROOM_EXPIRY_MS = 15 * 60 * 1000;
     const CHAT_MAX = 40;
+    const COUNTDOWN_MS = 10_000;
+    const MOVE_TIMER_MS = 30_000;
+    const PRESENCE_TIMEOUT_MS = 20_000;
+    const PRESENCE_HEARTBEAT_MS = 5_000;
+
+    const NIGERIAN_PHRASES = [
+      'Omo! 😱', 'E don do! 💀', 'Sharp sharp! ⚡', 'Wahala! 😭',
+      'You dey whine me? 🤨', 'Na wa oo 😤', 'Chai! 🙆🏾', 'I don die 💀',
+      'Oya now! 👊', 'No gree for anybody 🚨', 'Abeg 😩', 'God when? 🙏🏾'
+    ];
+    const QUICK_REACTIONS = ['🔥', '💀', '😂', '💰', '👑', '🎉', '😤', '🫡'];
 
     const CHECKERS_INITIAL = [
       [null,'H',null,'H',null,'H',null,'H'],
@@ -126,7 +135,6 @@
       ['G',null,'G',null,'G',null,'G',null]
     ];
 
-    // ========== HELPERS ==========
     const fmt = (n) => {
       n = Math.floor(Number(n) || 0);
       const s = n < 0 ? '-' : '';
@@ -168,7 +176,6 @@
       return { name: localStorage.getItem("lagos_user_name") || 'Hustler', cash: 25000, real: 0 };
     };
 
-    // ========== CHECKERS LOGIC ==========
     const pieceOwner = (p) => p ? p.charAt(0) : null;
     const isKing = (p) => p === 'Hk' || p === 'Gk';
 
@@ -221,7 +228,20 @@
       return n;
     };
 
-    // ========== AUDIO ==========
+    const getRandomMove = (board, owner) => {
+      const candidates = [];
+      for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+        if (pieceOwner(board[r][c]) === owner) {
+          const moves = getMoves(board, r, c);
+          if (moves.length > 0) candidates.push({ from: [r, c], moves });
+        }
+      }
+      if (candidates.length === 0) return null;
+      const pick = candidates[Math.floor(Math.random() * candidates.length)];
+      const move = pick.moves[Math.floor(Math.random() * pick.moves.length)];
+      return { from: pick.from, move };
+    };
+
     const AudioEngine = (() => {
       let ctx = null;
       const init = () => { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); };
@@ -237,36 +257,37 @@
         tap: () => { init(); tone(880, 0.08, 'triangle'); },
         move: () => { init(); tone(660, 0.08, 'triangle'); },
         capture: () => { init(); tone(440, 0.1, 'square'); tone(330, 0.15, 'square', 0.06); },
-        win: () => { init(); [523,659,783,1046].forEach((f,i) => tone(f, 0.2, 'triangle', i*0.09)); },
+        win: () => { init(); [523,659,783,1046,1318].forEach((f,i) => tone(f, 0.2, 'triangle', i*0.08)); },
         lose: () => { init(); tone(220, 0.3, 'sawtooth'); tone(165, 0.4, 'sawtooth', 0.15); },
         msg: () => { init(); tone(1046, 0.05, 'sine'); },
         error: () => { init(); tone(220, 0.15, 'sawtooth'); },
         copy: () => { init(); tone(1318, 0.08, 'sine'); tone(1568, 0.1, 'sine', 0.05); },
+        countdown: () => { init(); tone(880, 0.1, 'sine'); },
+        tick: () => { init(); tone(440, 0.03, 'sine', 0, 0.15); },
+        timeout: () => { init(); tone(330, 0.2, 'sawtooth'); tone(220, 0.3, 'sawtooth', 0.1); }
       };
     })();
 
-    // ========== MAIN APP ==========
     function App() {
       const [s, setS] = useState(getCachedData);
       const [uid, setUid] = useState(null);
-      const [view, setView] = useState('lobby'); // lobby | create | join | waiting | playing
+      const [view, setView] = useState('lobby');
       const [roomId, setRoomId] = useState(null);
       const [room, setRoom] = useState(null);
       const [inviteCode, setInviteCode] = useState(null);
       const [toast, setToast] = useState(null);
       const [feed, setFeed] = useState([]);
+      const [now, setNow] = useState(Date.now());
 
-      // create form
       const [opponentName, setOpponentName] = useState('');
       const [isReal, setIsReal] = useState(false);
       const [stake, setStake] = useState(FAKE_STAKES[0]);
+      const [userCheck, setUserCheck] = useState({ status: 'idle' });
 
-      // join validation
       const [joinError, setJoinError] = useState(null);
       const [joinRoom, setJoinRoom] = useState(null);
       const [checkingInvite, setCheckingInvite] = useState(false);
 
-      // ===== AUTH =====
       useEffect(() => {
         let unsubUser = null;
         const unsubAuth = auth.onAuthStateChanged(user => {
@@ -287,15 +308,18 @@
         return () => { unsubAuth(); if (unsubUser) unsubUser(); };
       }, []);
 
-      // ===== TOAST =====
+      useEffect(() => {
+        const iv = setInterval(() => setNow(Date.now()), 500);
+        return () => clearInterval(iv);
+      }, []);
+
       useEffect(() => {
         if (!toast) return;
-        const t = setTimeout(() => setToast(null), 2600);
+        const t = setTimeout(() => setToast(null), 2800);
         return () => clearTimeout(t);
       }, [toast]);
       const notify = (msg, kind='good') => setToast({ msg, kind, id: Date.now() });
 
-      // ===== LIVE FEED =====
       useEffect(() => {
         const unsub = db.collection("game_feed")
           .where("game", "==", "checkers")
@@ -309,57 +333,56 @@
         return () => unsub();
       }, []);
 
-      // ===== CHECK URL FOR INVITE =====
+      useEffect(() => {
+        const name = opponentName.trim();
+        if (!name || name.length < 2) { setUserCheck({ status: 'idle' }); return; }
+        if (uid && name.toLowerCase() === (s.name || '').toLowerCase()) {
+          setUserCheck({ status: 'self' });
+          return;
+        }
+        setUserCheck({ status: 'checking' });
+        const t = setTimeout(async () => {
+          try {
+            const snap = await db.collection("users").where("name", "==", name).limit(1).get();
+            if (snap.empty) {
+              setUserCheck({ status: 'notfound' });
+            } else {
+              const d = snap.docs[0].data();
+              setUserCheck({ status: 'found', user: { name: d.name, bankName: d.bankName || '—' } });
+            }
+          } catch (e) { setUserCheck({ status: 'error' }); }
+        }, 700);
+        return () => clearTimeout(t);
+      }, [opponentName, uid, s.name]);
+
       useEffect(() => {
         if (!uid || !s.name) return;
         const params = new URLSearchParams(window.location.search);
         const inv = params.get('invite');
         if (!inv) return;
-
         setCheckingInvite(true);
-        const check = async () => {
+        (async () => {
           try {
             const doc = await db.collection("game_rooms").doc(inv).get();
-            if (!doc.exists) {
-              setJoinError('This invite link no longer exists 😢');
-              setView('join');
-              setCheckingInvite(false);
-              return;
-            }
+            if (!doc.exists) { setJoinError('This invite link no longer exists 😢'); setView('join'); setCheckingInvite(false); return; }
             const d = doc.data();
-            if (d.hostId === uid) {
-              // Host reopening own link — go straight to waiting
-              setRoomId(inv);
-              setView('waiting');
-              setCheckingInvite(false);
-              return;
-            }
-            if (d.status !== 'waiting') {
-              setJoinError('This match has already started or finished 😤');
-              setView('join');
-              setCheckingInvite(false);
-              return;
-            }
-            // THE KEY CHECK: does current user's name match the target?
+            if (d.hostId === uid) { setRoomId(inv); setView('waiting'); setCheckingInvite(false); return; }
+            if (d.status !== 'waiting') { setJoinError('Match already started or finished 😤'); setView('join'); setCheckingInvite(false); return; }
             if (d.targetName && d.targetName.toLowerCase() !== (s.name || '').toLowerCase()) {
-              setJoinError('This invite is for "' + d.targetName + '" only! 🚫 Send the link to them.');
-              setView('join');
-              setCheckingInvite(false);
-              return;
+              setJoinError('This invite is for "' + d.targetName + '" only! 🚫');
+              setView('join'); setCheckingInvite(false); return;
             }
             setJoinRoom({ id: inv, ...d });
             setView('join');
             setCheckingInvite(false);
           } catch (e) {
-            setJoinError('Failed to load invite: ' + e.message);
+            setJoinError('Failed: ' + e.message);
             setView('join');
             setCheckingInvite(false);
           }
-        };
-        check();
+        })();
       }, [uid, s.name]);
 
-      // ===== LISTEN TO ROOM =====
       useEffect(() => {
         if (!roomId) { setRoom(null); return; }
         const unsub = db.collection("game_rooms").doc(roomId).onSnapshot(doc => {
@@ -369,10 +392,100 @@
         return () => unsub();
       }, [roomId]);
 
-      // ===== AUTO-CLEANUP EXPIRED ROOMS =====
+      useEffect(() => {
+        if (!room || !uid) return;
+        if (room.status !== 'countdown' && room.status !== 'playing') return;
+        const isHost = room.hostId === uid;
+        const field = isHost ? 'lastSeenHost' : 'lastSeenGuest';
+        const beat = () => {
+          db.collection("game_rooms").doc(room.id).update({
+            [field]: Date.now()
+          }).catch(() => {});
+        };
+        beat();
+        const iv = setInterval(beat, PRESENCE_HEARTBEAT_MS);
+        return () => clearInterval(iv);
+      }, [room?.id, room?.status, uid]);
+
+      const disconnectHandledRef = useRef(false);
+      useEffect(() => {
+        if (!room || room.status !== 'playing' || room.winner) { disconnectHandledRef.current = false; return; }
+        if (!uid) return;
+        const isHost = room.hostId === uid;
+        const oppLastSeen = isHost ? room.lastSeenGuest : room.lastSeenHost;
+        if (!oppLastSeen) return;
+        const stale = now - oppLastSeen;
+        if (stale > PRESENCE_TIMEOUT_MS && !disconnectHandledRef.current) {
+          disconnectHandledRef.current = true;
+          claimWinByDisconnect(room, isHost ? 'host' : 'guest');
+        }
+      }, [now, room, uid]);
+
+      const claimWinByDisconnect = async (r, winner) => {
+        try {
+          const roomRef = db.collection("game_rooms").doc(r.id);
+          await db.runTransaction(async (tx) => {
+            const doc = await tx.get(roomRef);
+            if (!doc.exists) return;
+            const d = doc.data();
+            if (d.status === 'finished' || d.winner) return;
+            tx.update(roomRef, {
+              status: 'finished',
+              winner,
+              forfeitedBy: winner === 'host' ? d.guestId : d.hostId,
+              endedBy: 'disconnect'
+            });
+          });
+          await payout(r, winner);
+          AudioEngine.win();
+          notify('Opponent disconnected! You win 🏆');
+        } catch (e) {
+          disconnectHandledRef.current = false;
+        }
+      };
+
+      useEffect(() => {
+        if (!room || room.status !== 'countdown' || !uid) return;
+        if (room.hostId !== uid) return;
+        const startsAt = room.startsAt?.toMillis?.() || 0;
+        if (now >= startsAt) {
+          db.collection("game_rooms").doc(room.id).update({
+            status: 'playing',
+            turn: 'host',
+            lastMoveAt: firebase.firestore.FieldValue.serverTimestamp(),
+            lastSeenHost: Date.now(),
+            lastSeenGuest: Date.now()
+          }).catch(() => {});
+        }
+      }, [now, room, uid]);
+
+      const autoMoveRef = useRef(false);
+      useEffect(() => {
+        if (!room || room.status !== 'playing' || room.winner || !uid) { autoMoveRef.current = false; return; }
+        const isHost = room.hostId === uid;
+        const myTurn = (isHost && room.turn === 'host') || (!isHost && room.turn === 'guest');
+        if (!myTurn) { autoMoveRef.current = false; return; }
+        const lastMove = room.lastMoveAt?.toMillis?.() || 0;
+        if (now - lastMove > MOVE_TIMER_MS && !autoMoveRef.current) {
+          autoMoveRef.current = true;
+          const myOwner = isHost ? 'H' : 'G';
+          const random = getRandomMove(room.board, myOwner);
+          if (random) {
+            const newBoard = applyMove(room.board, random.from, random.move, myOwner);
+            const opp = myOwner === 'H' ? 'G' : 'H';
+            const hasMoves = hasAnyMove(newBoard, opp);
+            const hasPieces = countPieces(newBoard, opp) > 0;
+            const winner = (!hasMoves || !hasPieces) ? (myOwner === 'H' ? 'host' : 'guest') : null;
+            makeMove(newBoard, winner, 'timeout');
+            AudioEngine.timeout();
+            notify('You ran out of time! Random move made ⏱️', 'bad');
+          }
+        }
+      }, [now, room, uid]);
+
       useEffect(() => {
         if (!uid) return;
-        const cleanup = async () => {
+        (async () => {
           try {
             const snap = await db.collection("game_rooms")
               .where("hostId", "==", uid)
@@ -390,14 +503,13 @@
               }
             }
           } catch (e) {}
-        };
-        cleanup();
+        })();
       }, [uid]);
 
-      // ===== CREATE ROOM (generate invite) =====
       const createRoom = async () => {
         const target = opponentName.trim();
         if (!target) return notify('Enter opponent username', 'bad');
+        if (userCheck.status !== 'found') return notify('Username must exist in the game', 'bad');
         if (target.toLowerCase() === (s.name || '').toLowerCase()) return notify('You cannot play against yourself 😂', 'bad');
         const amt = Math.floor(Number(stake));
         const field = isReal ? 'real' : 'cash';
@@ -430,11 +542,13 @@
               board: CHECKERS_INITIAL,
               winner: null,
               messages: [],
+              history: [],
               createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-              lastMoveAt: firebase.firestore.FieldValue.serverTimestamp()
+              lastMoveAt: firebase.firestore.FieldValue.serverTimestamp(),
+              lastSeenHost: Date.now(),
+              lastSeenGuest: null
             });
           });
-
           setRoomId(newRoomId);
           setInviteCode(code);
           setView('waiting');
@@ -445,12 +559,10 @@
         }
       };
 
-      // ===== ACCEPT INVITE =====
       const acceptInvite = async () => {
         if (!joinRoom) return;
         const field = joinRoom.isReal ? 'real' : 'cash';
         if ((s[field] || 0) < joinRoom.stake) { AudioEngine.error(); return notify('Not enough balance 💸', 'bad'); }
-
         try {
           await db.runTransaction(async (tx) => {
             const roomRef = db.collection("game_rooms").doc(joinRoom.id);
@@ -466,43 +578,78 @@
             tx.update(roomRef, {
               guestId: uid,
               guestName: s.name || 'Guest',
-              status: 'playing',
-              turn: 'host',
-              lastMoveAt: firebase.firestore.FieldValue.serverTimestamp()
+              status: 'countdown',
+              startsAt: firebase.firestore.Timestamp.fromMillis(Date.now() + COUNTDOWN_MS),
+              lastSeenGuest: Date.now()
             });
           });
           setRoomId(joinRoom.id);
-          setView('playing');
           window.history.replaceState({}, '', 'checkers.html');
         } catch (e) {
           notify('Join failed: ' + e.message, 'bad');
         }
       };
 
-      // ===== CANCEL WAITING ROOM =====
       const cancelWaiting = async () => {
-        if (!room || !uid || room.hostId !== uid || room.status !== 'waiting') return;
+        if (!room || !uid || room.hostId !== uid || (room.status !== 'waiting' && room.status !== 'countdown')) return;
         try {
           const field = room.isReal ? 'real' : 'cash';
           await db.runTransaction(async (tx) => {
-            const userRef = db.collection("users").doc(uid);
-            tx.update(userRef, { [field]: firebase.firestore.FieldValue.increment(room.stake) });
+            const hostRef = db.collection("users").doc(room.hostId);
+            tx.update(hostRef, { [field]: firebase.firestore.FieldValue.increment(room.stake) });
+            if (room.guestId) {
+              const guestRef = db.collection("users").doc(room.guestId);
+              tx.update(guestRef, { [field]: firebase.firestore.FieldValue.increment(room.stake) });
+            }
             tx.delete(db.collection("game_rooms").doc(roomId));
           });
-          notify('Refunded ' + (room.isReal ? fmtReal(room.stake) : fmt(room.stake)));
+          notify('Room cancelled · refunded');
           goLobby();
-        } catch (e) {
-          notify('Cancel failed: ' + e.message, 'bad');
-        }
+        } catch (e) { notify('Cancel failed: ' + e.message, 'bad'); }
       };
 
-      // ===== MAKE A MOVE =====
-      const makeMove = async (newBoard, winner) => {
+      const payout = async (r, winner) => {
+        const winnerId = winner === 'host' ? r.hostId : r.guestId;
+        const winnerName = winner === 'host' ? r.hostName : r.guestName;
+        if (!winnerId) return;
+        const winAmt = winPayout(r.stake, r.isReal);
+        const field = r.isReal ? 'real' : 'cash';
+        try {
+          await db.collection("users").doc(winnerId).update({
+            [field]: firebase.firestore.FieldValue.increment(winAmt),
+            'checkersStats.wins': firebase.firestore.FieldValue.increment(1)
+          }).catch(() => {});
+          const loserId = winner === 'host' ? r.guestId : r.hostId;
+          if (loserId) {
+            await db.collection("users").doc(loserId).update({
+              'checkersStats.losses': firebase.firestore.FieldValue.increment(1)
+            }).catch(() => {});
+          }
+          await db.collection("game_feed").add({
+            name: winnerName,
+            amount: winAmt,
+            game: 'checkers',
+            isReal: r.isReal,
+            at: Date.now()
+          }).catch(() => {});
+        } catch (e) { console.error('payout', e); }
+      };
+
+      const makeMove = async (newBoard, winner, reason) => {
         if (!room) return;
+        const isHost = room.hostId === uid;
+        const myOwner = isHost ? 'H' : 'G';
+        const historyEntry = {
+          by: isHost ? 'host' : 'guest',
+          name: s.name || 'Player',
+          reason: reason || 'move',
+          at: Date.now()
+        };
         const update = {
           board: newBoard,
           turn: room.turn === 'host' ? 'guest' : 'host',
-          lastMoveAt: firebase.firestore.FieldValue.serverTimestamp()
+          lastMoveAt: firebase.firestore.FieldValue.serverTimestamp(),
+          history: [...(room.history || []), historyEntry].slice(-10)
         };
         if (winner) {
           update.status = 'finished';
@@ -511,29 +658,12 @@
         try {
           await db.collection("game_rooms").doc(roomId).update(update);
           if (winner) {
-            const winnerId = winner === 'host' ? room.hostId : room.guestId;
-            const winnerName = winner === 'host' ? room.hostName : room.guestName;
-            if (winnerId) {
-              const winAmt = Math.floor(room.stake * 2 * (1 - HOUSE_FEE));
-              const field = room.isReal ? 'real' : 'cash';
-              await db.collection("users").doc(winnerId).update({
-                [field]: firebase.firestore.FieldValue.increment(winAmt)
-              }).catch(() => {});
-              await db.collection("game_feed").add({
-                name: winnerName,
-                amount: winAmt,
-                game: 'checkers',
-                isReal: room.isReal,
-                at: Date.now()
-              }).catch(() => {});
-            }
+            AudioEngine.win();
+            await payout(room, winner);
           }
-        } catch (e) {
-          notify('Move failed: ' + e.message, 'bad');
-        }
+        } catch (e) { notify('Move failed: ' + e.message, 'bad'); }
       };
 
-      // ===== FORFEIT / LEAVE =====
       const leaveGame = async () => {
         if (room?.status === 'playing' && !room.winner) {
           const isHost = room.hostId === uid;
@@ -542,21 +672,10 @@
             await db.collection("game_rooms").doc(roomId).update({
               status: 'finished',
               winner,
-              forfeitedBy: uid
+              forfeitedBy: uid,
+              endedBy: 'forfeit'
             });
-            const winnerId = winner === 'host' ? room.hostId : room.guestId;
-            const winnerName = winner === 'host' ? room.hostName : room.guestName;
-            if (winnerId) {
-              const winAmt = Math.floor(room.stake * 2 * (1 - HOUSE_FEE));
-              const field = room.isReal ? 'real' : 'cash';
-              await db.collection("users").doc(winnerId).update({
-                [field]: firebase.firestore.FieldValue.increment(winAmt)
-              }).catch(() => {});
-              await db.collection("game_feed").add({
-                name: winnerName, amount: winAmt, game: 'checkers',
-                isReal: room.isReal, at: Date.now()
-              }).catch(() => {});
-            }
+            await payout(room, winner);
           } catch (e) {}
         }
         goLobby();
@@ -570,12 +689,12 @@
         setOpponentName('');
         setStake(FAKE_STAKES[0]);
         setIsReal(false);
+        setUserCheck({ status: 'idle' });
         setJoinRoom(null);
         setJoinError(null);
         window.history.replaceState({}, '', 'checkers.html');
       };
 
-      // ===== ROUTING =====
       if (!uid) return h('div', { className: 'min-h-screen grid place-items-center bg-[#08080B]' },
         h('div', { className: 'text-[#FFD60A] animate-pulse font-black' }, 'Loading...'));
 
@@ -583,38 +702,30 @@
         h('div', { className: 'text-5xl mb-3 animate-pulse' }, '🎟️'),
         h('div', { className: 'text-[14px] font-black text-[#FFD60A] font-display' }, 'Checking invite...'));
 
-      // ===== JOIN SCREEN =====
-      if (view === 'join') {
-        return h(JoinScreen, { joinRoom, joinError, s, onAccept: acceptInvite, onBack: goLobby });
+      if (view === 'join') return h(JoinScreen, { joinRoom, joinError, s, onAccept: acceptInvite, onBack: goLobby });
+
+      if (view === 'waiting' && room) return h(WaitingScreen, { room, inviteCode, onCancel: cancelWaiting });
+
+      if (room && (room.status === 'countdown' || room.status === 'playing' || room.status === 'finished')) {
+        return h(PlayingScreen, { room, uid, s, now, onMove: makeMove, onLeave: leaveGame, notify });
       }
 
-      // ===== WAITING SCREEN =====
-      if (view === 'waiting' && room) {
-        return h(WaitingScreen, { room, inviteCode, onCancel: cancelWaiting, onCopy: () => notify('Copied! 📋') });
-      }
-
-      // ===== PLAYING SCREEN =====
-      if ((view === 'playing' || (room && room.status === 'playing') || (room && room.status === 'finished')) && room) {
-        return h(PlayingScreen, { room, uid, s, onMove: makeMove, onLeave: leaveGame, notify });
-      }
-
-      // ===== CREATE SCREEN =====
       if (view === 'create') {
         return h(CreateScreen, {
           s, isReal, setIsReal, stake, setStake,
-          opponentName, setOpponentName,
+          opponentName, setOpponentName, userCheck,
           onBack: () => setView('lobby'),
           onCreate: createRoom
         });
       }
 
-      // ===== LOBBY =====
+      const stats = s.checkersStats || { wins: 0, losses: 0 };
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased max-w-md mx-auto pb-10' },
         h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06] px-3 py-2.5 flex items-center justify-between' },
           h('a', { href: 'games.html', className: 'w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 grid place-items-center active:scale-90 text-lg' }, '←'),
           h('div', { className: 'flex-1 min-w-0 text-center' },
             h('div', { className: 'text-[13px] font-black font-display text-[#FFD60A]' }, 'Naija Draft ⚫'),
-            h('div', { className: 'text-[9px] text-white/40' }, 'Private invite · 1v1 · 30% fee')
+            h('div', { className: 'text-[9px] text-white/40' }, 'Private invite · 1v1')
           ),
           h('div', { className: 'text-[9px] text-right' },
             h('div', { className: 'text-[10px] font-black text-[#FFD60A] tabular-nums' }, fmt(s.cash)),
@@ -623,19 +734,28 @@
         ),
 
         h('main', { className: 'px-4 pt-5' },
-
-          // hero
-          h('div', { className: 'text-center mb-5 relative' },
-            h('div', { className: 'text-6xl mb-2 animate-pulse' }, '⚫'),
+          h('div', { className: 'text-center mb-4 relative' },
+            h('div', { className: 'text-6xl mb-2 animate-floatEmoji' }, '⚫'),
             h('div', { className: 'text-2xl font-black font-display text-[#FFD60A]' }, 'NAIJA DRAFT'),
-            h('div', { className: 'text-[11px] text-white/50 mt-1' }, 'Challenge a friend · Winner takes 70%'),
-            h('div', { className: 'mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[10px] font-bold text-white/60' },
-              h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse' }),
-              '🎟️ Invite-Only Mode'
+            h('div', { className: 'text-[11px] text-white/50 mt-1' }, 'Challenge a friend · Private match')
+          ),
+
+          h('div', { className: 'grid grid-cols-3 gap-2 mb-4' },
+            h('div', { className: 'rounded-xl card-gradient p-2.5 text-center' },
+              h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Wins'),
+              h('div', { className: 'text-lg font-black text-[#22C55E] tabular-nums' }, stats.wins || 0)
+            ),
+            h('div', { className: 'rounded-xl card-gradient p-2.5 text-center' },
+              h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Losses'),
+              h('div', { className: 'text-lg font-black text-red-400 tabular-nums' }, stats.losses || 0)
+            ),
+            h('div', { className: 'rounded-xl card-gradient p-2.5 text-center' },
+              h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Win Rate'),
+              h('div', { className: 'text-lg font-black text-[#FFD60A] tabular-nums' },
+                (stats.wins + stats.losses > 0) ? Math.round((stats.wins / (stats.wins + stats.losses)) * 100) + '%' : '—')
             )
           ),
 
-          // CREATE button
           h('button', {
             onClick: () => { setView('create'); AudioEngine.tap(); },
             className: 'w-full rounded-2xl bg-gradient-to-br from-[#FFD60A]/25 to-[#FFB800]/10 border-2 border-[#FFD60A]/50 p-5 text-left active:scale-[0.98] transition shadow-[0_8px_32px_-8px_rgba(255,214,10,0.5)] animate-pulseRing'
@@ -644,75 +764,58 @@
               h('div', { className: 'w-14 h-14 rounded-2xl bg-[#FFD60A]/25 border border-[#FFD60A]/60 grid place-items-center text-3xl shrink-0' }, '🎟️'),
               h('div', { className: 'flex-1' },
                 h('div', { className: 'text-[15px] font-black font-display text-[#FFD60A]' }, 'CREATE PRIVATE MATCH'),
-                h('div', { className: 'text-[11px] text-white/70 mt-0.5' }, 'Enter opponent username · Get unique link'),
-                h('div', { className: 'text-[10px] text-[#22C55E] font-bold mt-1' }, '💰 Winner takes 70% of pot')
+                h('div', { className: 'text-[11px] text-white/70 mt-0.5' }, 'Enter username · Verify · Share link'),
+                h('div', { className: 'text-[10px] text-[#22C55E] font-bold mt-1' }, '💰 Fake: 100% payout · Real: 75% payout')
               ),
               h('div', { className: 'text-3xl text-[#FFD60A]' }, '→')
             )
           ),
 
-          // quick match (secondary)
-          h('button', {
-            onClick: () => notify('Quick Match coming soon! Use Private Match for now 😉', 'bad'),
-            className: 'w-full mt-3 rounded-xl card-gradient p-3 flex items-center gap-3 active:scale-[0.98] transition opacity-60'
-          },
-            h('div', { className: 'text-2xl' }, '⚡'),
-            h('div', { className: 'flex-1 text-left' },
-              h('div', { className: 'text-[12px] font-black text-white/70' }, 'Quick Match'),
-              h('div', { className: 'text-[9px] text-white/40' }, 'Random opponent · Coming soon')
-            ),
-            h('div', { className: 'text-white/30' }, '🔒')
-          ),
-
-          // rules
-          h('div', { className: 'mt-5 rounded-2xl card-gradient p-4' },
-            h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2' }, '📋 How It Works'),
-            h('div', { className: 'space-y-2 text-[11px] text-white/60 leading-relaxed' },
-              h('div', { className: 'flex gap-2' },
-                h('span', { className: 'text-[#FFD60A] font-black shrink-0' }, '1.'),
-                h('span', null, 'Enter your opponent\'s exact username')
-              ),
-              h('div', { className: 'flex gap-2' },
-                h('span', { className: 'text-[#FFD60A] font-black shrink-0' }, '2.'),
-                h('span', null, 'Set your stake (fake or real money)')
-              ),
-              h('div', { className: 'flex gap-2' },
-                h('span', { className: 'text-[#FFD60A] font-black shrink-0' }, '3.'),
-                h('span', null, 'Share the unique link (only they can join)')
-              ),
-              h('div', { className: 'flex gap-2' },
-                h('span', { className: 'text-[#FFD60A] font-black shrink-0' }, '4.'),
-                h('span', null, 'Winner takes 70% · 30% house fee')
+          h('div', { className: 'mt-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-3' },
+            h('div', { className: 'flex items-start gap-2' },
+              h('span', { className: 'text-base shrink-0' }, '⚠️'),
+              h('div', { className: 'text-[10px] text-yellow-200/80 leading-relaxed' },
+                h('div', { className: 'font-black mb-1' }, 'Fee Structure'),
+                h('div', null, '🎮 Fake money: ', h('span', { className: 'text-[#22C55E] font-bold' }, 'Winner gets 100%')),
+                h('div', null, '💵 Real money: ', h('span', { className: 'text-[#FFD60A] font-bold' }, 'Winner gets 75% (25% house fee)'))
               )
             )
           ),
 
-          // live feed
-          h('div', { className: 'mt-5' },
-            h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2' }, '📡 Recent Wins'),
-            h('div', { className: 'rounded-2xl card-gradient overflow-hidden max-h-56 overflow-y-auto' },
-              feed.length === 0
-                ? h('div', { className: 'p-5 text-center text-white/40 text-[11px]' }, 'No wins yet. Be the first! 🏆')
-                : h('div', { className: 'divide-y divide-white/[0.05]' },
-                    feed.map((w, i) =>
-                      h('div', { key: w.id || i, className: 'px-3 py-2 flex items-center gap-2' },
-                        h('div', { className: 'w-7 h-7 rounded-full grid place-items-center text-[11px] font-black text-black shrink-0', style: { background: colorFromName(w.name) } }, initial(w.name)),
-                        h('div', { className: 'flex-1 min-w-0' },
-                          h('div', { className: 'text-[11px] text-white/80 truncate' },
-                            h('span', { className: 'font-black text-white' }, w.name),
-                            h('span', { className: 'text-white/50' }, ' won '),
-                            h('span', { className: 'font-black text-[#22C55E]' }, w.isReal ? fmtReal(w.amount) : fmt(w.amount))
-                          ),
-                          h('div', { className: 'text-[9px] text-white/30' }, timeAgo(w.at))
-                        )
-                      )
-                    )
-                  )
+          h('div', { className: 'mt-5 rounded-2xl card-gradient p-4' },
+            h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2' }, '📋 How It Works'),
+            h('div', { className: 'space-y-2 text-[11px] text-white/60 leading-relaxed' },
+              ['Type opponent\'s exact username',
+               'We verify it exists ✅',
+               'Set stake (both play same amount)',
+               'Share invite link — only they can join',
+               '10s countdown → play!'].map((t, i) =>
+                h('div', { key: i, className: 'flex gap-2' },
+                  h('span', { className: 'text-[#FFD60A] font-black shrink-0' }, (i+1) + '.'),
+                  h('span', null, t))
+              )
             )
           ),
 
-          h('div', { className: 'mt-5 p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-[10px] text-yellow-200/70 leading-relaxed' },
-            '⚠️ Real money mode: Winner gets 70%. 30% house fee. Withdrawals processed 24-48hrs. Play responsibly.'
+          feed.length > 0 && h('div', { className: 'mt-5' },
+            h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2' }, '📡 Recent Wins'),
+            h('div', { className: 'rounded-2xl card-gradient overflow-hidden max-h-56 overflow-y-auto' },
+              h('div', { className: 'divide-y divide-white/[0.05]' },
+                feed.map((w, i) =>
+                  h('div', { key: w.id || i, className: 'px-3 py-2 flex items-center gap-2' },
+                    h('div', { className: 'w-7 h-7 rounded-full grid place-items-center text-[11px] font-black text-black shrink-0', style: { background: colorFromName(w.name) } }, initial(w.name)),
+                    h('div', { className: 'flex-1 min-w-0' },
+                      h('div', { className: 'text-[11px] text-white/80 truncate' },
+                        h('span', { className: 'font-black text-white' }, w.name),
+                        h('span', { className: 'text-white/50' }, ' won '),
+                        h('span', { className: 'font-black text-[#22C55E]' }, w.isReal ? fmtReal(w.amount) : fmt(w.amount))
+                      ),
+                      h('div', { className: 'text-[9px] text-white/30' }, timeAgo(w.at))
+                    )
+                  )
+                )
+              )
+            )
           )
         ),
 
@@ -723,24 +826,23 @@
       );
     }
 
-    // ========== CREATE SCREEN ==========
-    function CreateScreen({ s, isReal, setIsReal, stake, setStake, opponentName, setOpponentName, onBack, onCreate }) {
+    function CreateScreen({ s, isReal, setIsReal, stake, setStake, opponentName, setOpponentName, userCheck, onBack, onCreate }) {
       const [custom, setCustom] = useState('');
       const presets = isReal ? REAL_STAKES : FAKE_STAKES;
       const balance = isReal ? (s.real || 0) : (s.cash || 0);
       const amt = custom ? Math.floor(Number(custom)) : stake;
       const canAfford = balance >= amt && amt > 0;
       const fmtAmt = (v) => isReal ? fmtReal(v) : fmt(v);
-      const winAmt = Math.floor(amt * 2 * 0.7);
+      const winAmt = winPayout(amt, isReal);
+      const feeAmt = Math.floor(amt * 2 * houseFeeFor(isReal));
 
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white max-w-md mx-auto pb-6' },
         h('header', { className: 'px-3 py-2.5 border-b border-white/[0.06] flex items-center justify-between' },
           h('button', { onClick: onBack, className: 'w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 grid place-items-center text-lg' }, '←'),
-          h('div', { className: 'text-[13px] font-black font-display text-[#FFD60A]' }, 'Create Private Match'),
+          h('div', { className: 'text-[13px] font-black font-display text-[#FFD60A]' }, 'Create Match'),
           h('div', { className: 'w-9' })
         ),
         h('div', { className: 'p-4 space-y-4' },
-          // mode toggle
           h('div', null,
             h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2' }, 'Choose Mode'),
             h('div', { className: 'grid grid-cols-2 gap-2' },
@@ -748,69 +850,95 @@
                 onClick: () => { setIsReal(false); setStake(FAKE_STAKES[0]); setCustom(''); },
                 className: 'py-3 rounded-xl font-black text-[12px] transition ' +
                   (!isReal ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)]' : 'bg-white/[0.05] border border-white/10 text-white/60')
-              }, '🎮 FAKE'),
+              }, h('div', null, '🎮 FAKE'), h('div', { className: 'text-[8px] font-bold mt-0.5 opacity-70' }, '100% payout')),
               h('button', {
                 onClick: () => { setIsReal(true); setStake(REAL_STAKES[0]); setCustom(''); },
                 className: 'py-3 rounded-xl font-black text-[12px] transition ' +
                   (isReal ? 'bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black shadow-[0_4px_16px_-4px_rgba(34,197,94,0.7)]' : 'bg-white/[0.05] border border-white/10 text-white/60')
-              }, '💵 REAL')
+              }, h('div', null, '💵 REAL'), h('div', { className: 'text-[8px] font-bold mt-0.5 opacity-70' }, '75% payout'))
             )
           ),
-          // opponent username
+
           h('div', null,
             h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2' }, 'Opponent Username *'),
-            h('input', {
-              value: opponentName,
-              onChange: e => setOpponentName(e.target.value),
-              placeholder: 'e.g. Aje Butler',
-              maxLength: 30,
-              className: 'w-full rounded-xl bg-white/[0.05] border border-white/10 px-4 py-3 text-[14px] font-black text-white placeholder-white/30 focus:border-[#FFD60A]/50 transition'
-            }),
-            h('div', { className: 'text-[9px] text-white/40 mt-1' }, '⚠️ Only this exact username can join the link')
+            h('div', { className: 'relative' },
+              h('input', {
+                value: opponentName,
+                onChange: e => setOpponentName(e.target.value),
+                placeholder: 'Type exact username...',
+                maxLength: 30,
+                className: 'w-full rounded-xl bg-white/[0.05] border pr-10 px-4 py-3 text-[14px] font-black text-white placeholder-white/30 transition ' +
+                  (userCheck.status === 'found' ? 'border-[#22C55E] focus:border-[#22C55E]' :
+                   userCheck.status === 'notfound' ? 'border-red-500 focus:border-red-500' :
+                   'border-white/10 focus:border-[#FFD60A]/50')
+              }),
+              h('div', { className: 'absolute right-3 top-1/2 -translate-y-1/2 text-lg' },
+                userCheck.status === 'checking' ? h('span', { className: 'animate-spin inline-block' }, '⏳') :
+                userCheck.status === 'found' ? '✅' :
+                userCheck.status === 'notfound' ? '❌' :
+                userCheck.status === 'self' ? '😅' :
+                userCheck.status === 'error' ? '⚠️' : ''
+              )
+            ),
+            userCheck.status === 'found' && h('div', { className: 'mt-1.5 px-3 py-2 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/40 flex items-center gap-2' },
+              h('span', { className: 'text-[#22C55E] text-sm' }, '✅'),
+              h('div', null,
+                h('div', { className: 'text-[10px] text-white/60 font-bold' }, 'Verified Player'),
+                h('div', { className: 'text-[12px] text-[#22C55E] font-black font-display' }, userCheck.user.name + (userCheck.user.bankName ? ' · ' + userCheck.user.bankName : ''))
+              )
+            ),
+            userCheck.status === 'notfound' && h('div', { className: 'mt-1.5 text-[10px] text-red-400 font-bold' }, '❌ User not found. Check spelling.'),
+            userCheck.status === 'self' && h('div', { className: 'mt-1.5 text-[10px] text-red-400 font-bold' }, '😅 That\'s your own username')
           ),
-          // stake
+
           h('div', null,
             h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2' }, 'Stake Amount'),
             h('div', { className: 'grid grid-cols-2 gap-2' },
               presets.map(p =>
                 h('button', {
-                  key: p,
-                  onClick: () => { setStake(p); setCustom(''); },
+                  key: p, onClick: () => { setStake(p); setCustom(''); },
                   className: 'py-3 rounded-xl text-[13px] font-black transition ' +
                     (amt === p ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)]' : 'bg-white/[0.05] border border-white/10 text-white/70')
                 }, fmtAmt(p))
               )
             ),
             h('input', {
-              type: 'number',
-              placeholder: 'Custom amount...',
-              value: custom,
+              type: 'number', placeholder: 'Custom amount...', value: custom,
               onChange: e => setCustom(e.target.value),
               className: 'mt-2 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[13px] font-black text-white placeholder-white/30 focus:border-[#FFD60A]/50 tabular-nums'
             })
           ),
-          // summary
+
           h('div', { className: 'p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] space-y-1.5' },
             h('div', { className: 'flex justify-between text-[11px]' },
               h('span', { className: 'text-white/40' }, 'Your stake'),
               h('span', { className: 'font-black text-[#FFD60A] tabular-nums' }, fmtAmt(amt))),
             h('div', { className: 'flex justify-between text-[11px]' },
-              h('span', { className: 'text-white/40' }, 'Winner gets (70%)'),
+              h('span', { className: 'text-white/40' }, 'Opponent stakes'),
+              h('span', { className: 'font-black text-white/60 tabular-nums' }, fmtAmt(amt))),
+            h('div', { className: 'flex justify-between text-[11px]' },
+              h('span', { className: 'text-white/40' }, 'Winner gets'),
               h('span', { className: 'font-black text-[#22C55E] tabular-nums' }, fmtAmt(winAmt))),
+            feeAmt > 0 && h('div', { className: 'flex justify-between text-[11px]' },
+              h('span', { className: 'text-white/40' }, 'House fee (25%)'),
+              h('span', { className: 'font-black text-white/60 tabular-nums' }, fmtAmt(feeAmt))),
             h('div', { className: 'flex justify-between text-[11px] pt-1 border-t border-white/[0.06]' },
               h('span', { className: 'text-white/40' }, 'Your balance'),
               h('span', { className: 'font-black tabular-nums ' + (canAfford ? 'text-white' : 'text-red-400') }, fmtAmt(balance)))
           ),
+
           h('button', {
             onClick: onCreate,
-            disabled: !canAfford || !opponentName.trim(),
+            disabled: !canAfford || userCheck.status !== 'found',
             className: 'w-full py-4 rounded-2xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[14px] shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)] active:scale-95 transition disabled:opacity-50'
-          }, canAfford ? '🎟️ GENERATE INVITE LINK' : '💸 Not enough balance')
+          },
+            !canAfford ? '💸 Not enough balance' :
+            userCheck.status !== 'found' ? '🔍 Verify opponent first' :
+            '🎟️ GENERATE INVITE LINK')
         )
       );
     }
 
-    // ========== WAITING SCREEN ==========
     function WaitingScreen({ room, inviteCode, onCancel }) {
       const [copied, setCopied] = useState(false);
       const link = window.location.origin + '/checkers.html?invite=' + room.id;
@@ -818,8 +946,8 @@
 
       const copyLink = async () => {
         const text = '🔥 ' + room.hostName + ' don challenge you to Naija Draft!\n' +
-                     '💰 Stake: ' + fmtAmt(room.stake) + '\n' +
-                     '🎟️ Join ONLY with this link: ' + link;
+                     '💰 Stake: ' + fmtAmt(room.stake) + ' ' + (room.isReal ? 'REAL' : 'FAKE') + '\n' +
+                     '🎟️ Join with this link: ' + link;
         try {
           if (navigator.share) { await navigator.share({ title: 'Draft Challenge', text, url: link }); return; }
           await navigator.clipboard.writeText(text);
@@ -834,15 +962,13 @@
           h('div', { className: 'text-[16px] font-black font-display text-[#FFD60A]' }, 'Waiting for opponent...'),
           h('div', { className: 'text-[11px] text-white/50 mt-1' }, 'Share the link below')
         ),
-
         h('div', { className: 'rounded-2xl bg-gradient-to-br from-[#FFD60A]/15 to-transparent border border-[#FFD60A]/40 p-4 space-y-3' },
           h('div', { className: 'text-center' },
-            h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, '🎟️ Your Invite Code'),
+            h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, '🎟️ Invite Code'),
             h('div', { className: 'text-3xl font-black font-display text-[#FFD60A] mt-1 tracking-wider' }, inviteCode || '------'),
             h('div', { className: 'text-[10px] text-white/50 mt-1' }, 'Only "' + room.targetName + '" can join')
           ),
-          h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold text-center pt-2 border-t border-white/[0.08]' }, 'Match Info'),
-          h('div', { className: 'space-y-1.5' },
+          h('div', { className: 'space-y-1.5 pt-2 border-t border-white/[0.08]' },
             h('div', { className: 'flex justify-between text-[11px]' },
               h('span', { className: 'text-white/40' }, 'Game'),
               h('span', { className: 'font-black' }, 'Naija Draft ⚫')),
@@ -851,26 +977,22 @@
               h('span', { className: 'font-black ' + (room.isReal ? 'text-[#22C55E]' : 'text-[#FFD60A]') }, fmtAmt(room.stake) + (room.isReal ? ' REAL' : ' FAKE'))),
             h('div', { className: 'flex justify-between text-[11px]' },
               h('span', { className: 'text-white/40' }, 'Winner gets'),
-              h('span', { className: 'font-black text-[#22C55E]' }, fmtAmt(Math.floor(room.stake * 2 * 0.7))))
+              h('span', { className: 'font-black text-[#22C55E]' }, fmtAmt(winPayout(room.stake, room.isReal))))
           )
         ),
-
         h('button', {
           onClick: copyLink,
           className: 'w-full mt-4 py-4 rounded-2xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[14px] shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)] active:scale-95 transition animate-pulseRing'
         }, copied ? '✅ COPIED!' : '📋 SHARE LINK'),
-
         h('button', {
           onClick: onCancel,
           className: 'w-full mt-2 py-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 text-[12px] font-black active:scale-95'
         }, '❌ CANCEL & REFUND'),
-
         h('p', { className: 'text-[9px] text-white/30 text-center mt-4 leading-relaxed' },
-          'Tip: Send the link on WhatsApp. It expires in 15 minutes. Refund is automatic if cancelled.')
+          'Link expires in 15 minutes. Auto-refund if cancelled.')
       );
     }
 
-    // ========== JOIN SCREEN ==========
     function JoinScreen({ joinRoom, joinError, s, onAccept, onBack }) {
       const [accepting, setAccepting] = useState(false);
       const fmtAmt = (v) => joinRoom?.isReal ? fmtReal(v) : fmt(v);
@@ -898,7 +1020,7 @@
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white max-w-md mx-auto grid place-items-center p-5' },
         h('div', { className: 'w-full max-w-sm' },
           h('div', { className: 'text-center mb-4' },
-            h('div', { className: 'text-6xl mb-2' }, '🎟️'),
+            h('div', { className: 'text-6xl mb-2 animate-floatEmoji' }, '🎟️'),
             h('div', { className: 'text-[16px] font-black font-display text-[#FFD60A]' }, 'YOU\'VE BEEN CHALLENGED!'),
             h('div', { className: 'text-[11px] text-white/50 mt-1' }, 'Only you can accept this match')
           ),
@@ -919,7 +1041,7 @@
             h('div', { className: 'text-[10px] space-y-1' },
               h('div', { className: 'flex justify-between' },
                 h('span', { className: 'text-white/40' }, 'Winner gets'),
-                h('span', { className: 'font-black text-[#22C55E]' }, fmtAmt(Math.floor(joinRoom.stake * 2 * 0.7)))),
+                h('span', { className: 'font-black text-[#22C55E]' }, fmtAmt(winPayout(joinRoom.stake, joinRoom.isReal)))),
               h('div', { className: 'flex justify-between' },
                 h('span', { className: 'text-white/40' }, 'Your balance'),
                 h('span', { className: 'font-black ' + (canAfford ? 'text-white' : 'text-red-400') }, fmtAmt(s[field] || 0)))
@@ -935,8 +1057,7 @@
       );
     }
 
-    // ========== PLAYING SCREEN ==========
-    function PlayingScreen({ room, uid, s, onMove, onLeave, notify }) {
+    function PlayingScreen({ room, uid, s, now, onMove, onLeave, notify }) {
       const isHost = room.hostId === uid;
       const myTurn = (isHost && room.turn === 'host') || (!isHost && room.turn === 'guest');
       const myOwner = isHost ? 'H' : 'G';
@@ -945,6 +1066,7 @@
       const [confirmLeave, setConfirmLeave] = useState(false);
       const [withdrawForm, setWithdrawForm] = useState({ bank: '', acc: '', name: '' });
       const [submitting, setSubmitting] = useState(false);
+      const [showPhrases, setShowPhrases] = useState(false);
       const chatEndRef = useRef(null);
 
       useEffect(() => {
@@ -954,14 +1076,18 @@
 
       const fmtAmt = (v) => room.isReal ? fmtReal(v) : fmt(v);
       const oppName = isHost ? room.guestName : room.hostName;
+      const oppLastSeen = isHost ? room.lastSeenGuest : room.lastSeenHost;
+      const oppStale = oppLastSeen && now - oppLastSeen;
 
-      const sendChat = async () => {
-        if (!chatText.trim()) return;
-        const msg = { userId: uid, name: s.name || 'Player', text: chatText.trim().slice(0, 200), at: Date.now() };
+      const sendChat = async (msgText) => {
+        const txt = (msgText || chatText).trim();
+        if (!txt) return;
+        const msg = { userId: uid, name: s.name || 'Player', text: txt.slice(0, 200), at: Date.now() };
         const trimmed = [...(room.messages || []), msg].slice(-CHAT_MAX);
         try {
           await db.collection("game_rooms").doc(room.id).update({ messages: trimmed });
-          setChatText(''); AudioEngine.msg();
+          if (!msgText) setChatText('');
+          AudioEngine.msg();
         } catch (e) {}
       };
 
@@ -980,7 +1106,6 @@
             const hasPieces = countPieces(newBoard, opp) > 0;
             const winner = (!hasMoves || !hasPieces) ? (myOwner === 'H' ? 'host' : 'guest') : null;
             if (move.type === 'jump') AudioEngine.capture(); else AudioEngine.move();
-            if (winner) AudioEngine.win();
             await onMove(newBoard, winner);
             setSelected(null);
           }
@@ -998,50 +1123,91 @@
             bankName: withdrawForm.bank,
             accountNumber: withdrawForm.acc,
             accountName: withdrawForm.name,
-            amountReal: Math.floor(room.stake * 2 * 0.7),
+            amountReal: winPayout(room.stake, room.isReal),
             status: 'pending',
             source: 'checkers_win',
             createdAt: Date.now()
           });
-          notify('Withdrawal requested! 24-48hrs ✅');
+          notify('Withdrawal submitted! 24-48hrs ✅');
           setWithdrawForm({ bank: '', acc: '', name: '' });
         } catch (e) { notify('Failed: ' + e.message, 'bad'); }
         setSubmitting(false);
       };
 
-      // ===== FINISHED =====
-      if (room.status === 'finished') {
-        const iWon = (isHost && room.winner === 'host') || (!isHost && room.winner === 'guest');
-        const winAmt = Math.floor(room.stake * 2 * 0.7);
-        return h('div', { className: 'min-h-screen bg-[#08080B] text-white max-w-md mx-auto grid place-items-center p-6' },
-          h('div', { className: 'text-center w-full max-w-sm' },
-            h('div', { className: 'text-7xl mb-3' }, iWon ? '🏆' : '💀'),
-            h('div', { className: 'text-2xl font-black font-display ' + (iWon ? 'text-[#FFD60A]' : 'text-red-400') }, iWon ? 'YOU WIN!' : 'YOU LOSE'),
-            h('div', { className: 'text-3xl font-black tabular-nums mt-2 ' + (iWon ? 'text-[#22C55E]' : 'text-red-400') },
-              (iWon ? '+' : '-') + fmtAmt(iWon ? winAmt : room.stake)),
-            h('div', { className: 'text-[11px] text-white/50 mt-1' },
-              iWon ? (room.isReal ? 'Winnings added to Real Balance' : 'Fake cash added') : (room.forfeitedBy === uid ? 'You forfeited' : 'Opponent outsmarted you')),
-
-            iWon && room.isReal && h('div', { className: 'mt-6 rounded-2xl card-gradient p-4 text-left' },
-              h('div', { className: 'text-[11px] uppercase tracking-widest text-[#FFD60A] font-bold mb-2' }, '💸 Withdraw Winnings'),
-              h('div', { className: 'space-y-2' },
-                h('input', { placeholder: 'Bank (e.g. GTBank)', value: withdrawForm.bank, onChange: e => setWithdrawForm({...withdrawForm, bank: e.target.value}), className: 'w-full rounded-lg bg-white/[0.05] border border-white/10 px-3 py-2 text-[11px] font-bold text-white placeholder-white/30' }),
-                h('input', { placeholder: 'Account number', type: 'tel', value: withdrawForm.acc, onChange: e => setWithdrawForm({...withdrawForm, acc: e.target.value.replace(/\D/g,'').slice(0,10)}), className: 'w-full rounded-lg bg-white/[0.05] border border-white/10 px-3 py-2 text-[11px] font-bold text-white placeholder-white/30' }),
-                h('input', { placeholder: 'Account name', value: withdrawForm.name, onChange: e => setWithdrawForm({...withdrawForm, name: e.target.value}), className: 'w-full rounded-lg bg-white/[0.05] border border-white/10 px-3 py-2 text-[11px] font-bold text-white placeholder-white/30' })
+      if (room.status === 'countdown') {
+        const startsAt = room.startsAt?.toMillis?.() || 0;
+        const remaining = Math.max(0, Math.ceil((startsAt - now) / 1000));
+        return h('div', { className: 'min-h-screen bg-[#08080B] text-white max-w-md mx-auto grid place-items-center p-6 relative overflow-hidden' },
+          h('div', { className: 'absolute inset-0 bg-gradient-to-br from-[#FFD60A]/20 via-transparent to-[#EF4444]/15' }),
+          h('div', { className: 'relative text-center' },
+            h('div', { className: 'text-[11px] uppercase tracking-widest text-white/50 font-bold mb-2' }, 'Match starts in'),
+            h('div', { className: 'text-9xl font-black font-display text-gradient-gold animate-countdownPop tabular-nums', key: remaining }, remaining || 'GO!'),
+            h('div', { className: 'mt-6 flex items-center justify-center gap-4' },
+              h('div', { className: 'text-center' },
+                h('div', { className: 'w-14 h-14 rounded-full grid place-items-center text-lg font-black text-black mx-auto', style: { background: colorFromName(s.name) } }, initial(s.name)),
+                h('div', { className: 'text-[10px] text-white/60 mt-1' }, 'You')
               ),
-              h('button', { onClick: submitWithdraw, disabled: submitting, className: 'w-full mt-2 py-2.5 rounded-lg bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black font-black text-[12px] active:scale-95 disabled:opacity-50' },
-                submitting ? 'Submitting...' : '📥 REQUEST WITHDRAWAL')
+              h('div', { className: 'text-2xl text-[#FFD60A]' }, '⚔️'),
+              h('div', { className: 'text-center' },
+                h('div', { className: 'w-14 h-14 rounded-full grid place-items-center text-lg font-black text-black mx-auto', style: { background: colorFromName(oppName) } }, initial(oppName)),
+                h('div', { className: 'text-[10px] text-white/60 mt-1' }, oppName)
+              )
             ),
-
-            h('button', { onClick: onLeave, className: 'mt-6 w-full py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[13px] active:scale-95' }, 'Back to Lobby')
+            h('div', { className: 'mt-4 text-[11px] text-white/50' }, 'Stake: ' + fmtAmt(room.stake))
           )
         );
       }
 
-      // ===== PLAYING =====
+      if (room.status === 'finished') {
+        const iWon = (isHost && room.winner === 'host') || (!isHost && room.winner === 'guest');
+        const winAmt = winPayout(room.stake, room.isReal);
+
+        return h('div', { className: 'min-h-screen bg-[#08080B] text-white max-w-md mx-auto p-6 overflow-y-auto' },
+          h('div', { className: 'text-center pt-6' },
+            h('div', { className: 'text-7xl mb-3 animate-bounce' }, iWon ? '🏆' : '💀'),
+            h('div', { className: 'text-2xl font-black font-display ' + (iWon ? 'text-[#FFD60A]' : 'text-red-400') }, iWon ? 'YOU WIN!' : 'YOU LOSE'),
+            h('div', { className: 'text-3xl font-black tabular-nums mt-2 ' + (iWon ? 'text-[#22C55E]' : 'text-red-400') },
+              (iWon ? '+' : '-') + fmtAmt(iWon ? winAmt : room.stake)),
+            h('div', { className: 'text-[11px] text-white/50 mt-1' },
+              room.endedBy === 'disconnect' ? '🎯 Opponent disconnected' :
+              room.endedBy === 'timeout' ? '⏱️ Timeout' :
+              room.forfeitedBy === uid ? '🚪 You forfeited' :
+              room.forfeitedBy ? '🎯 Opponent forfeited' :
+              iWon ? (room.isReal ? 'Added to Real Balance' : 'Added to Cash') :
+              'Opponent outsmarted you'
+            )
+          ),
+
+          iWon && room.isReal && h('div', { className: 'mt-6 rounded-2xl border-2 border-[#22C55E]/40 bg-gradient-to-br from-[#22C55E]/15 to-transparent p-4 animate-pulseRing' },
+            h('div', { className: 'text-center mb-3' },
+              h('div', { className: 'text-2xl mb-1' }, '💸'),
+              h('div', { className: 'text-[13px] font-black font-display text-[#22C55E]' }, 'WITHDRAW YOUR WINNINGS NOW'),
+              h('div', { className: 'text-[10px] text-white/60 mt-0.5' }, 'Don\'t let it sleep in your account!')
+            ),
+            h('div', { className: 'space-y-2' },
+              h('input', { placeholder: 'Bank (e.g. GTBank, Opay)', value: withdrawForm.bank, onChange: e => setWithdrawForm({...withdrawForm, bank: e.target.value}), className: 'w-full rounded-lg bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[12px] font-bold text-white placeholder-white/30' }),
+              h('input', { placeholder: 'Account number (10 digits)', type: 'tel', value: withdrawForm.acc, onChange: e => setWithdrawForm({...withdrawForm, acc: e.target.value.replace(/\D/g,'').slice(0,10)}), className: 'w-full rounded-lg bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[12px] font-bold text-white placeholder-white/30' }),
+              h('input', { placeholder: 'Account name', value: withdrawForm.name, onChange: e => setWithdrawForm({...withdrawForm, name: e.target.value}), className: 'w-full rounded-lg bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[12px] font-bold text-white placeholder-white/30' })
+            ),
+            h('button', { onClick: submitWithdraw, disabled: submitting, className: 'w-full mt-3 py-3 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black font-black text-[13px] active:scale-95 disabled:opacity-50 shadow-[0_6px_20px_-6px_rgba(34,197,94,0.7)]' },
+              submitting ? 'Submitting...' : '📥 WITHDRAW ' + fmtAmt(winAmt))
+          ),
+
+          h('button', {
+            onClick: onLeave,
+            className: 'w-full mt-6 py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[13px] active:scale-95'
+          }, '🎮 Back to Lobby')
+        );
+      }
+
       const validMoves = selected ? getMoves(room.board, selected[0], selected[1]) : [];
       const validTargets = new Set(validMoves.map(m => m.to[0] + ',' + m.to[1]));
       const captures = new Set(validMoves.filter(m => m.type === 'jump').map(m => m.to[0] + ',' + m.to[1]));
+
+      const lastMove = room.lastMoveAt?.toMillis?.() || 0;
+      const moveTimeLeft = Math.max(0, MOVE_TIMER_MS - (now - lastMove));
+      const moveTimeSecs = Math.ceil(moveTimeLeft / 1000);
+      const moveBarPct = (moveTimeLeft / MOVE_TIMER_MS) * 100;
 
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white max-w-md mx-auto flex flex-col' },
         h('header', { className: 'px-3 py-2 border-b border-white/[0.06] flex items-center justify-between shrink-0' },
@@ -1057,15 +1223,26 @@
             h('div', { className: 'font-black text-[10px]' }, isHost ? 'HOST' : 'GUEST'))
         ),
 
-        h('div', { className: 'px-3 py-1.5 bg-white/[0.03] border-b border-white/[0.05] flex items-center gap-2 text-[10px] shrink-0' },
-          h('div', { className: 'w-5 h-5 rounded-full grid place-items-center text-[9px] font-black text-black', style: { background: colorFromName(oppName) } }, initial(oppName)),
-          h('div', { className: 'font-bold text-white/70' }, oppName),
-          h('div', { className: 'ml-auto text-white/40' }, 'VS')
+        h('div', { className: 'px-3 py-2 bg-white/[0.03] border-b border-white/[0.05] shrink-0' },
+          h('div', { className: 'flex items-center gap-2 text-[10px]' },
+            h('div', { className: 'w-6 h-6 rounded-full grid place-items-center text-[10px] font-black text-black relative', style: { background: colorFromName(oppName) } },
+              initial(oppName),
+              oppStale < 5000 ? h('span', { className: 'absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#22C55E] border border-black' }) : null
+            ),
+            h('div', { className: 'font-bold text-white/70' }, oppName),
+            h('div', { className: 'ml-auto flex items-center gap-2' },
+              h('div', { className: 'text-[9px] font-black tabular-nums ' + (moveTimeSecs <= 5 ? 'text-red-400 animate-pulse' : 'text-white/50') }, moveTimeSecs + 's'),
+              h('div', { className: 'w-16 h-1 rounded-full bg-white/10 overflow-hidden' },
+                h('div', { className: 'h-full rounded-full transition-all ' + (moveTimeSecs <= 5 ? 'bg-red-500' : 'bg-[#FFD60A]'), style: { width: moveBarPct + '%' } })
+              )
+            )
+          ),
+          room.history && room.history.length > 0 && h('div', { className: 'mt-1.5 text-[9px] text-white/40 truncate' },
+            room.history.slice(-1).map((h_, i) => h_?.reason === 'timeout' ? '⏱️ ' + h_.name + ' timed out' : '♟️ ' + h_.name + ' moved'))
         ),
 
         h('div', { className: 'flex-1 min-h-0 overflow-y-auto' },
-          // board
-          h('div', { className: 'flex justify-center py-3 px-3' },
+          h('div', { className: 'flex justify-center py-2 px-3' },
             h('div', { className: 'rounded-xl overflow-hidden border-2 border-[#3a2a1a] shadow-[0_8px_32px_-8px_rgba(0,0,0,0.8)]', style: { width: 'min(92vw, 380px)', aspectRatio: '1/1' } },
               h('div', { className: 'grid grid-cols-8 h-full' },
                 room.board.map((row, r) =>
@@ -1096,9 +1273,32 @@
             )
           ),
 
-          // chat
-          h('div', { className: 'px-3 mt-3' },
-            h('div', { className: 'rounded-xl bg-white/[0.03] border border-white/[0.05] p-2 h-28 overflow-y-auto space-y-1' },
+          h('div', { className: 'px-2 pt-2 flex gap-1 overflow-x-auto' },
+            QUICK_REACTIONS.map(emoji =>
+              h('button', {
+                key: emoji,
+                onClick: () => sendChat(emoji),
+                className: 'shrink-0 w-9 h-9 rounded-full bg-white/[0.06] border border-white/10 flex items-center justify-center text-base active:scale-90 transition'
+              }, emoji)
+            ),
+            h('button', {
+              onClick: () => setShowPhrases(!showPhrases),
+              className: 'shrink-0 w-9 h-9 rounded-full bg-[#FFD60A]/20 border border-[#FFD60A]/50 flex items-center justify-center text-sm active:scale-90 transition'
+            }, showPhrases ? '✕' : '🇳🇬')
+          ),
+
+          showPhrases && h('div', { className: 'px-2 pt-2 flex flex-wrap gap-1' },
+            NIGERIAN_PHRASES.map((p, i) =>
+              h('button', {
+                key: i,
+                onClick: () => { sendChat(p); setShowPhrases(false); },
+                className: 'text-[10px] font-bold bg-[#22C55E]/15 border border-[#22C55E]/40 text-[#22C55E] px-2.5 py-1.5 rounded-full active:scale-95'
+              }, p)
+            )
+          ),
+
+          h('div', { className: 'px-3 mt-2' },
+            h('div', { className: 'rounded-xl bg-white/[0.03] border border-white/[0.05] p-2 h-32 overflow-y-auto space-y-1' },
               (room.messages || []).length === 0
                 ? h('div', { className: 'text-[10px] text-white/30 text-center py-8' }, 'Trash talk goes here 💬')
                 : room.messages.map((m, i) =>
@@ -1111,14 +1311,14 @@
             )
           ),
 
-          h('div', { className: 'px-3 py-2 flex gap-1.5 shrink-0' },
+          h('div', { className: 'px-3 py-2 flex gap-1.5 shrink-0 pb-3' },
             h('input', {
               value: chatText, onChange: e => setChatText(e.target.value),
               onKeyDown: e => { if (e.key === 'Enter') sendChat(); },
               placeholder: 'Say something...', maxLength: 200,
               className: 'flex-1 rounded-xl bg-white/[0.06] border border-white/10 px-3 py-2 text-[12px] text-white placeholder-white/30 focus:border-[#FFD60A]/50'
             }),
-            h('button', { onClick: sendChat, disabled: !chatText.trim(), className: 'w-10 h-10 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] text-black font-black grid place-items-center active:scale-90 disabled:opacity-40' }, '➤')
+            h('button', { onClick: () => sendChat(), disabled: !chatText.trim(), className: 'w-10 h-10 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] text-black font-black grid place-items-center active:scale-90 disabled:opacity-40' }, '➤')
           )
         ),
 
@@ -1136,7 +1336,6 @@
       );
     }
 
-    // ========== ERROR BOUNDARY ==========
     class ErrorBoundary extends React.Component {
       constructor(p) { super(p); this.state = { hasError: false, error: null }; }
       static getDerivedStateFromError(e) { return { hasError: true, error: e }; }
