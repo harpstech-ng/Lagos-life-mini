@@ -125,7 +125,6 @@
         return () => unsub();
       }, []);
 
-      // live online count
       useEffect(() => {
         const unsub = db.collection("lounge_presence").onSnapshot(
           snap => {
@@ -180,6 +179,12 @@
           ]
         },
         {
+          category: 'Head-to-Head',
+          items: [
+            { id: 'games', label: 'Street Corner Boardroom', icon: '🎱', desc: 'Draft, Pool, Ludo · Real opponents', href: 'games.html', color: 'from-amber-500/25 to-orange-700/10' },
+          ]
+        },
+        {
           category: 'Flex & Status',
           items: [
             { id: 'vip', label: 'Big Boys Lounge', icon: '👑', desc: 'VIP, Geh Geh, Gold Name', href: 'vip.html', color: 'from-amber-500/20 to-yellow-700/10' },
@@ -231,7 +236,6 @@
               )
             ),
 
-            /* ========== VGC LOUNGE HERO BANNER ========== */
             h('button', {
               onClick: () => window.location.href = 'lounge.html',
               className: 'w-full text-left mt-4 rounded-2xl overflow-hidden relative lounge-banner-bg border border-[#FFD60A]/35 active:scale-[0.98] transition shadow-[0_8px_32px_-8px_rgba(255,214,10,0.4)]'
