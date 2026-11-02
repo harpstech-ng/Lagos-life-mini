@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Street Corner Boardroom 🎱</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = { theme: { extend: {
+      colors: { gold: '#FFD60A', gold2: '#FFB800' },
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+    }}};
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent); }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); }
+    .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes pulseRing { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,214,10,0.7), 0 12px 40px -10px rgba(255,214,10,0.5); } 50% { box-shadow: 0 0 0 12px rgba(255,214,10,0), 0 12px 40px -10px rgba(255,214,10,0.8); } }
+    @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+    @keyframes floatSlow { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-6px) rotate(4deg); } }
+    @keyframes shine { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+    @keyframes pulseBg { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+    @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-pulseRing { animation: pulseRing 2s ease-in-out infinite; }
+    .animate-floatSlow { animation: floatSlow 4s ease-in-out infinite; }
+    .animate-popIn { animation: popIn 0.3s ease-out; }
+    .marquee-track { animation: marquee 25s linear infinite; white-space: nowrap; }
+
+    .shine-text {
+      background: linear-gradient(90deg, #FFD60A 0%, #FFE566 20%, #FFF8D0 40%, #FFE566 60%, #FFD60A 80%, #FFB800 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shine 3s linear infinite;
+    }
+
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+
+    .game-card {
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s ease;
+    }
+    .game-card:active { transform: scale(0.97); }
+    .game-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.1), transparent 60%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .game-card:active::before { opacity: 1; }
+
+    .badge-live {
+      background: linear-gradient(135deg, #22C55E, #16A34A);
+      box-shadow: 0 0 12px rgba(34,197,94,0.6);
+      animation: pulseBg 1.5s ease-in-out infinite;
+    }
+    .badge-soon {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    window.addEventListener('error', e => console.error('Error:', e.error || e.message));
+  </script>
+
+  <script>
+    const { useState, useEffect } = React;
+    const h = React.createElement;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    // ========== GAME CATALOG ==========
+    const GAMES = [
+      // ===== LIVE (5) =====
+      {
+        id: 'draft',
+        name: 'Naija Draft',
+        tagline: 'Classic checkers · Real stakes',
+        emoji: '⚫',
+        file: 'checkers.html',
+        live: true,
+        players: 1247,
+        color: 'from-amber-500/30 via-orange-500/20 to-red-700/10',
+        accent: '#F59E0B',
+        badge: 'HOT 🔥'
+      },
+      {
+        id: 'pool',
+        name: 'Lagos 8-Ball',
+        tagline: 'Snooker · Pot your ball to win',
+        emoji: '🎱',
+        file: 'snooker.html',
+        live: true,
+        players: 892,
+        color: 'from-emerald-500/30 via-teal-500/20 to-emerald-700/10',
+        accent: '#22C55E',
+        badge: 'NEW ✨'
+      },
+      {
+        id: 'ludo',
+        name: 'Street Ludo',
+        tagline: 'Race your tokens home',
+        emoji: '🎲',
+        file: 'ludo.html',
+        live: true,
+        players: 2103,
+        color: 'from-purple-500/30 via-fuchsia-500/20 to-purple-700/10',
+        accent: '#A855F7',
+        badge: 'HOT 🔥'
+      },
+      {
+        id: 'ttt',
+        name: 'Quick Draw',
+        tagline: 'Tic Tac Toe · Fast 60s games',
+        emoji: '❌',
+        file: 'tictactoe.html',
+        live: true,
+        players: 1567,
+        color: 'from-blue-500/30 via-cyan-500/20 to-blue-700/10',
+        accent: '#3B82F6',
+        badge: ''
+      },
+      {
+        id: 'c4',
+        name: 'Power 4',
+        tagline: 'Connect 4 · Drop & conquer',
+        emoji: '🔴',
+        file: 'connect4.html',
+        live: true,
+        players: 634,
+        color: 'from-red-500/30 via-rose-500/20 to-red-700/10',
+        accent: '#EF4444',
+        badge: ''
+      },
+      // ===== COMING SOON (5) =====
+      {
+        id: 'whot',
+        name: 'Whot Master',
+        tagline: 'Classic Nigerian card game',
+        emoji: '🃏',
+        file: null,
+        live: false,
+        players: 0,
+        color: 'from-pink-500/20 via-purple-500/10 to-transparent',
+        accent: '#EC4899'
+      },
+      {
+        id: 'dominoes',
+        name: 'Draft Kings',
+        tagline: 'Dominoes · 2-player battle',
+        emoji: '🁣',
+        file: null,
+        live: false,
+        players: 0,
+        color: 'from-slate-500/20 via-gray-500/10 to-transparent',
+        accent: '#94A3B8'
+      },
+      {
+        id: 'ayo',
+        name: 'Ayo Olopon',
+        tagline: 'Traditional seed game · 4-row',
+        emoji: '🌰',
+        file: null,
+        live: false,
+        players: 0,
+        color: 'from-orange-500/20 via-amber-500/10 to-transparent',
+        accent: '#F97316'
+      },
+      {
+        id: 'chess',
+        name: 'Street Chess',
+        tagline: 'Think fast · Checkmate',
+        emoji: '♟️',
+        file: null,
+        live: false,
+        players: 0,
+        color: 'from-zinc-500/20 via-gray-500/10 to-transparent',
+        accent: '#71717A'
+      },
+      {
+        id: 'quiz',
+        name: 'Naija Quiz',
+        tagline: 'Battle of wits · Nigeria trivia',
+        emoji: '🧠',
+        file: null,
+        live: false,
+        players: 0,
+        color: 'from-cyan-500/20 via-teal-500/10 to-transparent',
+        accent: '#06B6D4'
+      }
+    ];
+
+    const FEED_NAMES = ['Tunde', 'Chidi', 'Bisi', 'Emeka', 'Ngozi', 'Femi', 'Yemi', 'Ada', 'Kelechi', 'Seyi', 'Ifeanyi', 'Amaka', 'Bola', 'Dapo', 'Funke'];
+    const FEED_ACTIONS = [
+      'just smashed {op} in Draft! +{amt} 💰',
+      'pot the final ball against {op}! +{amt} 🎱',
+      'beat {op} in 3 moves! +{amt} 🔥',
+      'won Ludo against {op}! +{amt} 🎲',
+      'cashed out {amt} vs {op} 💸',
+      'made {op} rage quit! +{amt} 😭',
+      'lucky win against {op}! +{amt} 🍀'
+    ];
+    const FEED_AMOUNTS = ['₦2M', '₦5M', '₦10M', '₦20M', '₦50M', '₦100M', '₦500M', '₦1B'];
+
+    const randomFeed = () => {
+      const name = FEED_NAMES[Math.floor(Math.random() * FEED_NAMES.length)];
+      const opp = FEED_NAMES[Math.floor(Math.random() * FEED_NAMES.length)];
+      const amt = FEED_AMOUNTS[Math.floor(Math.random() * FEED_AMOUNTS.length)];
+      const action = FEED_ACTIONS[Math.floor(Math.random() * FEED_ACTIONS.length)]
+        .replace('{op}', opp).replace('{amt}', amt);
+      return `${name} ${action}`;
+    };
+
+    // ========== HELPERS ==========
+    const fmt = (n) => {
+      n = Math.floor(Number(n) || 0);
+      const s = n < 0 ? '-' : '';
+      n = Math.abs(n);
+      if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
+      if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return s + '₦' + (n / 1e3).toFixed(1) + 'K';
+      return s + '₦' + n.toLocaleString();
+    };
+    const fmtReal = (n) => '₦' + (Number(n) || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 });
+
+    const getCachedData = () => {
+      try {
+        const c = localStorage.getItem("lagos_user_data");
+        if (c) return JSON.parse(c);
+      } catch (e) {}
+      return { name: localStorage.getItem("lagos_user_name") || 'Hustler', cash: 25000, real: 0 };
+    };
+
+    // ========== MAIN APP ==========
+    function App() {
+      const [s, setS] = useState(getCachedData);
+      const [uid, setUid] = useState(null);
+      const [feedMsg, setFeedMsg] = useState(randomFeed());
+      const [timeNow, setTimeNow] = useState(Date.now());
+
+      // auth + user listener
+      useEffect(() => {
+        let unsubUser = null;
+        const unsubAuth = auth.onAuthStateChanged(user => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          if (unsubUser) unsubUser();
+          setUid(user.uid);
+          unsubUser = db.collection("users").doc(user.uid).onSnapshot(doc => {
+            if (doc.exists) {
+              const d = doc.data();
+              setS(prev => {
+                const m = { ...prev, ...d };
+                try { localStorage.setItem("lagos_user_data", JSON.stringify(m)); } catch(e) {}
+                return m;
+              });
+            }
+          }, e => console.error(e));
+        });
+        return () => { unsubAuth(); if (unsubUser) unsubUser(); };
+      }, []);
+
+      // feed ticker
+      useEffect(() => {
+        const iv = setInterval(() => setFeedMsg(randomFeed()), 5000);
+        return () => clearInterval(iv);
+      }, []);
+
+      // clock for live player count simulation
+      useEffect(() => {
+        const iv = setInterval(() => setTimeNow(Date.now()), 8000);
+        return () => clearInterval(iv);
+      }, []);
+
+      const liveGames = GAMES.filter(g => g.live);
+      const soonGames = GAMES.filter(g => !g.live);
+      const totalPlayers = liveGames.reduce((a, g) => a + g.players, 0);
+
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased max-w-md mx-auto pb-8 relative' },
+
+        // ===== STICKY HEADER =====
+        h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/90 backdrop-blur-xl border-b border-white/[0.06] px-3 py-2.5' },
+          h('div', { className: 'flex items-center justify-between gap-2' },
+            h('a', {
+              href: 'more.html',
+              className: 'w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 grid place-items-center active:scale-90 transition text-lg shrink-0'
+            }, '←'),
+            h('div', { className: 'flex-1 min-w-0 text-center' },
+              h('div', { className: 'text-[13px] font-black font-display text-[#FFD60A] leading-tight' }, 'Street Corner'),
+              h('div', { className: 'text-[9px] text-white/40 mt-0.5 flex items-center justify-center gap-1' },
+                h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#22C55E] glow-dot animate-pulse' }),
+                totalPlayers.toLocaleString() + ' playing now'
+              )
+            ),
+            h('div', { className: 'flex gap-1 shrink-0' },
+              h('div', { className: 'px-2 py-1 rounded-lg bg-[#FFD60A]/15 border border-[#FFD60A]/30 text-[10px] font-black text-[#FFD60A] tabular-nums' }, fmt(s.cash)),
+              h('div', { className: 'px-2 py-1 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[10px] font-black text-[#22C55E] tabular-nums' }, fmtReal(s.real || 0))
+            )
+          )
+        ),
+
+        // ===== HERO BANNER =====
+        h('div', { className: 'relative px-4 pt-5 pb-3 overflow-hidden' },
+          // floating game emojis
+          h('div', { className: 'absolute inset-0 pointer-events-none' },
+            ['⚫', '🎱', '🎲', '❌', '🔴'].map((e, i) =>
+              h('div', {
+                key: i,
+                className: 'absolute text-3xl opacity-[0.06] animate-floatSlow',
+                style: {
+                  left: (10 + i * 18) + '%',
+                  top: (20 + (i % 3) * 25) + '%',
+                  animationDelay: (i * 0.7) + 's'
+                }
+              }, e)
+            )
+          ),
+          h('div', { className: 'relative text-center' },
+            h('div', { className: 'text-4xl mb-1' }, '⚔️'),
+            h('div', { className: 'text-2xl font-black font-display shine-text' }, 'STREET CORNER'),
+            h('div', { className: 'text-[10px] uppercase tracking-[0.3em] text-white/40 mt-1 font-bold' }, 'BOARDROOM'),
+            h('div', { className: 'mt-2 text-[11px] text-white/50' }, 'Real opponents · Real money · Real bragging rights')
+          )
+        ),
+
+        // ===== LIVE FEED TICKER =====
+        h('div', { className: 'mx-4 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3 py-2 overflow-hidden flex items-center gap-2' },
+          h('span', { className: 'text-sm shrink-0 animate-pulse' }, '📡'),
+          h('div', { className: 'flex-1 overflow-hidden relative h-5' },
+            h('div', { className: 'absolute text-[10.5px] font-bold text-white/60 whitespace-nowrap marquee-track', key: feedMsg }, feedMsg)
+          )
+        ),
+
+        // ===== BALANCE CTA =====
+        h('button', {
+          onClick: () => window.location.href = 'leaderboard.html',
+          className: 'mx-4 mt-3 w-[calc(100%-2rem)] rounded-xl bg-gradient-to-r from-[#FFD60A]/20 to-[#FFB800]/10 border border-[#FFD60A]/30 px-3 py-2 flex items-center justify-between active:scale-[0.98] transition'
+        },
+          h('div', { className: 'flex items-center gap-2' },
+            h('span', { className: 'text-base' }, '💰'),
+            h('div', { className: 'text-left' },
+              h('div', { className: 'text-[9px] uppercase tracking-widest text-[#FFD60A]/80 font-black' }, 'Top Up'),
+              h('div', { className: 'text-[11px] text-white/70 font-bold' }, 'Need more cash? Tap here')
+            )
+          ),
+          h('div', { className: 'text-[#FFD60A] font-black text-sm' }, '→')
+        ),
+
+        // ===== LIVE GAMES =====
+        h('div', { className: 'mt-5 px-4' },
+          h('div', { className: 'flex items-center justify-between mb-3' },
+            h('div', { className: 'flex items-center gap-2' },
+              h('span', { className: 'text-base' }, '🔥'),
+              h('div', { className: 'text-[11px] uppercase tracking-[0.2em] font-black text-white' }, 'LIVE GAMES'),
+              h('span', { className: 'text-[9px] bg-[#22C55E]/20 text-[#22C55E] px-1.5 py-0.5 rounded-full border border-[#22C55E]/30 font-black' }, liveGames.length + ' READY')
+            ),
+            h('span', { className: 'text-[9px] text-white/30' }, 'Tap to play')
+          ),
+
+          h('div', { className: 'space-y-2.5' },
+            liveGames.map((g, idx) =>
+              h('a', {
+                key: g.id,
+                href: g.file,
+                className: 'game-card block rounded-2xl card-gradient relative overflow-hidden ' + (idx === 0 ? 'animate-pulseRing' : ''),
+                style: { borderColor: g.accent + '40' }
+              },
+                // gradient background
+                h('div', { className: 'absolute inset-0 bg-gradient-to-br ' + g.color + ' opacity-90 pointer-events-none' }),
+
+                // accent bar
+                h('div', { className: 'absolute left-0 top-0 bottom-0 w-1', style: { background: g.accent } }),
+
+                h('div', { className: 'relative p-4 flex items-center gap-3' },
+                  // emoji medallion
+                  h('div', {
+                    className: 'w-14 h-14 rounded-2xl grid place-items-center text-3xl shrink-0 shadow-lg',
+                    style: {
+                      background: 'linear-gradient(135deg, ' + g.accent + '40, ' + g.accent + '15)',
+                      border: '1.5px solid ' + g.accent + '80',
+                      boxShadow: '0 4px 20px -4px ' + g.accent + '60'
+                    }
+                  }, g.emoji),
+
+                  // text
+                  h('div', { className: 'flex-1 min-w-0' },
+                    h('div', { className: 'flex items-center gap-1.5 flex-wrap mb-0.5' },
+                      h('div', { className: 'text-[14px] font-black font-display text-white' }, g.name),
+                      g.badge && h('span', {
+                        className: 'text-[8px] font-black px-1.5 py-0.5 rounded-full text-black',
+                        style: { background: g.accent }
+                      }, g.badge)
+                    ),
+                    h('div', { className: 'text-[10px] text-white/60 leading-snug' }, g.tagline),
+                    h('div', { className: 'text-[9px] text-white/40 mt-1 flex items-center gap-1' },
+                      h('span', { className: 'w-1 h-1 rounded-full bg-[#22C55E] animate-pulse' }),
+                      (g.players + (Math.floor(timeNow / 8000) % 20)).toLocaleString() + ' online'
+                    )
+                  ),
+
+                  // arrow
+                  h('div', {
+                    className: 'w-9 h-9 rounded-xl grid place-items-center text-lg font-black shrink-0 active:scale-90 transition',
+                    style: {
+                      background: g.accent + '25',
+                      border: '1.5px solid ' + g.accent + '60',
+                      color: g.accent
+                    }
+                  }, '→')
+                )
+              )
+            )
+          )
+        ),
+
+        // ===== COMING SOON =====
+        h('div', { className: 'mt-6 px-4' },
+          h('div', { className: 'flex items-center justify-between mb-3' },
+            h('div', { className: 'flex items-center gap-2' },
+              h('span', { className: 'text-base' }, '🚧'),
+              h('div', { className: 'text-[11px] uppercase tracking-[0.2em] font-black text-white/70' }, 'COMING SOON'),
+              h('span', { className: 'text-[9px] bg-white/10 text-white/50 px-1.5 py-0.5 rounded-full border border-white/15 font-black' }, soonGames.length)
+            ),
+            h('span', { className: 'text-[9px] text-white/30' }, 'Stay tuned')
+          ),
+
+          h('div', { className: 'grid grid-cols-2 gap-2' },
+            soonGames.map(g =>
+              h('div', {
+                key: g.id,
+                className: 'relative rounded-2xl card-gradient overflow-hidden opacity-60'
+              },
+                h('div', { className: 'absolute inset-0 bg-gradient-to-br ' + g.color + ' pointer-events-none' }),
+                h('div', { className: 'absolute top-2 right-2 z-10' },
+                  h('span', { className: 'text-[7px] font-black uppercase tracking-widest badge-soon px-1.5 py-0.5 rounded-full text-white/60' }, '🔒 SOON')
+                ),
+                h('div', { className: 'relative p-3 text-center' },
+                  h('div', { className: 'text-3xl mb-1.5 opacity-70' }, g.emoji),
+                  h('div', { className: 'text-[11px] font-black font-display text-white/80 leading-tight' }, g.name),
+                  h('div', { className: 'text-[8.5px] text-white/40 mt-1 leading-tight' }, g.tagline)
+                )
+              )
+            )
+          )
+        ),
+
+        // ===== RULES NOTICE =====
+        h('div', { className: 'mx-4 mt-6 rounded-xl bg-yellow-500/10 border border-yellow-500/30 p-3' },
+          h('div', { className: 'flex items-start gap-2' },
+            h('span', { className: 'text-base shrink-0' }, '⚠️'),
+            h('div', { className: 'text-[10px] text-yellow-200/80 leading-relaxed' },
+              h('div', { className: 'font-black mb-0.5' }, 'Fair Play Rules'),
+              'Play with fake cash or real money. Winner takes 70% of pot (30% house fee). Real money play requires 18+. Withdrawals processed in 24-48 hours. Play responsibly.'
+            )
+          )
+        ),
+
+        // ===== HOW TO PLAY =====
+        h('div', { className: 'mt-6 px-4' },
+          h('div', { className: 'text-[10px] uppercase tracking-[0.2em] font-black text-white/40 mb-2' }, 'HOW TO PLAY'),
+          h('div', { className: 'space-y-2' },
+            [
+              { icon: '1️⃣', text: 'Pick any live game above' },
+              { icon: '2️⃣', text: 'Choose Fake Money or Real Money mode' },
+              { icon: '3️⃣', text: 'Set your stake and find an opponent' },
+              { icon: '4️⃣', text: 'Play and win 70% of the pot 💰' },
+              { icon: '5️⃣', text: 'Withdraw your real winnings anytime' }
+            ].map((step, i) =>
+              h('div', { key: i, className: 'flex items-center gap-2.5 rounded-lg bg-white/[0.03] border border-white/[0.06] px-3 py-2' },
+                h('div', { className: 'text-base shrink-0' }, step.icon),
+                h('div', { className: 'text-[11px] text-white/70 font-bold' }, step.text)
+              )
+            )
+          )
+        ),
+
+        // ===== FOOTER =====
+        h('div', { className: 'mt-8 text-center px-4' },
+          h('div', { className: 'text-[10px] font-bold text-white/20' }, 'Street Corner · Lagos Life Mini v2.0'),
+          h('div', { className: 'text-[9px] text-white/15 mt-1' }, 'Hustle or Nothing 🇳🇬')
+        )
+      );
+    }
+
+    // ========== ERROR BOUNDARY ==========
+    class ErrorBoundary extends React.Component {
+      constructor(p) { super(p); this.state = { hasError: false, error: null }; }
+      static getDerivedStateFromError(e) { return { hasError: true, error: e }; }
+      componentDidCatch(e, i) { console.error('EB:', e, i); }
+      render() {
+        if (this.state.hasError) {
+          return h('div', { style: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, padding: 24, textAlign: 'center', background: '#08080B', color: '#F87171', fontFamily: 'monospace', fontSize: 12 } },
+            h('div', { style: { fontSize: 32 } }, '⚠️'),
+            h('div', { style: { fontWeight: 'bold' } }, 'Something went wrong'),
+            h('div', { style: { opacity: 0.6, wordBreak: 'break-word' } }, String(this.state.error?.message || 'Unknown')),
+            h('button', { style: { marginTop: 12, padding: '8px 16px', background: '#FFD60A', color: '#000', borderRadius: 8, fontWeight: 'bold' }, onClick: () => window.location.reload() }, 'Reload')
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(ErrorBoundary, null, h(App)));
+  </script>
+</body>
+</html>
