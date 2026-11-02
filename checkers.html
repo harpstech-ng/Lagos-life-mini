@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Naija Draft ⚫ — Private Match</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = { theme: { extend: {
+      colors: { gold: '#FFD60A', gold2: '#FFB800' },
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+    }}};
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent); }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); }
+    .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+
+    @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes pulseRing { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,214,10,0.7); } 50% { box-shadow: 0 0 0 12px rgba(255,214,10,0); } }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes glow { 0%, 100% { box-shadow: 0 0 20px rgba(255,214,10,0.5); } 50% { box-shadow: 0 0 40px rgba(255,214,10,0.9); } }
+
+    .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
+    .animate-pulseRing { animation: pulseRing 2s ease-in-out infinite; }
+    .animate-glow { animation: glow 2s ease-in-out infinite; }
+
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    input, textarea { -webkit-user-select: text; user-select: text; }
+    input:focus, textarea:focus { outline: none; }
+
+    .square-dark { background: linear-gradient(135deg, #7a4a20 0%, #5a3510 100%); }
+    .square-light { background: linear-gradient(135deg, #E8C9A0 0%, #D4B785 100%); }
+
+    .piece-H {
+      background: radial-gradient(circle at 35% 30%, #FFED4E 0%, #FFD60A 40%, #E6A800 80%, #B88600 100%);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.6), inset 0 -3px 6px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.4);
+    }
+    .piece-G {
+      background: radial-gradient(circle at 35% 30%, #FF6B6B 0%, #EF4444 40%, #B91C1C 80%, #7F1D1D 100%);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.6), inset 0 -3px 6px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.4);
+    }
+    .piece-king::after {
+      content: '♛';
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: 55%;
+      color: #000;
+      font-weight: 900;
+      text-shadow: 0 1px 2px rgba(255,255,255,0.4);
+    }
+
+    .cell-selected {
+      box-shadow: inset 0 0 0 4px #FFD60A, 0 0 25px rgba(255,214,10,0.9);
+      animation: glow 1s ease-in-out infinite;
+    }
+    .cell-valid { box-shadow: inset 0 0 0 3px #22C55E, inset 0 0 15px rgba(34,197,94,0.5); }
+    .cell-capture { box-shadow: inset 0 0 0 3px #EF4444, inset 0 0 15px rgba(239,68,68,0.5); }
+    .cell-last-from { box-shadow: inset 0 0 0 2px rgba(255,214,10,0.4); }
+    .cell-last-to { box-shadow: inset 0 0 0 3px rgba(255,214,10,0.7); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    window.addEventListener('error', e => console.error('Error:', e.error || e.message));
+  </script>
+
+  <script>
+    const { useState, useEffect, useRef } = React;
+    const h = React.createElement;
+
+    // ========== FIREBASE ==========
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    // ========== CONSTANTS ==========
+    const HOUSE_FEE = 0.30;
+    const FAKE_STAKES = [1_000_000, 10_000_000, 50_000_000, 100_000_000];
+    const REAL_STAKES = [100, 500, 1000, 5000];
+    const ROOM_EXPIRY_MS = 15 * 60 * 1000;
+    const CHAT_MAX = 40;
+
+    const CHECKERS_INITIAL = [
+      [null,'H',null,'H',null,'H',null,'H'],
+      ['H',null,'H',null,'H',null,'H',null],
+      [null,'H',null,'H',null,'H',null,'H'],
+      [null,null,null,null,null,null,null,null],
+      [null,null,null,null,null,null,null,null],
+      ['G',null,'G',null,'G',null,'G',null],
+      [null,'G',null,'G',null,'G',null,'G'],
+      ['G',null,'G',null,'G',null,'G',null]
+    ];
+
+    // ========== HELPERS ==========
+    const fmt = (n) => {
+      n = Math.floor(Number(n) || 0);
+      const s = n < 0 ? '-' : '';
+      n = Math.abs(n);
+      if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
+      if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return s + '₦' + (n / 1e3).toFixed(1) + 'K';
+      return s + '₦' + n.toLocaleString();
+    };
+    const fmtReal = (n) => '₦' + (Number(n) || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 });
+    const timeAgo = (ts) => {
+      if (!ts) return 'now';
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      const sec = Math.floor((Date.now() - d.getTime()) / 1000);
+      if (sec < 10) return 'now';
+      if (sec < 60) return sec + 's';
+      if (sec < 3600) return Math.floor(sec / 60) + 'm';
+      return Math.floor(sec / 3600) + 'h';
+    };
+    const initial = (n) => (n || 'H').charAt(0).toUpperCase();
+    const colorFromName = (name) => {
+      const c = ['#FFD60A','#22C55E','#3B82F6','#A855F7','#EF4444','#EC4899','#06B6D4','#F59E0B'];
+      let hash = 0;
+      for (let i = 0; i < (name || '').length; i++) hash = (hash * 31 + name.charCodeAt(i)) | 0;
+      return c[Math.abs(hash) % c.length];
+    };
+    const genCode = () => {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let out = '';
+      for (let i = 0; i < 8; i++) out += chars[Math.floor(Math.random() * chars.length)];
+      return out;
+    };
+    const getCachedData = () => {
+      try {
+        const c = localStorage.getItem("lagos_user_data");
+        if (c) return JSON.parse(c);
+      } catch (e) {}
+      return { name: localStorage.getItem("lagos_user_name") || 'Hustler', cash: 25000, real: 0 };
+    };
+
+    // ========== CHECKERS LOGIC ==========
+    const pieceOwner = (p) => p ? p.charAt(0) : null;
+    const isKing = (p) => p === 'Hk' || p === 'Gk';
+
+    const getMoves = (board, r, c) => {
+      const piece = board[r][c];
+      if (!piece) return [];
+      const owner = pieceOwner(piece);
+      const king = isKing(piece);
+      const forward = owner === 'H' ? 1 : -1;
+      const dirs = king ? [1, -1] : [forward];
+      const moves = [];
+      for (const dr of dirs) {
+        for (const dc of [-1, 1]) {
+          const nr = r + dr, nc = c + dc;
+          if (nr < 0 || nr >= 8 || nc < 0 || nc >= 8) continue;
+          if (!board[nr][nc]) moves.push({ to: [nr, nc], type: 'move' });
+          else if (pieceOwner(board[nr][nc]) !== owner) {
+            const jr = r + dr * 2, jc = c + dc * 2;
+            if (jr >= 0 && jr < 8 && jc >= 0 && jc < 8 && !board[jr][jc]) {
+              moves.push({ to: [jr, jc], type: 'jump', captured: [nr, nc] });
+            }
+          }
+        }
+      }
+      return moves;
+    };
+
+    const applyMove = (board, from, move, owner) => {
+      const nb = board.map(r => [...r]);
+      const [fr, fc] = from;
+      const [tr, tc] = move.to;
+      let piece = nb[fr][fc];
+      nb[fr][fc] = null;
+      if (move.type === 'jump') nb[move.captured[0]][move.captured[1]] = null;
+      if (owner === 'H' && tr === 7 && piece === 'H') piece = 'Hk';
+      if (owner === 'G' && tr === 0 && piece === 'G') piece = 'Gk';
+      nb[tr][tc] = piece;
+      return nb;
+    };
+
+    const hasAnyMove = (board, owner) => {
+      for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+        if (pieceOwner(board[r][c]) === owner && getMoves(board, r, c).length > 0) return true;
+      }
+      return false;
+    };
+    const countPieces = (board, owner) => {
+      let n = 0;
+      for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) if (pieceOwner(board[r][c]) === owner) n++;
+      return n;
+    };
+
+    // ========== AUDIO ==========
+    const AudioEngine = (() => {
+      let ctx = null;
+      const init = () => { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); };
+      const tone = (f, d, t, w=0, g=0.25) => {
+        if (!ctx) return;
+        const s = ctx.currentTime + w, o = ctx.createOscillator(), gn = ctx.createGain();
+        o.type = t; o.frequency.value = f;
+        gn.gain.setValueAtTime(0, s); gn.gain.linearRampToValueAtTime(g, s+0.01);
+        gn.gain.exponentialRampToValueAtTime(0.0001, s+d);
+        o.connect(gn); gn.connect(ctx.destination); o.start(s); o.stop(s+d+0.05);
+      };
+      return {
+        tap: () => { init(); tone(880, 0.08, 'triangle'); },
+        move: () => { init(); tone(660, 0.08, 'triangle'); },
+        capture: () => { init(); tone(440, 0.1, 'square'); tone(330, 0.15, 'square', 0.06); },
+        win: () => { init(); [523,659,783,1046].forEach((f,i) => tone(f, 0.2, 'triangle', i*0.09)); },
+        lose: () => { init(); tone(220, 0.3, 'sawtooth'); tone(165, 0.4, 'sawtooth', 0.15); },
+        msg: () => { init(); tone(1046, 0.05, 'sine'); },
+        error: () => { init(); tone(220, 0.15, 'sawtooth'); },
+        copy: () => { init(); tone(1318, 0.08, 'sine'); tone(1568, 0.1, 'sine', 0.05); },
+      };
+    })();
+
+    // ========== MAIN APP ==========
+    function App() {
+      const [s, setS] = useState(getCachedData);
+      const [uid, setUid] = useState(null);
+      const [view, setView] = useState('lobby'); // lobby | create | join | waiting | playing
+      const [roomId, setRoomId] = useState(null);
+      const [room, setRoom] = useState(null);
+      const [inviteCode, setInviteCode] = useState(null);
+      const [toast, setToast] = useState(null);
+      const [feed, setFeed] = useState([]);
+
+      // create form
+      const [opponentName, setOpponentName] = useState('');
+      const [isReal, setIsReal] = useState(false);
+      const [stake, setStake] = useState(FAKE_STAKES[0]);
+
+      // join validation
+      const [joinError, setJoinError] = useState(null);
+      const [joinRoom, setJoinRoom] = useState(null);
+      const [checkingInvite, setCheckingInvite] = useState(false);
+
+      // ===== AUTH =====
+      useEffect(() => {
+        let unsubUser = null;
+        const unsubAuth = auth.onAuthStateChanged(user => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          if (unsubUser) unsubUser();
+          setUid(user.uid);
+          unsubUser = db.collection("users").doc(user.uid).onSnapshot(doc => {
+            if (doc.exists) {
+              const d = doc.data();
+              setS(prev => {
+                const m = { ...prev, ...d };
+                try { localStorage.setItem("lagos_user_data", JSON.stringify(m)); } catch(e) {}
+                return m;
+              });
+            }
+          }, e => console.error(e));
+        });
+        return () => { unsubAuth(); if (unsubUser) unsubUser(); };
+      }, []);
+
+      // ===== TOAST =====
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2600);
+        return () => clearTimeout(t);
+      }, [toast]);
+      const notify = (msg, kind='good') => setToast({ msg, kind, id: Date.now() });
+
+      // ===== LIVE FEED =====
+      useEffect(() => {
+        const unsub = db.collection("game_feed")
+          .where("game", "==", "checkers")
+          .orderBy("at", "desc")
+          .limit(10)
+          .onSnapshot(snap => {
+            const list = [];
+            snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+            setFeed(list);
+          }, () => {});
+        return () => unsub();
+      }, []);
+
+      // ===== CHECK URL FOR INVITE =====
+      useEffect(() => {
+        if (!uid || !s.name) return;
+        const params = new URLSearchParams(window.location.search);
+        const inv = params.get('invite');
+        if (!inv) return;
+
+        setCheckingInvite(true);
+        const check = async () => {
+          try {
+            const doc = await db.collection("game_rooms").doc(inv).get();
+            if (!doc.exists) {
+              setJoinError('This invite link no longer exists 😢');
+              setView('join');
+              setCheckingInvite(false);
+              return;
+            }
+            const d = doc.data();
+            if (d.hostId === uid) {
+              // Host reopening own link — go straight to waiting
+              setRoomId(inv);
+              setView('waiting');
+              setCheckingInvite(false);
+              return;
+            }
+            if (d.status !== 'waiting') {
+              setJoinError('This match has already started or finished 😤');
+              setView('join');
+              setCheckingInvite(false);
+              return;
+            }
+            // THE KEY CHECK: does current user's name match the target?
+            if (d.targetName && d.targetName.toLowerCase() !== (s.name || '').toLowerCase()) {
+              setJoinError('This invite is for "' + d.targetName + '" only! 🚫 Send the link to them.');
+              setView('join');
+              setCheckingInvite(false);
+              return;
+            }
+            setJoinRoom({ id: inv, ...d });
+            setView('join');
+            setCheckingInvite(false);
+          } catch (e) {
+            setJoinError('Failed to load invite: ' + e.message);
+            setView('join');
+            setCheckingInvite(false);
+          }
+        };
+        check();
+      }, [uid, s.name]);
+
+      // ===== LISTEN TO ROOM =====
+      useEffect(() => {
+        if (!roomId) { setRoom(null); return; }
+        const unsub = db.collection("game_rooms").doc(roomId).onSnapshot(doc => {
+          if (!doc.exists) { setRoom(null); return; }
+          setRoom({ id: doc.id, ...doc.data() });
+        }, e => console.error(e));
+        return () => unsub();
+      }, [roomId]);
+
+      // ===== AUTO-CLEANUP EXPIRED ROOMS =====
+      useEffect(() => {
+        if (!uid) return;
+        const cleanup = async () => {
+          try {
+            const snap = await db.collection("game_rooms")
+              .where("hostId", "==", uid)
+              .where("status", "==", "waiting")
+              .get();
+            for (const doc of snap.docs) {
+              const d = doc.data();
+              const created = d.createdAt?.toMillis?.() || 0;
+              if (Date.now() - created > ROOM_EXPIRY_MS) {
+                const field = d.isReal ? 'real' : 'cash';
+                await db.collection("users").doc(uid).update({
+                  [field]: firebase.firestore.FieldValue.increment(d.stake)
+                }).catch(() => {});
+                await doc.ref.delete().catch(() => {});
+              }
+            }
+          } catch (e) {}
+        };
+        cleanup();
+      }, [uid]);
+
+      // ===== CREATE ROOM (generate invite) =====
+      const createRoom = async () => {
+        const target = opponentName.trim();
+        if (!target) return notify('Enter opponent username', 'bad');
+        if (target.toLowerCase() === (s.name || '').toLowerCase()) return notify('You cannot play against yourself 😂', 'bad');
+        const amt = Math.floor(Number(stake));
+        const field = isReal ? 'real' : 'cash';
+        if ((s[field] || 0) < amt) { AudioEngine.error(); return notify('Not enough balance 💸', 'bad'); }
+
+        try {
+          const code = genCode();
+          let newRoomId;
+          await db.runTransaction(async (tx) => {
+            const userRef = db.collection("users").doc(uid);
+            const userDoc = await tx.get(userRef);
+            if ((userDoc.data()[field] || 0) < amt) throw new Error('Not enough balance');
+
+            tx.update(userRef, { [field]: firebase.firestore.FieldValue.increment(-amt) });
+            const newRef = db.collection("game_rooms").doc();
+            newRoomId = newRef.id;
+            tx.set(newRef, {
+              gameType: 'checkers',
+              isPrivate: true,
+              inviteCode: code,
+              targetName: target,
+              stake: amt,
+              isReal: isReal,
+              hostId: uid,
+              hostName: s.name || 'Host',
+              guestId: null,
+              guestName: null,
+              status: 'waiting',
+              turn: 'host',
+              board: CHECKERS_INITIAL,
+              winner: null,
+              messages: [],
+              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+              lastMoveAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          });
+
+          setRoomId(newRoomId);
+          setInviteCode(code);
+          setView('waiting');
+          AudioEngine.copy();
+          notify('Room created! Share the link 🎟️');
+        } catch (e) {
+          notify('Failed: ' + e.message, 'bad');
+        }
+      };
+
+      // ===== ACCEPT INVITE =====
+      const acceptInvite = async () => {
+        if (!joinRoom) return;
+        const field = joinRoom.isReal ? 'real' : 'cash';
+        if ((s[field] || 0) < joinRoom.stake) { AudioEngine.error(); return notify('Not enough balance 💸', 'bad'); }
+
+        try {
+          await db.runTransaction(async (tx) => {
+            const roomRef = db.collection("game_rooms").doc(joinRoom.id);
+            const roomDoc = await tx.get(roomRef);
+            if (!roomDoc.exists) throw new Error('Room gone');
+            if (roomDoc.data().status !== 'waiting') throw new Error('Match already started');
+
+            const userRef = db.collection("users").doc(uid);
+            const userDoc = await tx.get(userRef);
+            if ((userDoc.data()[field] || 0) < joinRoom.stake) throw new Error('Not enough balance');
+
+            tx.update(userRef, { [field]: firebase.firestore.FieldValue.increment(-joinRoom.stake) });
+            tx.update(roomRef, {
+              guestId: uid,
+              guestName: s.name || 'Guest',
+              status: 'playing',
+              turn: 'host',
+              lastMoveAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          });
+          setRoomId(joinRoom.id);
+          setView('playing');
+          window.history.replaceState({}, '', 'checkers.html');
+        } catch (e) {
+          notify('Join failed: ' + e.message, 'bad');
+        }
+      };
+
+      // ===== CANCEL WAITING ROOM =====
+      const cancelWaiting = async () => {
+        if (!room || !uid || room.hostId !== uid || room.status !== 'waiting') return;
+        try {
+          const field = room.isReal ? 'real' : 'cash';
+          await db.runTransaction(async (tx) => {
+            const userRef = db.collection("users").doc(uid);
+            tx.update(userRef, { [field]: firebase.firestore.FieldValue.increment(room.stake) });
+            tx.delete(db.collection("game_rooms").doc(roomId));
+          });
+          notify('Refunded ' + (room.isReal ? fmtReal(room.stake) : fmt(room.stake)));
+          goLobby();
+        } catch (e) {
+          notify('Cancel failed: ' + e.message, 'bad');
+        }
+      };
+
+      // ===== MAKE A MOVE =====
+      const makeMove = async (newBoard, winner) => {
+        if (!room) return;
+        const update = {
+          board: newBoard,
+          turn: room.turn === 'host' ? 'guest' : 'host',
+          lastMoveAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        if (winner) {
+          update.status = 'finished';
+          update.winner = winner;
+        }
+        try {
+          await db.collection("game_rooms").doc(roomId).update(update);
+          if (winner) {
+            const winnerId = winner === 'host' ? room.hostId : room.guestId;
+            const winnerName = winner === 'host' ? room.hostName : room.guestName;
+            if (winnerId) {
+              const winAmt = Math.floor(room.stake * 2 * (1 - HOUSE_FEE));
+              const field = room.isReal ? 'real' : 'cash';
+              await db.collection("users").doc(winnerId).update({
+                [field]: firebase.firestore.FieldValue.increment(winAmt)
+              }).catch(() => {});
+              await db.collection("game_feed").add({
+                name: winnerName,
+                amount: winAmt,
+                game: 'checkers',
+                isReal: room.isReal,
+                at: Date.now()
+              }).catch(() => {});
+            }
+          }
+        } catch (e) {
+          notify('Move failed: ' + e.message, 'bad');
+        }
+      };
+
+      // ===== FORFEIT / LEAVE =====
+      const leaveGame = async () => {
+        if (room?.status === 'playing' && !room.winner) {
+          const isHost = room.hostId === uid;
+          const winner = isHost ? 'guest' : 'host';
+          try {
+            await db.collection("game_rooms").doc(roomId).update({
+              status: 'finished',
+              winner,
+              forfeitedBy: uid
+            });
+            const winnerId = winner === 'host' ? room.hostId : room.guestId;
+            const winnerName = winner === 'host' ? room.hostName : room.guestName;
+            if (winnerId) {
+              const winAmt = Math.floor(room.stake * 2 * (1 - HOUSE_FEE));
+              const field = room.isReal ? 'real' : 'cash';
+              await db.collection("users").doc(winnerId).update({
+                [field]: firebase.firestore.FieldValue.increment(winAmt)
+              }).catch(() => {});
+              await db.collection("game_feed").add({
+                name: winnerName, amount: winAmt, game: 'checkers',
+                isReal: room.isReal, at: Date.now()
+              }).catch(() => {});
+            }
+          } catch (e) {}
+        }
+        goLobby();
+      };
+
+      const goLobby = () => {
+        setRoomId(null);
+        setRoom(null);
+        setInviteCode(null);
+        setView('lobby');
+        setOpponentName('');
+        setStake(FAKE_STAKES[0]);
+        setIsReal(false);
+        setJoinRoom(null);
+        setJoinError(null);
+        window.history.replaceState({}, '', 'checkers.html');
+      };
+
+      // ===== ROUTING =====
+      if (!uid) return h('div', { className: 'min-h-screen grid place-items-center bg-[#08080B]' },
+        h('div', { className: 'text-[#FFD60A] animate-pulse font-black' }, 'Loading...'));
+
+      if (checkingInvite) return h('div', { className: 'min-h-screen grid place-items-center bg-[#08080B] p-6 text-center' },
+        h('div', { className: 'text-5xl mb-3 animate-pulse' }, '🎟️'),
+        h('div', { className: 'text-[14px] font-black text-[#FFD60A] font-display' }, 'Checking invite...'));
+
+      // ===== JOIN SCREEN =====
+      if (view === 'join') {
+        return h(JoinScreen, { joinRoom, joinError, s, onAccept: acceptInvite, onBack: goLobby });
+      }
+
+      // ===== WAITING SCREEN =====
+      if (view === 'waiting' && room) {
+        return h(WaitingScreen, { room, inviteCode, onCancel: cancelWaiting, onCopy: () => notify('Copied! 📋') });
+      }
+
+      // ===== PLAYING SCREEN =====
+      if ((view === 'playing' || (room && room.status === 'playing') || (room && room.status === 'finished')) && room) {
+        return h(PlayingScreen, { room, uid, s, onMove: makeMove, onLeave: leaveGame, notify });
+      }
+
+      // ===== CREATE SCREEN =====
+      if (view === 'create') {
+        return h(CreateScreen, {
+          s, isReal, setIsReal, stake, setStake,
+          opponentName, setOpponentName,
+          onBack: () => setView('lobby'),
+          onCreate: createRoom
+        });
+      }
+
+      // ===== LOBBY =====
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased max-w-md mx-auto pb-10' },
+        h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06] px-3 py-2.5 flex items-center justify-between' },
+          h('a', { href: 'games.html', className: 'w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 grid place-items-center active:scale-90 text-lg' }, '←'),
+          h('div', { className: 'flex-1 min-w-0 text-center' },
+            h('div', { className: 'text-[13px] font-black font-display text-[#FFD60A]' }, 'Naija Draft ⚫'),
+            h('div', { className: 'text-[9px] text-white/40' }, 'Private invite · 1v1 · 30% fee')
+          ),
+          h('div', { className: 'text-[9px] text-right' },
+            h('div', { className: 'text-[10px] font-black text-[#FFD60A] tabular-nums' }, fmt(s.cash)),
+            h('div', { className: 'text-[10px] font-black text-[#22C55E] tabular-nums' }, fmtReal(s.real || 0))
+          )
+        ),
+
+        h('main', { className: 'px-4 pt-5' },
+
+          // hero
+          h('div', { className: 'text-center mb-5 relative' },
+            h('div', { className: 'text-6xl mb-2 animate-pulse' }, '⚫'),
+            h('div', { className: 'text-2xl font-black font-display text-[#FFD60A]' }, 'NAIJA DRAFT'),
+            h('div', { className: 'text-[11px] text-white/50 mt-1' }, 'Challenge a friend · Winner takes 70%'),
+            h('div', { className: 'mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 text-[10px] font-bold text-white/60' },
+              h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse' }),
+              '🎟️ Invite-Only Mode'
+            )
+          ),
+
+          // CREATE button
+          h('button', {
+            onClick: () => { setView('create'); AudioEngine.tap(); },
+            className: 'w-full rounded-2xl bg-gradient-to-br from-[#FFD60A]/25 to-[#FFB800]/10 border-2 border-[#FFD60A]/50 p-5 text-left active:scale-[0.98] transition shadow-[0_8px_32px_-8px_rgba(255,214,10,0.5)] animate-pulseRing'
+          },
+            h('div', { className: 'flex items-center gap-3' },
+              h('div', { className: 'w-14 h-14 rounded-2xl bg-[#FFD60A]/25 border border-[#FFD60A]/60 grid place-items-center text-3xl shrink-0' }, '🎟️'),
+              h('div', { className: 'flex-1' },
+                h('div', { className: 'text-[15px] font-black font-display text-[#FFD60A]' }, 'CREATE PRIVATE MATCH'),
+                h('div', { className: 'text-[11px] text-white/70 mt-0.5' }, 'Enter opponent username · Get unique link'),
+                h('div', { className: 'text-[10px] text-[#22C55E] font-bold mt-1' }, '💰 Winner takes 70% of pot')
+              ),
+              h('div', { className: 'text-3xl text-[#FFD60A]' }, '→')
+            )
+          ),
+
+          // quick match (secondary)
+          h('button', {
+            onClick: () => notify('Quick Match coming soon! Use Private Match for now 😉', 'bad'),
+            className: 'w-full mt-3 rounded-xl card-gradient p-3 flex items-center gap-3 active:scale-[0.98] transition opacity-60'
+          },
+            h('div', { className: 'text-2xl' }, '⚡'),
+            h('div', { className: 'flex-1 text-left' },
+              h('div', { className: 'text-[12px] font-black text-white/70' }, 'Quick Match'),
+              h('div', { className: 'text-[9px] text-white/40' }, 'Random opponent · Coming soon')
+            ),
+            h('div', { className: 'text-white/30' }, '🔒')
+          ),
+
+          // rules
+          h('div', { className: 'mt-5 rounded-2xl card-gradient p-4' },
+            h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2' }, '📋 How It Works'),
+            h('div', { className: 'space-y-2 text-[11px] text-white/60 leading-relaxed' },
+              h('div', { className: 'flex gap-2' },
+                h('span', { className: 'text-[#FFD60A] font-black shrink-0' }, '1.'),
+                h('span', null, 'Enter your opponent\'s exact username')
+              ),
+              h('div', { className: 'flex gap-2' },
+                h('span', { className: 'text-[#FFD60A] font-black shrink-0' }, '2.'),
+                h('span', null, 'Set your stake (fake or real money)')
+              ),
+              h('div', { className: 'flex gap-2' },
+                h('span', { className: 'text-[#FFD60A] font-black shrink-0' }, '3.'),
+                h('span', null, 'Share the unique link (only they can join)')
+              ),
+              h('div', { className: 'flex gap-2' },
+                h('span', { className: 'text-[#FFD60A] font-black shrink-0' }, '4.'),
+                h('span', null, 'Winner takes 70% · 30% house fee')
+              )
+            )
+          ),
+
+          // live feed
+          h('div', { className: 'mt-5' },
+            h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2' }, '📡 Recent Wins'),
+            h('div', { className: 'rounded-2xl card-gradient overflow-hidden max-h-56 overflow-y-auto' },
+              feed.length === 0
+                ? h('div', { className: 'p-5 text-center text-white/40 text-[11px]' }, 'No wins yet. Be the first! 🏆')
+                : h('div', { className: 'divide-y divide-white/[0.05]' },
+                    feed.map((w, i) =>
+                      h('div', { key: w.id || i, className: 'px-3 py-2 flex items-center gap-2' },
+                        h('div', { className: 'w-7 h-7 rounded-full grid place-items-center text-[11px] font-black text-black shrink-0', style: { background: colorFromName(w.name) } }, initial(w.name)),
+                        h('div', { className: 'flex-1 min-w-0' },
+                          h('div', { className: 'text-[11px] text-white/80 truncate' },
+                            h('span', { className: 'font-black text-white' }, w.name),
+                            h('span', { className: 'text-white/50' }, ' won '),
+                            h('span', { className: 'font-black text-[#22C55E]' }, w.isReal ? fmtReal(w.amount) : fmt(w.amount))
+                          ),
+                          h('div', { className: 'text-[9px] text-white/30' }, timeAgo(w.at))
+                        )
+                      )
+                    )
+                  )
+            )
+          ),
+
+          h('div', { className: 'mt-5 p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-[10px] text-yellow-200/70 leading-relaxed' },
+            '⚠️ Real money mode: Winner gets 70%. 30% house fee. Withdrawals processed 24-48hrs. Play responsibly.'
+          )
+        ),
+
+        toast && h('div', {
+          className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[400] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
+            (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')
+        }, toast.msg)
+      );
+    }
+
+    // ========== CREATE SCREEN ==========
+    function CreateScreen({ s, isReal, setIsReal, stake, setStake, opponentName, setOpponentName, onBack, onCreate }) {
+      const [custom, setCustom] = useState('');
+      const presets = isReal ? REAL_STAKES : FAKE_STAKES;
+      const balance = isReal ? (s.real || 0) : (s.cash || 0);
+      const amt = custom ? Math.floor(Number(custom)) : stake;
+      const canAfford = balance >= amt && amt > 0;
+      const fmtAmt = (v) => isReal ? fmtReal(v) : fmt(v);
+      const winAmt = Math.floor(amt * 2 * 0.7);
+
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white max-w-md mx-auto pb-6' },
+        h('header', { className: 'px-3 py-2.5 border-b border-white/[0.06] flex items-center justify-between' },
+          h('button', { onClick: onBack, className: 'w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 grid place-items-center text-lg' }, '←'),
+          h('div', { className: 'text-[13px] font-black font-display text-[#FFD60A]' }, 'Create Private Match'),
+          h('div', { className: 'w-9' })
+        ),
+        h('div', { className: 'p-4 space-y-4' },
+          // mode toggle
+          h('div', null,
+            h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2' }, 'Choose Mode'),
+            h('div', { className: 'grid grid-cols-2 gap-2' },
+              h('button', {
+                onClick: () => { setIsReal(false); setStake(FAKE_STAKES[0]); setCustom(''); },
+                className: 'py-3 rounded-xl font-black text-[12px] transition ' +
+                  (!isReal ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)]' : 'bg-white/[0.05] border border-white/10 text-white/60')
+              }, '🎮 FAKE'),
+              h('button', {
+                onClick: () => { setIsReal(true); setStake(REAL_STAKES[0]); setCustom(''); },
+                className: 'py-3 rounded-xl font-black text-[12px] transition ' +
+                  (isReal ? 'bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black shadow-[0_4px_16px_-4px_rgba(34,197,94,0.7)]' : 'bg-white/[0.05] border border-white/10 text-white/60')
+              }, '💵 REAL')
+            )
+          ),
+          // opponent username
+          h('div', null,
+            h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2' }, 'Opponent Username *'),
+            h('input', {
+              value: opponentName,
+              onChange: e => setOpponentName(e.target.value),
+              placeholder: 'e.g. Aje Butler',
+              maxLength: 30,
+              className: 'w-full rounded-xl bg-white/[0.05] border border-white/10 px-4 py-3 text-[14px] font-black text-white placeholder-white/30 focus:border-[#FFD60A]/50 transition'
+            }),
+            h('div', { className: 'text-[9px] text-white/40 mt-1' }, '⚠️ Only this exact username can join the link')
+          ),
+          // stake
+          h('div', null,
+            h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold mb-2' }, 'Stake Amount'),
+            h('div', { className: 'grid grid-cols-2 gap-2' },
+              presets.map(p =>
+                h('button', {
+                  key: p,
+                  onClick: () => { setStake(p); setCustom(''); },
+                  className: 'py-3 rounded-xl text-[13px] font-black transition ' +
+                    (amt === p ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)]' : 'bg-white/[0.05] border border-white/10 text-white/70')
+                }, fmtAmt(p))
+              )
+            ),
+            h('input', {
+              type: 'number',
+              placeholder: 'Custom amount...',
+              value: custom,
+              onChange: e => setCustom(e.target.value),
+              className: 'mt-2 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[13px] font-black text-white placeholder-white/30 focus:border-[#FFD60A]/50 tabular-nums'
+            })
+          ),
+          // summary
+          h('div', { className: 'p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] space-y-1.5' },
+            h('div', { className: 'flex justify-between text-[11px]' },
+              h('span', { className: 'text-white/40' }, 'Your stake'),
+              h('span', { className: 'font-black text-[#FFD60A] tabular-nums' }, fmtAmt(amt))),
+            h('div', { className: 'flex justify-between text-[11px]' },
+              h('span', { className: 'text-white/40' }, 'Winner gets (70%)'),
+              h('span', { className: 'font-black text-[#22C55E] tabular-nums' }, fmtAmt(winAmt))),
+            h('div', { className: 'flex justify-between text-[11px] pt-1 border-t border-white/[0.06]' },
+              h('span', { className: 'text-white/40' }, 'Your balance'),
+              h('span', { className: 'font-black tabular-nums ' + (canAfford ? 'text-white' : 'text-red-400') }, fmtAmt(balance)))
+          ),
+          h('button', {
+            onClick: onCreate,
+            disabled: !canAfford || !opponentName.trim(),
+            className: 'w-full py-4 rounded-2xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[14px] shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)] active:scale-95 transition disabled:opacity-50'
+          }, canAfford ? '🎟️ GENERATE INVITE LINK' : '💸 Not enough balance')
+        )
+      );
+    }
+
+    // ========== WAITING SCREEN ==========
+    function WaitingScreen({ room, inviteCode, onCancel }) {
+      const [copied, setCopied] = useState(false);
+      const link = window.location.origin + '/checkers.html?invite=' + room.id;
+      const fmtAmt = (v) => room.isReal ? fmtReal(v) : fmt(v);
+
+      const copyLink = async () => {
+        const text = '🔥 ' + room.hostName + ' don challenge you to Naija Draft!\n' +
+                     '💰 Stake: ' + fmtAmt(room.stake) + '\n' +
+                     '🎟️ Join ONLY with this link: ' + link;
+        try {
+          if (navigator.share) { await navigator.share({ title: 'Draft Challenge', text, url: link }); return; }
+          await navigator.clipboard.writeText(text);
+          setCopied(true); AudioEngine.copy();
+          setTimeout(() => setCopied(false), 2000);
+        } catch (e) {}
+      };
+
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white max-w-md mx-auto p-5' },
+        h('div', { className: 'text-center mb-5 pt-4' },
+          h('div', { className: 'text-6xl mb-3 animate-pulse' }, '⏳'),
+          h('div', { className: 'text-[16px] font-black font-display text-[#FFD60A]' }, 'Waiting for opponent...'),
+          h('div', { className: 'text-[11px] text-white/50 mt-1' }, 'Share the link below')
+        ),
+
+        h('div', { className: 'rounded-2xl bg-gradient-to-br from-[#FFD60A]/15 to-transparent border border-[#FFD60A]/40 p-4 space-y-3' },
+          h('div', { className: 'text-center' },
+            h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, '🎟️ Your Invite Code'),
+            h('div', { className: 'text-3xl font-black font-display text-[#FFD60A] mt-1 tracking-wider' }, inviteCode || '------'),
+            h('div', { className: 'text-[10px] text-white/50 mt-1' }, 'Only "' + room.targetName + '" can join')
+          ),
+          h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold text-center pt-2 border-t border-white/[0.08]' }, 'Match Info'),
+          h('div', { className: 'space-y-1.5' },
+            h('div', { className: 'flex justify-between text-[11px]' },
+              h('span', { className: 'text-white/40' }, 'Game'),
+              h('span', { className: 'font-black' }, 'Naija Draft ⚫')),
+            h('div', { className: 'flex justify-between text-[11px]' },
+              h('span', { className: 'text-white/40' }, 'Stake'),
+              h('span', { className: 'font-black ' + (room.isReal ? 'text-[#22C55E]' : 'text-[#FFD60A]') }, fmtAmt(room.stake) + (room.isReal ? ' REAL' : ' FAKE'))),
+            h('div', { className: 'flex justify-between text-[11px]' },
+              h('span', { className: 'text-white/40' }, 'Winner gets'),
+              h('span', { className: 'font-black text-[#22C55E]' }, fmtAmt(Math.floor(room.stake * 2 * 0.7))))
+          )
+        ),
+
+        h('button', {
+          onClick: copyLink,
+          className: 'w-full mt-4 py-4 rounded-2xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[14px] shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)] active:scale-95 transition animate-pulseRing'
+        }, copied ? '✅ COPIED!' : '📋 SHARE LINK'),
+
+        h('button', {
+          onClick: onCancel,
+          className: 'w-full mt-2 py-3 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 text-[12px] font-black active:scale-95'
+        }, '❌ CANCEL & REFUND'),
+
+        h('p', { className: 'text-[9px] text-white/30 text-center mt-4 leading-relaxed' },
+          'Tip: Send the link on WhatsApp. It expires in 15 minutes. Refund is automatic if cancelled.')
+      );
+    }
+
+    // ========== JOIN SCREEN ==========
+    function JoinScreen({ joinRoom, joinError, s, onAccept, onBack }) {
+      const [accepting, setAccepting] = useState(false);
+      const fmtAmt = (v) => joinRoom?.isReal ? fmtReal(v) : fmt(v);
+
+      if (joinError || !joinRoom) {
+        return h('div', { className: 'min-h-screen bg-[#08080B] text-white max-w-md mx-auto grid place-items-center p-6' },
+          h('div', { className: 'text-center w-full max-w-sm' },
+            h('div', { className: 'text-6xl mb-3' }, '🚫'),
+            h('div', { className: 'text-[16px] font-black font-display text-red-400' }, 'Cannot Join'),
+            h('div', { className: 'text-[11px] text-white/60 mt-2 leading-relaxed px-4' }, joinError || 'Invite not found'),
+            h('button', { onClick: onBack, className: 'mt-5 px-6 py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[12px] active:scale-95' }, 'Back to Lobby')
+          )
+        );
+      }
+
+      const field = joinRoom.isReal ? 'real' : 'cash';
+      const canAfford = (s[field] || 0) >= joinRoom.stake;
+
+      const handleAccept = async () => {
+        setAccepting(true);
+        await onAccept();
+        setAccepting(false);
+      };
+
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white max-w-md mx-auto grid place-items-center p-5' },
+        h('div', { className: 'w-full max-w-sm' },
+          h('div', { className: 'text-center mb-4' },
+            h('div', { className: 'text-6xl mb-2' }, '🎟️'),
+            h('div', { className: 'text-[16px] font-black font-display text-[#FFD60A]' }, 'YOU\'VE BEEN CHALLENGED!'),
+            h('div', { className: 'text-[11px] text-white/50 mt-1' }, 'Only you can accept this match')
+          ),
+          h('div', { className: 'rounded-2xl card-gradient p-5 space-y-3' },
+            h('div', { className: 'flex items-center gap-3' },
+              h('div', { className: 'w-12 h-12 rounded-full grid place-items-center font-black text-black text-lg', style: { background: colorFromName(joinRoom.hostName) } }, initial(joinRoom.hostName)),
+              h('div', { className: 'flex-1' },
+                h('div', { className: 'text-[13px] font-black' }, joinRoom.hostName),
+                h('div', { className: 'text-[10px] text-white/40' }, 'Challenger')
+              )
+            ),
+            h('div', { className: 'text-center py-3 border-y border-white/[0.08]' },
+              h('div', { className: 'text-4xl mb-1' }, '⚫'),
+              h('div', { className: 'text-[14px] font-black' }, 'Naija Draft'),
+              h('div', { className: 'text-[11px] ' + (joinRoom.isReal ? 'text-[#22C55E]' : 'text-[#FFD60A]') + ' font-bold mt-1' },
+                fmtAmt(joinRoom.stake) + ' ' + (joinRoom.isReal ? 'REAL' : 'FAKE'))
+            ),
+            h('div', { className: 'text-[10px] space-y-1' },
+              h('div', { className: 'flex justify-between' },
+                h('span', { className: 'text-white/40' }, 'Winner gets'),
+                h('span', { className: 'font-black text-[#22C55E]' }, fmtAmt(Math.floor(joinRoom.stake * 2 * 0.7)))),
+              h('div', { className: 'flex justify-between' },
+                h('span', { className: 'text-white/40' }, 'Your balance'),
+                h('span', { className: 'font-black ' + (canAfford ? 'text-white' : 'text-red-400') }, fmtAmt(s[field] || 0)))
+            )
+          ),
+          h('button', {
+            onClick: handleAccept,
+            disabled: accepting || !canAfford,
+            className: 'w-full mt-4 py-4 rounded-2xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black font-black text-[14px] shadow-[0_8px_24px_-8px_rgba(34,197,94,0.7)] active:scale-95 transition disabled:opacity-50 animate-pulseRing'
+          }, accepting ? 'Joining...' : !canAfford ? '💸 Not enough balance' : '✅ ACCEPT & PLAY'),
+          h('button', { onClick: onBack, className: 'w-full mt-2 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-[11px] font-bold text-white/60' }, 'Decline')
+        )
+      );
+    }
+
+    // ========== PLAYING SCREEN ==========
+    function PlayingScreen({ room, uid, s, onMove, onLeave, notify }) {
+      const isHost = room.hostId === uid;
+      const myTurn = (isHost && room.turn === 'host') || (!isHost && room.turn === 'guest');
+      const myOwner = isHost ? 'H' : 'G';
+      const [selected, setSelected] = useState(null);
+      const [chatText, setChatText] = useState('');
+      const [confirmLeave, setConfirmLeave] = useState(false);
+      const [withdrawForm, setWithdrawForm] = useState({ bank: '', acc: '', name: '' });
+      const [submitting, setSubmitting] = useState(false);
+      const chatEndRef = useRef(null);
+
+      useEffect(() => {
+        if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }, [room.messages?.length]);
+      useEffect(() => { setSelected(null); }, [room.turn, room.board]);
+
+      const fmtAmt = (v) => room.isReal ? fmtReal(v) : fmt(v);
+      const oppName = isHost ? room.guestName : room.hostName;
+
+      const sendChat = async () => {
+        if (!chatText.trim()) return;
+        const msg = { userId: uid, name: s.name || 'Player', text: chatText.trim().slice(0, 200), at: Date.now() };
+        const trimmed = [...(room.messages || []), msg].slice(-CHAT_MAX);
+        try {
+          await db.collection("game_rooms").doc(room.id).update({ messages: trimmed });
+          setChatText(''); AudioEngine.msg();
+        } catch (e) {}
+      };
+
+      const handleTap = async (r, c) => {
+        if (!myTurn || room.status !== 'playing') return;
+        const piece = room.board[r][c];
+        if (selected && selected[0] === r && selected[1] === c) { setSelected(null); return; }
+        if (piece && pieceOwner(piece) === myOwner) { setSelected([r, c]); AudioEngine.tap(); return; }
+        if (selected) {
+          const moves = getMoves(room.board, selected[0], selected[1]);
+          const move = moves.find(m => m.to[0] === r && m.to[1] === c);
+          if (move) {
+            const newBoard = applyMove(room.board, selected, move, myOwner);
+            const opp = myOwner === 'H' ? 'G' : 'H';
+            const hasMoves = hasAnyMove(newBoard, opp);
+            const hasPieces = countPieces(newBoard, opp) > 0;
+            const winner = (!hasMoves || !hasPieces) ? (myOwner === 'H' ? 'host' : 'guest') : null;
+            if (move.type === 'jump') AudioEngine.capture(); else AudioEngine.move();
+            if (winner) AudioEngine.win();
+            await onMove(newBoard, winner);
+            setSelected(null);
+          }
+        }
+      };
+
+      const submitWithdraw = async () => {
+        if (!withdrawForm.bank || !withdrawForm.acc || !withdrawForm.name) return notify('Fill all fields', 'bad');
+        if (withdrawForm.acc.length < 10) return notify('Account must be 10 digits', 'bad');
+        setSubmitting(true);
+        try {
+          await db.collection("withdrawals").add({
+            userId: uid,
+            name: s.name || 'Hustler',
+            bankName: withdrawForm.bank,
+            accountNumber: withdrawForm.acc,
+            accountName: withdrawForm.name,
+            amountReal: Math.floor(room.stake * 2 * 0.7),
+            status: 'pending',
+            source: 'checkers_win',
+            createdAt: Date.now()
+          });
+          notify('Withdrawal requested! 24-48hrs ✅');
+          setWithdrawForm({ bank: '', acc: '', name: '' });
+        } catch (e) { notify('Failed: ' + e.message, 'bad'); }
+        setSubmitting(false);
+      };
+
+      // ===== FINISHED =====
+      if (room.status === 'finished') {
+        const iWon = (isHost && room.winner === 'host') || (!isHost && room.winner === 'guest');
+        const winAmt = Math.floor(room.stake * 2 * 0.7);
+        return h('div', { className: 'min-h-screen bg-[#08080B] text-white max-w-md mx-auto grid place-items-center p-6' },
+          h('div', { className: 'text-center w-full max-w-sm' },
+            h('div', { className: 'text-7xl mb-3' }, iWon ? '🏆' : '💀'),
+            h('div', { className: 'text-2xl font-black font-display ' + (iWon ? 'text-[#FFD60A]' : 'text-red-400') }, iWon ? 'YOU WIN!' : 'YOU LOSE'),
+            h('div', { className: 'text-3xl font-black tabular-nums mt-2 ' + (iWon ? 'text-[#22C55E]' : 'text-red-400') },
+              (iWon ? '+' : '-') + fmtAmt(iWon ? winAmt : room.stake)),
+            h('div', { className: 'text-[11px] text-white/50 mt-1' },
+              iWon ? (room.isReal ? 'Winnings added to Real Balance' : 'Fake cash added') : (room.forfeitedBy === uid ? 'You forfeited' : 'Opponent outsmarted you')),
+
+            iWon && room.isReal && h('div', { className: 'mt-6 rounded-2xl card-gradient p-4 text-left' },
+              h('div', { className: 'text-[11px] uppercase tracking-widest text-[#FFD60A] font-bold mb-2' }, '💸 Withdraw Winnings'),
+              h('div', { className: 'space-y-2' },
+                h('input', { placeholder: 'Bank (e.g. GTBank)', value: withdrawForm.bank, onChange: e => setWithdrawForm({...withdrawForm, bank: e.target.value}), className: 'w-full rounded-lg bg-white/[0.05] border border-white/10 px-3 py-2 text-[11px] font-bold text-white placeholder-white/30' }),
+                h('input', { placeholder: 'Account number', type: 'tel', value: withdrawForm.acc, onChange: e => setWithdrawForm({...withdrawForm, acc: e.target.value.replace(/\D/g,'').slice(0,10)}), className: 'w-full rounded-lg bg-white/[0.05] border border-white/10 px-3 py-2 text-[11px] font-bold text-white placeholder-white/30' }),
+                h('input', { placeholder: 'Account name', value: withdrawForm.name, onChange: e => setWithdrawForm({...withdrawForm, name: e.target.value}), className: 'w-full rounded-lg bg-white/[0.05] border border-white/10 px-3 py-2 text-[11px] font-bold text-white placeholder-white/30' })
+              ),
+              h('button', { onClick: submitWithdraw, disabled: submitting, className: 'w-full mt-2 py-2.5 rounded-lg bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black font-black text-[12px] active:scale-95 disabled:opacity-50' },
+                submitting ? 'Submitting...' : '📥 REQUEST WITHDRAWAL')
+            ),
+
+            h('button', { onClick: onLeave, className: 'mt-6 w-full py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[13px] active:scale-95' }, 'Back to Lobby')
+          )
+        );
+      }
+
+      // ===== PLAYING =====
+      const validMoves = selected ? getMoves(room.board, selected[0], selected[1]) : [];
+      const validTargets = new Set(validMoves.map(m => m.to[0] + ',' + m.to[1]));
+      const captures = new Set(validMoves.filter(m => m.type === 'jump').map(m => m.to[0] + ',' + m.to[1]));
+
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white max-w-md mx-auto flex flex-col' },
+        h('header', { className: 'px-3 py-2 border-b border-white/[0.06] flex items-center justify-between shrink-0' },
+          h('button', { onClick: () => setConfirmLeave(true), className: 'w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 grid place-items-center text-lg' }, '←'),
+          h('div', { className: 'flex-1 min-w-0 text-center' },
+            h('div', { className: 'text-[12px] font-black font-display text-[#FFD60A]' }, 'Naija Draft · ' + fmtAmt(room.stake)),
+            h('div', { className: 'text-[9px] ' + (myTurn ? 'text-[#22C55E]' : 'text-white/40') + ' flex items-center justify-center gap-1 mt-0.5' },
+              h('span', { className: 'w-1.5 h-1.5 rounded-full ' + (myTurn ? 'bg-[#22C55E] glow-dot animate-pulse' : 'bg-white/30') }),
+              myTurn ? 'YOUR TURN' : 'Waiting...'
+            )
+          ),
+          h('div', { className: 'text-[9px] text-white/60 text-right' },
+            h('div', { className: 'font-black text-[10px]' }, isHost ? 'HOST' : 'GUEST'))
+        ),
+
+        h('div', { className: 'px-3 py-1.5 bg-white/[0.03] border-b border-white/[0.05] flex items-center gap-2 text-[10px] shrink-0' },
+          h('div', { className: 'w-5 h-5 rounded-full grid place-items-center text-[9px] font-black text-black', style: { background: colorFromName(oppName) } }, initial(oppName)),
+          h('div', { className: 'font-bold text-white/70' }, oppName),
+          h('div', { className: 'ml-auto text-white/40' }, 'VS')
+        ),
+
+        h('div', { className: 'flex-1 min-h-0 overflow-y-auto' },
+          // board
+          h('div', { className: 'flex justify-center py-3 px-3' },
+            h('div', { className: 'rounded-xl overflow-hidden border-2 border-[#3a2a1a] shadow-[0_8px_32px_-8px_rgba(0,0,0,0.8)]', style: { width: 'min(92vw, 380px)', aspectRatio: '1/1' } },
+              h('div', { className: 'grid grid-cols-8 h-full' },
+                room.board.map((row, r) =>
+                  row.map((cell, c) => {
+                    const isDark = (r + c) % 2 === 1;
+                    const key = r + ',' + c;
+                    const isSel = selected && selected[0] === r && selected[1] === c;
+                    const isValid = validTargets.has(key);
+                    const isCap = captures.has(key);
+                    const owner = pieceOwner(cell);
+                    const king = isKing(cell);
+                    return h('button', {
+                      key: r + '-' + c,
+                      onClick: () => handleTap(r, c),
+                      className: 'relative ' + (isDark ? 'square-dark' : 'square-light') + ' ' +
+                        (isSel ? 'cell-selected ' : '') + (isValid && !isCap ? 'cell-valid ' : '') + (isCap ? 'cell-capture ' : '')
+                    },
+                      h('div', { className: 'absolute inset-0 grid place-items-center' },
+                        cell && h('div', {
+                          className: 'w-[78%] h-[78%] rounded-full relative flex items-center justify-center ' +
+                            (owner === 'H' ? 'piece-H' : 'piece-G') + ' ' + (king ? 'piece-king' : '')
+                        }, !king && h('div', { className: 'w-[35%] h-[35%] rounded-full bg-black/20' }))
+                      )
+                    );
+                  })
+                )
+              )
+            )
+          ),
+
+          // chat
+          h('div', { className: 'px-3 mt-3' },
+            h('div', { className: 'rounded-xl bg-white/[0.03] border border-white/[0.05] p-2 h-28 overflow-y-auto space-y-1' },
+              (room.messages || []).length === 0
+                ? h('div', { className: 'text-[10px] text-white/30 text-center py-8' }, 'Trash talk goes here 💬')
+                : room.messages.map((m, i) =>
+                    h('div', { key: i, className: 'text-[10px] leading-snug' },
+                      h('span', { className: 'font-black', style: { color: colorFromName(m.name) } }, m.name),
+                      h('span', { className: 'text-white/30 mx-1' }, '·'),
+                      h('span', { className: 'text-white/80' }, m.text))
+                  ),
+              h('div', { ref: chatEndRef })
+            )
+          ),
+
+          h('div', { className: 'px-3 py-2 flex gap-1.5 shrink-0' },
+            h('input', {
+              value: chatText, onChange: e => setChatText(e.target.value),
+              onKeyDown: e => { if (e.key === 'Enter') sendChat(); },
+              placeholder: 'Say something...', maxLength: 200,
+              className: 'flex-1 rounded-xl bg-white/[0.06] border border-white/10 px-3 py-2 text-[12px] text-white placeholder-white/30 focus:border-[#FFD60A]/50'
+            }),
+            h('button', { onClick: sendChat, disabled: !chatText.trim(), className: 'w-10 h-10 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] text-black font-black grid place-items-center active:scale-90 disabled:opacity-40' }, '➤')
+          )
+        ),
+
+        confirmLeave && h('div', { className: 'fixed inset-0 z-[200] grid place-items-center p-6' },
+          h('div', { className: 'absolute inset-0 bg-black/85 backdrop-blur-sm', onClick: () => setConfirmLeave(false) }),
+          h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-red-500/30 rounded-3xl p-5 text-center animate-popIn' },
+            h('div', { className: 'text-5xl mb-2' }, '⚠️'),
+            h('div', { className: 'text-[14px] font-black text-white font-display' }, 'Forfeit the match?'),
+            h('p', { className: 'text-[11px] text-white/50 mt-2 leading-relaxed' }, 'You lose your ' + fmtAmt(room.stake) + ' stake. No refund.'),
+            h('div', { className: 'mt-4 flex gap-2' },
+              h('button', { onClick: () => setConfirmLeave(false), className: 'flex-1 rounded-xl bg-white/[0.06] border border-white/10 py-3 text-[12px] font-bold text-white/70' }, 'Stay'),
+              h('button', { onClick: onLeave, className: 'flex-1 rounded-xl bg-gradient-to-b from-[#F87171] to-[#EF4444] py-3 text-[12px] font-black text-white' }, 'Leave'))
+          )
+        )
+      );
+    }
+
+    // ========== ERROR BOUNDARY ==========
+    class ErrorBoundary extends React.Component {
+      constructor(p) { super(p); this.state = { hasError: false, error: null }; }
+      static getDerivedStateFromError(e) { return { hasError: true, error: e }; }
+      componentDidCatch(e, i) { console.error('EB:', e, i); }
+      render() {
+        if (this.state.hasError) {
+          return h('div', { style: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, padding: 24, textAlign: 'center', background: '#08080B', color: '#F87171', fontFamily: 'monospace', fontSize: 12 } },
+            h('div', { style: { fontSize: 32 } }, '⚠️'),
+            h('div', { style: { fontWeight: 'bold' } }, 'Something went wrong'),
+            h('div', { style: { opacity: 0.6, wordBreak: 'break-word' } }, String(this.state.error?.message || 'Unknown')),
+            h('button', { style: { marginTop: 12, padding: '8px 16px', background: '#FFD60A', color: '#000', borderRadius: 8, fontWeight: 'bold' }, onClick: () => window.location.reload() }, 'Reload')
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(ErrorBoundary, null, h(App)));
+  </script>
+</body>
+</html>
