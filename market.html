@@ -61,6 +61,7 @@
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: #08080B; }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    a { -webkit-tap-highlight-color: transparent; text-decoration: none; }
     @keyframes badgePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
     .badge-owned { animation: badgePulse 2s ease-in-out infinite; }
     @keyframes shine { 0% { transform: translateX(-100%) skewX(-15deg); } 100% { transform: translateX(200%) skewX(-15deg); } }
@@ -106,7 +107,6 @@
     const ENERGY_MS = 5 * 60 * 1000;
     const NPC_SELL_PCT = 0.6;
 
-    // 🆕 Campaign/Auction/Mystery config
     const MYSTERY_BOX_COST = 50_000_000_000;
     const MIN_REWARD_PER_FOLLOW = 100_000_000_000;
     const FLASH_DISCOUNT = 0.5;
@@ -120,7 +120,6 @@
     ];
 
     const ASSETS = [
-      // STREET FLEX
       { id: 'af1', name: 'Air Force 1', emoji: '👟', price: 500_000, tier: 'Starter', color: 'from-gray-400/20 to-gray-700/10', cat: 'Street Flex', desc: 'White on white. Clean. But if you step on my shoe, e go be fight!' },
       { id: 'shades', name: 'Designer Shades', emoji: '🕶️', price: 2_000_000, tier: 'Baller', color: 'from-black/40 to-gray-800/20', cat: 'Street Flex', desc: 'To hide your eyes from haters and police.' },
       { id: 'chain', name: 'Gold Chain', emoji: '📿', price: 20_000_000, tier: 'Starter', color: 'from-yellow-500/20 to-yellow-700/10', cat: 'Street Flex', desc: 'Heavy neck, heavy pockets.' },
@@ -129,7 +128,6 @@
       { id: 'rolex', name: 'Rolex', emoji: '⌚', price: 250_000_000, tier: 'Baller', color: 'from-amber-400/25 to-amber-700/10', cat: 'Street Flex', desc: 'Time is money. But make e no be fake.' },
       { id: 'agbero_army', name: 'Personal Agbero Army', emoji: '🦍', price: 500_000_000, tier: 'Big Boy', color: 'from-slate-400/20 to-slate-700/10', cat: 'Street Flex', desc: '5 agberos to collect tax for you.' },
 
-      // WOMEN'S FLEX
       { id: 'nail_polish', name: 'Gel Nails Set', emoji: '💅', price: 400_000, tier: 'Starter', color: 'from-pink-400/20 to-pink-700/10', cat: "Women's Flex", desc: 'Fresh nails for the gram.' },
       { id: 'lipstick', name: 'Louboutin Lipstick', emoji: '💄', price: 800_000, tier: 'Starter', color: 'from-red-400/20 to-red-700/10', cat: "Women's Flex", desc: 'Red-bottom lipstick.' },
       { id: 'teddy_bear', name: 'Giant Teddy Bear', emoji: '🧸', price: 1_500_000, tier: 'Starter', color: 'from-amber-300/20 to-amber-700/10', cat: "Women's Flex", desc: 'For the babe wey sabi enjoy soft life.' },
@@ -145,7 +143,6 @@
       { id: 'jewelry_set', name: 'Diamond Jewelry Set', emoji: '💎', price: 25_000_000_000, tier: 'Legend', color: 'from-cyan-400/20 to-cyan-700/10', cat: "Women's Flex", desc: 'All real diamonds.' },
       { id: 'handbag_set', name: 'Handbag Collection', emoji: '🛍️', price: 50_000_000_000, tier: 'Legend', color: 'from-rose-400/20 to-rose-700/10', cat: "Women's Flex", desc: 'Birkin, Kelly, Chanel.' },
 
-      // RIDES
       { id: 'honda', name: 'Honda Accord', emoji: '🚗', price: 60_000_000, tier: 'Sharp', color: 'from-slate-400/20 to-slate-700/10', cat: 'Rides', desc: 'End of discussion.' },
       { id: 'camry', name: 'Toyota Camry', emoji: '🚘', price: 120_000_000, tier: 'Sharp', color: 'from-gray-400/20 to-gray-700/10', cat: 'Rides', desc: 'Muscle car for the big boys.' },
       { id: 'traffic_lane', name: 'Private Traffic Lane', emoji: '🛣️', price: 2_500_000_000, tier: 'Odogwu', color: 'from-gray-400/20 to-gray-700/10', cat: 'Rides', desc: 'Bypass Lagos traffic permanently.' },
@@ -154,7 +151,6 @@
       { id: 'rr', name: 'Range Rover', emoji: '🚐', price: 75_000_000_000, tier: 'Odogwu', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Rides', desc: 'The official car of the rich.' },
       { id: 'lambo', name: 'Lamborghini', emoji: '🏎️', price: 250_000_000_000, tier: 'Aje', color: 'from-yellow-400/20 to-yellow-700/10', cat: 'Rides', desc: 'Scissor doors. Pure flex.' },
 
-      // REAL ESTATE
       { id: 'landlord_house', name: 'Lagos Landlord Special', emoji: '🏚️', price: 250_000_000, tier: 'Sharp', color: 'from-slate-400/20 to-slate-700/10', cat: 'Real Estate', desc: 'Face-me-I-face-you.' },
       { id: 'lekki_flat', name: 'Lekki 2-Bedroom', emoji: '🏢', price: 500_000_000, tier: 'Baller', color: 'from-amber-400/20 to-amber-700/10', cat: 'Real Estate', desc: 'Where the tech bros live.' },
       { id: 'ikeja_duplex', name: 'Ikeja Duplex', emoji: '🏡', price: 1_500_000_000, tier: 'Big Boy', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Real Estate', desc: 'Close to the airport.' },
@@ -163,7 +159,6 @@
       { id: 'lekki_bridge', name: 'Lekki-Ikoyi Bridge', emoji: '🌉', price: 2_500_000_000_000, tier: 'Legend', color: 'from-blue-400/20 to-blue-700/10', cat: 'Real Estate', desc: 'You own the toll gate now.' },
       { id: 'mansion', name: 'Banana Island Mansion', emoji: '🏰', price: 5_000_000_000_000, tier: 'Legend', color: 'from-pink-400/20 to-pink-700/10', cat: 'Real Estate', desc: 'The ultimate Lagos dream.' },
 
-      // AJE STATUS
       { id: 'chef', name: 'Private Chef', emoji: '👨🏾‍🍳', price: 250_000_000, tier: 'Baller', color: 'from-white/20 to-gray-700/10', cat: 'Aje Status', desc: 'Breakfast, lunch and dinner.' },
       { id: 'bodyguard', name: 'Personal Bodyguard', emoji: '💪🏾', price: 750_000_000, tier: 'Big Boy', color: 'from-red-400/20 to-red-700/10', cat: 'Aje Status', desc: 'Keep the area boys away.' },
       { id: 'plate', name: 'Custom Plate Number', emoji: '🔠', price: 1_000_000_000, tier: 'Sharp', color: 'from-blue-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'E.g. "BIG-BOY-1".' },
@@ -306,27 +301,23 @@
       const [showSortMenu, setShowSortMenu] = useState(false);
       const [now, setNow] = useState(Date.now());
 
-      // P2P
       const [listings, setListings] = useState([]);
       const [sellModal, setSellModal] = useState(false);
       const [sellAsset, setSellAsset] = useState(null);
       const [sellPrice, setSellPrice] = useState("");
       const [isTransacting, setIsTransacting] = useState(false);
 
-      // Bulk buy
       const [buyModal, setBuyModal] = useState(false);
       const [bulkBuyAsset, setBulkBuyAsset] = useState(null);
 
-      // 🆕 TikTok Campaigns
       const [campaigns, setCampaigns] = useState([]);
       const [createCampaignModal, setCreateCampaignModal] = useState(false);
       const [newTiktokUrl, setNewTiktokUrl] = useState("");
-      const [newHandle, setNewHandle] = useState("");
       const [newSlots, setNewSlots] = useState(100);
       const [newReward, setNewReward] = useState(1_000_000_000_000);
-      const [claimingCampaign, setClaimingCampaign] = useState(null);
+      // 🆕 Track in-flight claims to prevent double-click
+      const inFlightClaims = useRef(new Set());
 
-      // 🆕 Auctions
       const [auctions, setAuctions] = useState([]);
       const [auctionModal, setAuctionModal] = useState(false);
       const [auctionAsset, setAuctionAsset] = useState(null);
@@ -335,7 +326,6 @@
       const [bidModal, setBidModal] = useState(null);
       const [bidAmount, setBidAmount] = useState("");
 
-      // 🆕 Mystery Box
       const [mysteryModal, setMysteryModal] = useState(false);
       const [mysteryResult, setMysteryResult] = useState(null);
       const [isOpeningBox, setIsOpeningBox] = useState(false);
@@ -403,7 +393,6 @@
         return () => unsub();
       }, []);
 
-      // 🆕 Campaigns listener
       useEffect(() => {
         const unsub = db.collection("tiktok_campaigns").orderBy("createdAt", "desc").limit(30).onSnapshot((snap) => {
           const items = [];
@@ -413,15 +402,13 @@
         return () => unsub();
       }, []);
 
-      // 🆕 Auctions listener + auto-settle
       useEffect(() => {
         const unsub = db.collection("auctions").orderBy("createdAt", "desc").limit(30).onSnapshot((snap) => {
           const items = [];
           snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
           setAuctions(items);
-          // Auto-settle expired auctions
-          const now = Date.now();
-          items.filter(a => a.status === 'active' && a.endsAt < now).forEach(async (auction) => {
+          const nowT = Date.now();
+          items.filter(a => a.status === 'active' && a.endsAt < nowT).forEach(async (auction) => {
             try {
               await db.runTransaction(async (t) => {
                 const aRef = db.collection("auctions").doc(auction.id);
@@ -501,7 +488,6 @@
       const netWorth = Math.floor((s.cash || 0) + bizValue + assetValue);
       const ownedCount = Object.values(safeAssets).reduce((a, c) => a + c, 0);
 
-      // 🆕 Flash deal — per hour
       const currentHourSeed = Math.floor(now / 3600000);
       const lastFlashHour = Math.floor((s.flashDealBoughtAt || 0) / 3600000);
       const canBuyFlash = currentHourSeed > lastFlashHour;
@@ -720,7 +706,6 @@
         }
       };
 
-      // 🆕 TikTok Campaign functions
       const parseTiktokUrl = (url) => {
         if (!url) return { handle: '', fullUrl: '' };
         let handle = url;
@@ -768,7 +753,6 @@
           logHistory('TikTok Campaign', 'Created campaign for ' + parsed.handle, -totalCost);
           setCreateCampaignModal(false);
           setNewTiktokUrl('');
-          setNewHandle('');
           setViewMode('tiktok');
         } catch (e) {
           console.error(e);
@@ -776,10 +760,14 @@
         }
       };
 
+      // ✅ ONE-TAP CLAIM — fires immediately on link click, no modal
       const claimCampaign = async (campaign) => {
+        if (!uid) return;
         if (campaign.creatorId === uid) return notify('You cannot claim your own campaign', 'bad');
-        if ((campaign.claimedBy || []).includes(uid)) return notify('You already claimed this', 'bad');
+        if ((campaign.claimedBy || []).includes(uid)) return notify('You already claimed this ✅', 'bad');
         if (campaign.claimedSlots >= campaign.totalSlots) return notify('All slots filled!', 'bad');
+        if (inFlightClaims.current.has(campaign.id)) return;
+        inFlightClaims.current.add(campaign.id);
 
         try {
           await db.runTransaction(async (t) => {
@@ -787,7 +775,7 @@
             const doc = await t.get(campRef);
             if (!doc.exists) throw new Error("Campaign not found");
             const data = doc.data();
-            if (data.claimedBy?.includes(uid)) throw new Error("Already claimed");
+            if (data.claimedBy?.includes(uid)) throw new Error("You already claimed this");
             if (data.claimedSlots >= data.totalSlots) throw new Error("Slots full");
 
             const userRef = db.collection("users").doc(uid);
@@ -798,12 +786,13 @@
             });
           });
           AudioEngine.jackpot();
-          notify('🎉 Claimed ' + fmt(campaign.rewardPerFollow) + '!');
+          notify('🎉 You earned ' + fmt(campaign.rewardPerFollow) + '!');
           logHistory('TikTok Campaign', 'Followed ' + campaign.tiktokHandle, campaign.rewardPerFollow);
-          setClaimingCampaign(null);
         } catch(e) {
           console.error(e);
           notify(e.message || 'Claim failed', 'bad');
+        } finally {
+          inFlightClaims.current.delete(campaign.id);
         }
       };
 
@@ -830,7 +819,6 @@
         }
       };
 
-      // 🆕 Auction functions
       const createAuction = async (asset, startingBid, duration) => {
         if ((safeAssets[asset.id] || 0) < 1) return notify('You do not own this', 'bad');
         if (startingBid < 1000) return notify('Min bid ₦1,000', 'bad');
@@ -911,7 +899,6 @@
         }
       };
 
-      // 🆕 Mystery Box
       const openMysteryBox = async () => {
         if ((s.cash || 0) < MYSTERY_BOX_COST) { AudioEngine.error(); return notify('Need ' + fmt(MYSTERY_BOX_COST), 'bad'); }
         setIsOpeningBox(true);
@@ -974,11 +961,10 @@
       const activeAuctions = auctions.filter(a => a.status === 'active' && a.endsAt > now);
       const activeCampaigns = campaigns.filter(c => c.claimedSlots < c.totalSlots && c.expiresAt > now);
 
-      // Hero value per view
       let heroValue = '', heroLabel = '', heroSub = '', heroEmoji = '';
       if (viewMode === 'store') { heroValue = fmt(assetValue); heroLabel = 'Your Asset Value'; heroSub = ownedCount + ' assets · ' + wishlist.length + ' wishlisted'; heroEmoji = '🛒'; }
       else if (viewMode === 'player') { heroValue = listings.length + ' Listings'; heroLabel = 'Player Market'; heroSub = 'Buy from other players'; heroEmoji = '🤝'; }
-      else if (viewMode === 'tiktok') { heroValue = activeCampaigns.length + ' Live'; heroLabel = 'TikTok Campaigns'; heroSub = 'Earn cash for following'; heroEmoji = '🎵'; }
+      else if (viewMode === 'tiktok') { heroValue = activeCampaigns.length + ' Live'; heroLabel = 'TikTok Campaigns'; heroSub = 'Tap any card → follow → get paid instantly'; heroEmoji = '🎵'; }
       else { heroValue = activeAuctions.length + ' Live'; heroLabel = 'Auction House'; heroSub = 'Bid or list your assets'; heroEmoji = '🔨'; }
 
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
@@ -1007,7 +993,6 @@
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
 
-            // 4 view modes
             h('div', { className: 'mt-3 grid grid-cols-4 gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06]' },
               [
                 { id: 'store', label: '🏪 NPC' },
@@ -1024,7 +1009,6 @@
               )
             ),
 
-            // Hero
             h(Card, { className: 'relative overflow-hidden p-4 mt-3 hero-grid', gold: true },
               h('div', { className: 'absolute -top-16 -right-12 w-48 h-48 rounded-full bg-[#FFD60A]/25 blur-3xl pointer-events-none' }),
               h('div', { className: 'relative' },
@@ -1037,7 +1021,6 @@
               )
             ),
 
-            // 🆕 FLASH DEAL (store view only)
             viewMode === 'store' && h('div', { className: 'mt-3 relative overflow-hidden rounded-2xl flash-gradient p-[1px] animate-glow' },
               h('div', { className: 'rounded-2xl bg-[#121218] p-3 relative overflow-hidden' },
                 h('div', { className: 'flex items-center gap-3' },
@@ -1060,7 +1043,6 @@
               )
             ),
 
-            // 🆕 MYSTERY BOX (store view only)
             viewMode === 'store' && h('button', {
               onClick: () => setMysteryModal(true),
               className: 'mt-2 w-full text-left'
@@ -1078,7 +1060,6 @@
               )
             ),
 
-            // Feed marquee
             h('div', { className: 'mt-3 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center gap-2 overflow-hidden' },
               h('span', { className: 'text-sm shrink-0 animate-pulse' }, '📡'),
               h('div', { className: 'flex-1 overflow-hidden relative h-5' },
@@ -1086,7 +1067,7 @@
               )
             ),
 
-            // ========== STORE VIEW ==========
+            // ===== STORE =====
             viewMode === 'store' && h('div', null,
               h('div', { className: 'mt-4 flex gap-2' },
                 h('div', { className: 'flex-1 flex items-center bg-white/[0.05] border border-white/10 rounded-xl px-3' },
@@ -1191,7 +1172,7 @@
                 )
             ),
 
-            // ========== PLAYER VIEW ==========
+            // ===== P2P =====
             viewMode === 'player' && h('div', { className: 'mt-4 space-y-2.5' },
               listings.length === 0 ?
                 h('div', { className: 'text-center text-white/40 text-[11px] py-10' },
@@ -1221,13 +1202,13 @@
                 })
             ),
 
-            // ========== TIKTOK VIEW ==========
+            // ===== TIKTOK — ONE-TAP CLAIM =====
             viewMode === 'tiktok' && h('div', { className: 'mt-4' },
               h('button', {
                 onClick: () => setCreateCampaignModal(true),
                 className: 'w-full rounded-2xl tiktok-gradient p-3 text-white font-black text-[13px] active:scale-95 transition flex items-center justify-center gap-2 shadow-[0_8px_24px_-8px_rgba(254,44,85,0.7)] font-display'
               }, '✨ CREATE TIKTOK CAMPAIGN'),
-              h('div', { className: 'mt-3 text-[10px] text-white/50 text-center px-4' }, 'Pay to promote your TikTok. Hustlers follow you and earn cash. Win-win. 💰'),
+              h('div', { className: 'mt-3 text-[10px] text-white/50 text-center px-4' }, 'Tap any card below → opens TikTok → you get paid instantly. Once per campaign. 💰'),
               activeCampaigns.length === 0 ?
                 h('div', { className: 'text-center text-white/40 text-[11px] py-10 mt-4' },
                   h('div', { className: 'text-5xl mb-3' }, '🎵'),
@@ -1240,10 +1221,13 @@
                     const hasClaimed = (c.claimedBy || []).includes(uid);
                     const slotsLeft = c.totalSlots - c.claimedSlots;
                     const pct = (c.claimedSlots / c.totalSlots) * 100;
-                    return h(Card, { key: c.id, className: 'p-3 relative overflow-hidden' },
-                      h('div', { className: 'absolute top-0 right-0 text-[8px] font-black tiktok-gradient text-white px-2 py-1 rounded-bl-lg' }, isMine ? 'YOURS' : 'EARN ' + fmt(c.rewardPerFollow)),
-                      h('div', { className: 'flex items-center gap-3' },
-                        h('div', { className: 'w-12 h-12 rounded-xl tiktok-gradient grid place-items-center text-2xl shrink-0' }, '🎵'),
+
+                    const innerContent = [
+                      h('div', { key: 'badge', className: 'absolute top-0 right-0 text-[8px] font-black tiktok-gradient text-white px-2 py-1 rounded-bl-lg' },
+                        isMine ? 'YOURS' : hasClaimed ? 'CLAIMED ✅' : 'EARN ' + fmt(c.rewardPerFollow)
+                      ),
+                      h('div', { key: 'body', className: 'flex items-center gap-3' },
+                        h('div', { className: 'w-12 h-12 rounded-xl tiktok-gradient grid place-items-center text-2xl shrink-0' }, hasClaimed ? '✅' : '🎵'),
                         h('div', { className: 'flex-1 min-w-0' },
                           h('div', { className: 'text-[12px] font-extrabold truncate font-display' }, c.tiktokHandle),
                           h('div', { className: 'text-[9px] text-white/50' }, 'by ' + c.creatorName),
@@ -1256,17 +1240,43 @@
                           )
                         ),
                         isMine ?
-                          h('button', { onClick: () => cancelCampaign(c), className: 'shrink-0 text-[10px] font-black bg-red-500/20 text-red-400 px-2 py-2 rounded-lg active:scale-95' }, 'CANCEL') :
+                          h('button', { key: 'act', onClick: (e) => { e.preventDefault(); e.stopPropagation(); cancelCampaign(c); }, className: 'shrink-0 text-[10px] font-black bg-red-500/20 text-red-400 px-2 py-2 rounded-lg active:scale-95' }, 'CANCEL') :
                           hasClaimed ?
-                            h('div', { className: 'shrink-0 text-[10px] font-black text-[#22C55E] px-2 py-2' }, '✅') :
-                            h('button', { onClick: () => setClaimingCampaign(c), className: 'shrink-0 text-[10px] font-black bg-gradient-to-b from-[#25F4EE] to-[#FE2C55] text-white px-2.5 py-2 rounded-lg active:scale-95' }, 'GO')
+                            h('div', { key: 'act', className: 'shrink-0 text-[10px] font-black text-[#22C55E] px-2 py-2' }, '✅') :
+                            h('div', { key: 'act', className: 'shrink-0 text-[10px] font-black bg-gradient-to-b from-[#25F4EE] to-[#FE2C55] text-white px-2.5 py-2 rounded-lg text-center' }, 'GO')
                       )
-                    );
+                    ];
+
+                    // Owner — plain div, no tap
+                    if (isMine) {
+                      return h('div', {
+                        key: c.id,
+                        className: 'rounded-2xl card-gradient p-3 relative overflow-hidden'
+                      }, innerContent);
+                    }
+
+                    // Already claimed — locked, dimmed, plain div
+                    if (hasClaimed) {
+                      return h('div', {
+                        key: c.id,
+                        className: 'rounded-2xl card-gradient p-3 relative overflow-hidden opacity-70'
+                      }, innerContent);
+                    }
+
+                    // Available — <a> tag: tap = open TikTok + claim + lock
+                    return h('a', {
+                      key: c.id,
+                      href: c.tiktokUrl,
+                      target: '_blank',
+                      rel: 'noopener noreferrer',
+                      onClick: () => claimCampaign(c),
+                      className: 'block rounded-2xl card-gradient p-3 relative overflow-hidden cursor-pointer active:scale-[0.99] transition'
+                    }, innerContent);
                   })
                 )
             ),
 
-            // ========== AUCTION VIEW ==========
+            // ===== AUCTION =====
             viewMode === 'auction' && h('div', { className: 'mt-4' },
               h('div', { className: 'text-[10px] text-white/50 text-center px-4 mb-3' }, 'List an asset for auction. Highest bidder wins when timer ends. 🔨'),
               activeAuctions.length === 0 ?
@@ -1318,7 +1328,7 @@
             )
           ),
 
-          // ===== BULK BUY MODAL =====
+          // BULK BUY MODAL
           buyModal && bulkBuyAsset && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setBuyModal(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 animate-popIn text-center' },
@@ -1345,7 +1355,7 @@
             )
           ),
 
-          // ===== SELL MODAL (with AUCTION option) =====
+          // SELL MODAL
           sellModal && sellAsset && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => !isTransacting && setSellModal(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 animate-popIn' },
@@ -1385,7 +1395,7 @@
             )
           ),
 
-          // ===== CREATE CAMPAIGN MODAL =====
+          // CREATE CAMPAIGN MODAL
           createCampaignModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setCreateCampaignModal(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FE2C55]/30 rounded-3xl p-5 animate-popIn' },
@@ -1448,33 +1458,7 @@
             )
           ),
 
-          // ===== CLAIM CAMPAIGN MODAL =====
-          claimingCampaign && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
-            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setClaimingCampaign(null) }),
-            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FE2C55]/30 rounded-3xl p-5 animate-popIn text-center' },
-              h('div', { className: 'text-5xl mb-2' }, '🎵'),
-              h('div', { className: 'text-[14px] font-black font-display text-white' }, claimingCampaign.tiktokHandle),
-              h('div', { className: 'text-[11px] text-white/50 mt-1' }, 'by ' + claimingCampaign.creatorName),
-              h('div', { className: 'my-4 px-3 py-2 rounded-xl bg-[#22C55E]/15 border border-[#22C55E]/30' },
-                h('div', { className: 'text-[9px] uppercase tracking-widest text-white/50 font-bold' }, 'You Will Earn'),
-                h('div', { className: 'text-[18px] font-black text-[#22C55E] tabular-nums font-display' }, fmt(claimingCampaign.rewardPerFollow))
-              ),
-              h('p', { className: 'text-[11px] text-white/60 mb-3' }, '1. Tap "Open TikTok" below. 2. Follow the account. 3. Come back and claim.'),
-              h('div', { className: 'space-y-2' },
-                h('button', {
-                  onClick: () => { window.open(claimingCampaign.tiktokUrl, '_blank', 'noopener,noreferrer'); notify('Open TikTok → follow → come back', 'good'); },
-                  className: 'w-full py-3 rounded-xl tiktok-gradient text-white text-[12px] font-black active:scale-95'
-                }, '🔗 Open TikTok & Follow'),
-                h('button', {
-                  onClick: () => claimCampaign(claimingCampaign),
-                  className: 'w-full py-3 rounded-xl bg-gradient-to-b from-[#22C55E] to-[#16A34A] text-black text-[12px] font-black active:scale-95'
-                }, '✅ I Followed — Claim ' + fmt(claimingCampaign.rewardPerFollow)),
-                h('button', { onClick: () => setClaimingCampaign(null), className: 'w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 text-[11px] font-bold' }, 'Cancel')
-              )
-            )
-          ),
-
-          // ===== CREATE AUCTION MODAL =====
+          // CREATE AUCTION MODAL
           auctionModal && auctionAsset && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setAuctionModal(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FF6B00]/30 rounded-3xl p-5 animate-popIn' },
@@ -1519,7 +1503,7 @@
             )
           ),
 
-          // ===== BID MODAL =====
+          // BID MODAL
           bidModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setBidModal(null) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FF6B00]/30 rounded-3xl p-5 animate-popIn' },
@@ -1556,7 +1540,7 @@
             )
           ),
 
-          // ===== MYSTERY BOX MODAL =====
+          // MYSTERY BOX MODAL
           mysteryModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => { if (!isOpeningBox) { setMysteryModal(false); setMysteryResult(null); } } }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#A855F7]/40 rounded-3xl p-5 animate-popIn text-center' },
