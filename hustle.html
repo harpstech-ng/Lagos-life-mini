@@ -35,7 +35,9 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    /* ✅ SCROLL FIX 1: Split html/body, use 'contain' instead of 'none', add iOS momentum */
+    html { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: contain; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; -webkit-overflow-scrolling: touch; }
     body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent); }
     ::-webkit-scrollbar { width: 0; height: 0; }
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
@@ -64,7 +66,8 @@
     .confetti-piece { position: fixed; top: 0; width: 10px; height: 10px; border-radius: 2px; pointer-events: none; z-index: 9999; animation: confettiFall 2.5s linear forwards; }
     .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
-    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    /* ✅ SCROLL FIX 2: Removed backdrop-filter blur from nav — this was killing Android scroll */
+    .nav-backdrop { background: #08080B; }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
     
     .sapa-btn { background: radial-gradient(circle at 30% 20%, #6b7280 0%, #4b5563 35%, #374151 70%, #1f2937 100%); box-shadow: 0 0 0 1px rgba(255,255,255,0.1) inset, 0 -8px 0 rgba(0,0,0,0.25) inset, 0 12px 0 rgba(0,0,0,0.55), 0 20px 50px -10px rgba(0,0,0,0.8); }
@@ -105,7 +108,8 @@
     const BASE_TAP = 500;
     const EVENT_CHANCE = 0.055;
 
-    const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/LMbBqxYsoZUEkTC4PbbzA7';
+    /* ✅ Updated WhatsApp group link */
+    const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/DLTh6m6oyUBBIbmk1dS8Um?s=cl&p=i&mlu=4&ilr=4&iam=2';
     const WHATSAPP_CHANNEL_URL = 'https://whatsapp.com/channel/0029VbBlJUeFy72KIFuQoP38';
 
     const COMBO_WINDOW_MS = 800;
@@ -113,27 +117,30 @@
     const COMBO_MAX = 5;
 
     const SPIN_COOLDOWN_MS = 60 * 60 * 1000;
+    /* ✅ Spin prizes: 500k+ multiplied ×5 */
     const SPIN_PRIZES = [
-      { amount: 50000,   chance: 30 },
-      { amount: 100000,  chance: 25 },
-      { amount: 250000,  chance: 20 },
-      { amount: 500000,  chance: 15 },
-      { amount: 1000000, chance: 7 },
-      { amount: 5000000, chance: 2.5 },
-      { amount: 50000000, chance: 0.5 },
+      { amount: 50000,     chance: 30 },
+      { amount: 100000,    chance: 25 },
+      { amount: 250000,    chance: 20 },
+      { amount: 2500000,   chance: 15 },  // was 500000
+      { amount: 5000000,   chance: 7 },   // was 1000000
+      { amount: 25000000,  chance: 2.5 }, // was 5000000
+      { amount: 250000000, chance: 0.5 }, // was 50000000
     ];
 
-    const DAILY_REWARDS = [10000, 25000, 50000, 100000, 250000, 500000, 1000000];
+    /* ✅ Daily rewards: Day 6 & 7 multiplied ×5 */
+    const DAILY_REWARDS = [10000, 25000, 50000, 100000, 250000, 2500000, 5000000];
     const BOSS_DURATION_MS = 15000;
     const BOSS_MAX_HP = 100;
     const BOSS_REWARD_PER_HIT = 3000;
-    const BOSS_KILL_BONUS = 500000;
+    const BOSS_KILL_BONUS = 2500000; // was 500000 — ✅ ×5
     const BOSS_COOLDOWN_MS = 5 * 60 * 1000;
 
+    /* ✅ Boosts: 500k+ multiplied ×5 */
     const BOOSTS = [
-      { id: 'x2', mult: 2, duration: 5 * 60 * 1000, cost: 200000, label: '2x Tap', durLabel: '5 min' },
-      { id: 'x3', mult: 3, duration: 5 * 60 * 1000, cost: 500000, label: '3x Tap', durLabel: '5 min' },
-      { id: 'x5', mult: 5, duration: 3 * 60 * 1000, cost: 1500000, label: '5x Tap', durLabel: '3 min' },
+      { id: 'x2', mult: 2, duration: 5 * 60 * 1000, cost: 200000,  label: '2x Tap', durLabel: '5 min' },
+      { id: 'x3', mult: 3, duration: 5 * 60 * 1000, cost: 2500000, label: '3x Tap', durLabel: '5 min' }, // was 500000
+      { id: 'x5', mult: 5, duration: 3 * 60 * 1000, cost: 7500000, label: '5x Tap', durLabel: '3 min' }, // was 1500000
     ];
 
     const BIZ_PER_HR = { water: 2_000, suya: 40_000, keke: 75_000, phone: 350_000, danfo: 800_000, wash: 4_000_000, bet9ja: 9_000_000, lounge: 90_000_000, oil: 1_000_000_000 };
@@ -367,7 +374,6 @@
       const [hasJoinedWA, setHasJoinedWA] = useState(localStorage.getItem('joined_wa_group') === 'true');
       const [hasJoinedChannel, setHasJoinedChannel] = useState(localStorage.getItem('joined_wa_channel') === 'true');
 
-      // New feature states
       const [comboMult, setComboMult] = useState(1);
       const [spinOpen, setSpinOpen] = useState(false);
       const [isSpinning, setIsSpinning] = useState(false);
@@ -387,6 +393,8 @@
       const comboRef = useRef({ lastTap: 0, count: 0, timer: null });
       const bossTimerRef = useRef(null);
       const bossIntervalRef = useRef(null);
+      /* ✅ SCROLL FIX 3: touchStart for swipe-vs-tap detection on big button */
+      const touchStart = useRef({ x: 0, y: 0, isScroll: false });
 
       useEffect(() => {
         const iv = setInterval(() => setNow(Date.now()), 1000);
@@ -554,23 +562,19 @@
       const TAP_VALUE = BASE_TAP + tapBonus;
       const currentRank = [...STREET_RANKS].reverse().find(r => (s.taps || 0) >= r.min) || STREET_RANKS[0];
 
-      // Boost
       const boostActive = (s.boostUntil || 0) > Date.now();
       const boostMult = boostActive ? (s.boostMult || 1) : 1;
       const boostRemaining = boostActive ? (s.boostUntil - Date.now()) : 0;
 
-      // Spin
       const spinCooldownLeft = Math.max(0, SPIN_COOLDOWN_MS - (Date.now() - (s.lastSpinAt || 0)));
       const canSpin = spinCooldownLeft === 0;
 
-      // Daily
       const todayStr = new Date().toISOString().slice(0, 10);
       const yesterdayStr = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
       const canClaimDaily = s.lastClaimDate !== todayStr;
       const nextStreak = s.lastClaimDate === yesterdayStr ? (s.streakCount || 0) + 1 : 1;
       const dailyRewardAmount = DAILY_REWARDS[Math.min(nextStreak - 1, DAILY_REWARDS.length - 1)];
 
-      // Boss
       const bossCooldownLeft = Math.max(0, BOSS_COOLDOWN_MS - (Date.now() - (s.lastBossAt || 0)));
       const canFightBoss = bossCooldownLeft === 0;
 
@@ -646,7 +650,6 @@
         setEvent(EVENTS[Math.floor(Math.random() * EVENTS.length)]);
       };
 
-      // ===== JOIN WHATSAPP GROUP (replaces watch ad) =====
       const joinWAGroup = () => {
         if (hasJoinedWA) return notify('You already claimed this bonus!', 'bad');
         try { window.open(WHATSAPP_GROUP_URL, '_blank', 'noopener,noreferrer'); } catch(e) {}
@@ -697,7 +700,6 @@
         notify('Scam! You just paid processing fee for fake alert 😭', 'bad');
       };
 
-      // ===== LUCKY SPIN =====
       const handleSpin = () => {
         if (isSpinning) return;
         if (!canSpin) return notify('Spin dey cool down: ' + mmss(spinCooldownLeft), 'bad');
@@ -715,12 +717,11 @@
           setSpinResult(prize);
           setIsSpinning(false);
           updateUser({ cash: s.cash + prize, lastSpinAt: Date.now() });
-          if (prize >= 1000000) { AudioEngine.jackpot(); fireConfetti(); }
+          if (prize >= 5000000) { AudioEngine.jackpot(); fireConfetti(); }
           else AudioEngine.coin();
         }, 2000);
       };
 
-      // ===== DAILY STREAK =====
       const claimDaily = () => {
         if (!canClaimDaily) return notify('Come back tomorrow 😴', 'bad');
         const reward = dailyRewardAmount;
@@ -736,7 +737,6 @@
         notify('Day ' + newStreak + ' claimed! +' + fmt(reward));
       };
 
-      // ===== BOSS FIGHT =====
       const startBossFight = () => {
         if (!canFightBoss) return notify('Boss dey recover: ' + mmss(bossCooldownLeft), 'bad');
         setBossOpen(true);
@@ -779,10 +779,9 @@
         setBossHits(0);
         if (killed) { AudioEngine.jackpot(); fireConfetti(); }
         else AudioEngine.coin();
-        notify((killed ? '🏆 BOSS KILLED! ' : 'Boss survived. ') + '+' + fmt(totalReward), killed ? 'good' : 'good');
+        notify((killed ? '🏆 BOSS KILLED! ' : 'Boss survived. ') + '+' + fmt(totalReward), 'good');
       };
 
-      // ===== BOOST SHOP =====
       const buyBoost = (b) => {
         if (s.cash < b.cost) { AudioEngine.error(); return notify('You no get ' + fmt(b.cost), 'bad'); }
         updateUser({
@@ -809,7 +808,8 @@
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
         h(Confetti, { trigger: confettiTrigger }),
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
-          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+          /* ✅ SCROLL FIX 4: Removed backdrop-blur-xl from sticky header */
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B] border-b border-white/[0.06]' },
             h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
               h('div', { className: 'flex items-center gap-2 min-w-0' },
                 h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display' }, 'L'),
@@ -825,7 +825,6 @@
             )
           ),
 
-          // Active boost banner
           boostActive && h('div', { className: 'mx-4 mt-3 px-3 py-2 rounded-xl bg-gradient-to-r from-[#FF6B00]/25 to-[#FF0055]/25 border border-[#FF6B00]/40 flex items-center justify-between' },
             h('div', { className: 'flex items-center gap-2' },
               h('span', { className: 'text-lg animate-pulse' }, '⚡'),
@@ -861,8 +860,21 @@
                 comboMult > 1 && h('div', { 
                   className: 'absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-[#FF6B00] to-[#FF0055] text-white text-[12px] font-black shadow-lg animate-popIn whitespace-nowrap z-20'
                 }, '🔥 ' + comboMult.toFixed(1) + 'x COMBO'),
+                /* ✅ SCROLL FIX 5: Touch swipe detection — dragging over button scrolls instead of tapping */
                 h('button', { 
-                  onClick: doTap, 
+                  onClick: () => {
+                    if (touchStart.current.isScroll) { touchStart.current.isScroll = false; return; }
+                    doTap();
+                  },
+                  onTouchStart: (e) => {
+                    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, isScroll: false };
+                  },
+                  onTouchMove: (e) => {
+                    if (!touchStart.current || touchStart.current.isScroll) return;
+                    const dx = Math.abs(e.touches[0].clientX - touchStart.current.x);
+                    const dy = Math.abs(e.touches[0].clientY - touchStart.current.y);
+                    if (dx > 8 || dy > 8) touchStart.current.isScroll = true;
+                  },
                   className: 'tap-btn w-64 h-64 grid place-items-center text-black ' + (s.cash < 10000 ? 'sapa-btn' : '') 
                 },
                   h('div', { className: 'text-center relative z-10' },
@@ -884,7 +896,6 @@
               )
             ),
 
-            // ===== DAILY STREAK =====
             h(Card, { className: 'p-4 mt-4' },
               h('div', { className: 'flex items-center justify-between mb-2' },
                 h('div', null,
@@ -914,7 +925,6 @@
               )
             ),
 
-            // ===== LUCKY SPIN + BOOST SHOP + BOSS FIGHT =====
             h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A]' }, 'Mini-games') }, 'Play & Win'),
             h('div', { className: 'grid grid-cols-3 gap-2' },
               h(Card, { className: 'p-3 flex flex-col items-center text-center' },
@@ -948,7 +958,6 @@
               )
             ),
 
-            // ===== BONUSES =====
             h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A]' }, 'Free Money') }, 'Bonuses'),
             h('div', { className: 'grid grid-cols-3 gap-2' },
               h(Card, { className: 'p-2.5 flex flex-col items-center text-center' },
@@ -1011,7 +1020,6 @@
             )
           ),
 
-          // ===== EVENT MODAL =====
           event && h('div', { className: 'fixed inset-0 z-50 grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/85 backdrop-blur-sm' }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.4)] animate-popIn' },
@@ -1031,13 +1039,13 @@
             )
           ),
 
-          // ===== SPIN MODAL =====
           spinOpen && h('div', { className: 'fixed inset-0 z-[70] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => !isSpinning && setSpinOpen(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(255,214,10,0.5)] animate-popIn text-center' },
               h('div', { className: 'text-4xl mb-1' }, '🎡'),
               h('div', { className: 'text-[15px] font-black tracking-widest text-[#FFD60A] font-display' }, 'LUCKY SPIN'),
-              h('div', { className: 'text-[11px] text-white/50 mt-1' }, 'Win up to ₦50,000,000'),
+              /* ✅ Updated max prize text to reflect new 250M top prize */
+              h('div', { className: 'text-[11px] text-white/50 mt-1' }, 'Win up to ₦250,000,000'),
               
               h('div', { className: 'my-5 h-32 rounded-2xl bg-gradient-to-br from-[#FFE566]/20 to-[#FFB800]/5 border border-[#FFD60A]/30 grid place-items-center overflow-hidden' },
                 isSpinning ? h('div', { className: 'text-5xl animate-spin' }, '🎰') :
@@ -1058,7 +1066,6 @@
             )
           ),
 
-          // ===== BOOST SHOP MODAL =====
           boostOpen && h('div', { className: 'fixed inset-0 z-[70] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setBoostOpen(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#22C55E]/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(34,197,94,0.4)] animate-popIn' },
@@ -1084,7 +1091,6 @@
             )
           ),
 
-          // ===== BOSS FIGHT MODAL =====
           bossOpen && h('div', { className: 'fixed inset-0 z-[70] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-gradient-to-b from-[#1a0a0a] to-black' }),
             h('div', { className: 'relative w-full max-w-sm' },
@@ -1110,7 +1116,6 @@
             )
           ),
 
-          // ===== SAPA SCAM =====
           sapaScamOpen && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md' }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-green-500/30 rounded-3xl p-5 shadow-[0_0_60px_-10px_rgba(34,197,94,0.4)] animate-popIn text-center' },
