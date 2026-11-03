@@ -24,12 +24,10 @@
 
   <script>
     tailwind.config = {
-      theme: {
-        extend: {
-          colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
-          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
-        },
-      },
+      theme: { extend: {
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+      }},
     };
   </script>
 
@@ -104,12 +102,13 @@
     const auth = firebase.auth();
 
     const MAX_E = 100;
-    const ENERGY_MS = 5 * 60 * 1000;
     const NPC_SELL_PCT = 0.6;
-
     const MYSTERY_BOX_COST = 50_000_000_000;
     const MIN_REWARD_PER_FOLLOW = 100_000_000_000;
     const FLASH_DISCOUNT = 0.5;
+    const MARKET_CACHE_MS = 30000;
+    const SETTINGS_REFRESH_MS = 5 * 60 * 1000;
+    const FETCH_LIMIT = 15;
 
     const CATEGORIES = ["All", "Street Flex", "Rides", "Real Estate", "Aje Status", "Women's Flex"];
     const SORTS = [
@@ -123,11 +122,10 @@
       { id: 'af1', name: 'Air Force 1', emoji: '👟', price: 500_000, tier: 'Starter', color: 'from-gray-400/20 to-gray-700/10', cat: 'Street Flex', desc: 'White on white. Clean. But if you step on my shoe, e go be fight!' },
       { id: 'shades', name: 'Designer Shades', emoji: '🕶️', price: 2_000_000, tier: 'Baller', color: 'from-black/40 to-gray-800/20', cat: 'Street Flex', desc: 'To hide your eyes from haters and police.' },
       { id: 'chain', name: 'Gold Chain', emoji: '📿', price: 20_000_000, tier: 'Starter', color: 'from-yellow-500/20 to-yellow-700/10', cat: 'Street Flex', desc: 'Heavy neck, heavy pockets.' },
-      { id: 'iphone', name: 'iPhone 15 Pro Max', emoji: '📱', price: 10_000_000, tier: 'Sharp', color: 'from-blue-400/20 to-blue-700/10', cat: 'Street Flex', desc: 'Titanium finish. Sharp. But if you drop am, your heart go break.' },
+      { id: 'iphone', name: 'iPhone 15 Pro Max', emoji: '📱', price: 10_000_000, tier: 'Sharp', color: 'from-blue-400/20 to-blue-700/10', cat: 'Street Flex', desc: 'Titanium finish. Sharp.' },
       { id: 'grillz', name: 'Gold Grillz', emoji: '🦷', price: 50_000_000, tier: 'Baller', color: 'from-amber-400/20 to-amber-700/10', cat: 'Street Flex', desc: 'Smile and blind them.' },
-      { id: 'rolex', name: 'Rolex', emoji: '⌚', price: 250_000_000, tier: 'Baller', color: 'from-amber-400/25 to-amber-700/10', cat: 'Street Flex', desc: 'Time is money. But make e no be fake.' },
+      { id: 'rolex', name: 'Rolex', emoji: '⌚', price: 250_000_000, tier: 'Baller', color: 'from-amber-400/25 to-amber-700/10', cat: 'Street Flex', desc: 'Time is money.' },
       { id: 'agbero_army', name: 'Personal Agbero Army', emoji: '🦍', price: 500_000_000, tier: 'Big Boy', color: 'from-slate-400/20 to-slate-700/10', cat: 'Street Flex', desc: '5 agberos to collect tax for you.' },
-
       { id: 'nail_polish', name: 'Gel Nails Set', emoji: '💅', price: 400_000, tier: 'Starter', color: 'from-pink-400/20 to-pink-700/10', cat: "Women's Flex", desc: 'Fresh nails for the gram.' },
       { id: 'lipstick', name: 'Louboutin Lipstick', emoji: '💄', price: 800_000, tier: 'Starter', color: 'from-red-400/20 to-red-700/10', cat: "Women's Flex", desc: 'Red-bottom lipstick.' },
       { id: 'teddy_bear', name: 'Giant Teddy Bear', emoji: '🧸', price: 1_500_000, tier: 'Starter', color: 'from-amber-300/20 to-amber-700/10', cat: "Women's Flex", desc: 'For the babe wey sabi enjoy soft life.' },
@@ -142,29 +140,26 @@
       { id: 'purse', name: 'Hermès Birkin Bag', emoji: '👜', price: 5_000_000_000, tier: 'Aje', color: 'from-orange-400/20 to-orange-700/10', cat: "Women's Flex", desc: 'You must be invited by Hermès.' },
       { id: 'jewelry_set', name: 'Diamond Jewelry Set', emoji: '💎', price: 25_000_000_000, tier: 'Legend', color: 'from-cyan-400/20 to-cyan-700/10', cat: "Women's Flex", desc: 'All real diamonds.' },
       { id: 'handbag_set', name: 'Handbag Collection', emoji: '🛍️', price: 50_000_000_000, tier: 'Legend', color: 'from-rose-400/20 to-rose-700/10', cat: "Women's Flex", desc: 'Birkin, Kelly, Chanel.' },
-
       { id: 'honda', name: 'Honda Accord', emoji: '🚗', price: 60_000_000, tier: 'Sharp', color: 'from-slate-400/20 to-slate-700/10', cat: 'Rides', desc: 'End of discussion.' },
-      { id: 'camry', name: 'Toyota Camry', emoji: '🚘', price: 120_000_000, tier: 'Sharp', color: 'from-gray-400/20 to-gray-700/10', cat: 'Rides', desc: 'Muscle car for the big boys.' },
-      { id: 'traffic_lane', name: 'Private Traffic Lane', emoji: '🛣️', price: 2_500_000_000, tier: 'Odogwu', color: 'from-gray-400/20 to-gray-700/10', cat: 'Rides', desc: 'Bypass Lagos traffic permanently.' },
+      { id: 'camry', name: 'Toyota Camry', emoji: '🚘', price: 120_000_000, tier: 'Sharp', color: 'from-gray-400/20 to-gray-700/10', cat: 'Rides', desc: 'Muscle car.' },
+      { id: 'traffic_lane', name: 'Private Traffic Lane', emoji: '🛣️', price: 2_500_000_000, tier: 'Odogwu', color: 'from-gray-400/20 to-gray-700/10', cat: 'Rides', desc: 'Bypass Lagos traffic.' },
       { id: 'tesla', name: 'Tesla', emoji: '⚡', price: 3_000_000_000, tier: 'Sharp', color: 'from-red-500/20 to-red-700/10', cat: 'Rides', desc: 'Electric. Zero noise.' },
       { id: 'gwag', name: 'G-Wagon', emoji: '🚙', price: 25_000_000_000, tier: 'Big Boy', color: 'from-slate-400/20 to-slate-700/10', cat: 'Rides', desc: 'Boxy but expensive.' },
-      { id: 'rr', name: 'Range Rover', emoji: '🚐', price: 75_000_000_000, tier: 'Odogwu', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Rides', desc: 'The official car of the rich.' },
-      { id: 'lambo', name: 'Lamborghini', emoji: '🏎️', price: 250_000_000_000, tier: 'Aje', color: 'from-yellow-400/20 to-yellow-700/10', cat: 'Rides', desc: 'Scissor doors. Pure flex.' },
-
+      { id: 'rr', name: 'Range Rover', emoji: '🚐', price: 75_000_000_000, tier: 'Odogwu', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Rides', desc: 'Official car of the rich.' },
+      { id: 'lambo', name: 'Lamborghini', emoji: '🏎️', price: 250_000_000_000, tier: 'Aje', color: 'from-yellow-400/20 to-yellow-700/10', cat: 'Rides', desc: 'Scissor doors.' },
       { id: 'landlord_house', name: 'Lagos Landlord Special', emoji: '🏚️', price: 250_000_000, tier: 'Sharp', color: 'from-slate-400/20 to-slate-700/10', cat: 'Real Estate', desc: 'Face-me-I-face-you.' },
-      { id: 'lekki_flat', name: 'Lekki 2-Bedroom', emoji: '🏢', price: 500_000_000, tier: 'Baller', color: 'from-amber-400/20 to-amber-700/10', cat: 'Real Estate', desc: 'Where the tech bros live.' },
-      { id: 'ikeja_duplex', name: 'Ikeja Duplex', emoji: '🏡', price: 1_500_000_000, tier: 'Big Boy', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Real Estate', desc: 'Close to the airport.' },
-      { id: 'ikoyi_penthouse', name: 'Ikoyi Penthouse', emoji: '🏙️', price: 7_500_000_000, tier: 'Odogwu', color: 'from-cyan-400/20 to-cyan-700/10', cat: 'Real Estate', desc: 'High above the noise.' },
-      { id: 'yacht', name: 'Private Yacht', emoji: '🛥️', price: 100_000_000_000, tier: 'Odogwu', color: 'from-cyan-400/20 to-blue-700/10', cat: 'Real Estate', desc: 'Party on the water.' },
-      { id: 'lekki_bridge', name: 'Lekki-Ikoyi Bridge', emoji: '🌉', price: 2_500_000_000_000, tier: 'Legend', color: 'from-blue-400/20 to-blue-700/10', cat: 'Real Estate', desc: 'You own the toll gate now.' },
-      { id: 'mansion', name: 'Banana Island Mansion', emoji: '🏰', price: 5_000_000_000_000, tier: 'Legend', color: 'from-pink-400/20 to-pink-700/10', cat: 'Real Estate', desc: 'The ultimate Lagos dream.' },
-
+      { id: 'lekki_flat', name: 'Lekki 2-Bedroom', emoji: '🏢', price: 500_000_000, tier: 'Baller', color: 'from-amber-400/20 to-amber-700/10', cat: 'Real Estate', desc: 'Tech bros live here.' },
+      { id: 'ikeja_duplex', name: 'Ikeja Duplex', emoji: '🏡', price: 1_500_000_000, tier: 'Big Boy', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Real Estate', desc: 'Close to airport.' },
+      { id: 'ikoyi_penthouse', name: 'Ikoyi Penthouse', emoji: '🏙️', price: 7_500_000_000, tier: 'Odogwu', color: 'from-cyan-400/20 to-cyan-700/10', cat: 'Real Estate', desc: 'High above noise.' },
+      { id: 'yacht', name: 'Private Yacht', emoji: '🛥️', price: 100_000_000_000, tier: 'Odogwu', color: 'from-cyan-400/20 to-blue-700/10', cat: 'Real Estate', desc: 'Party on water.' },
+      { id: 'lekki_bridge', name: 'Lekki-Ikoyi Bridge', emoji: '🌉', price: 2_500_000_000_000, tier: 'Legend', color: 'from-blue-400/20 to-blue-700/10', cat: 'Real Estate', desc: 'You own the toll gate.' },
+      { id: 'mansion', name: 'Banana Island Mansion', emoji: '🏰', price: 5_000_000_000_000, tier: 'Legend', color: 'from-pink-400/20 to-pink-700/10', cat: 'Real Estate', desc: 'The ultimate dream.' },
       { id: 'chef', name: 'Private Chef', emoji: '👨🏾‍🍳', price: 250_000_000, tier: 'Baller', color: 'from-white/20 to-gray-700/10', cat: 'Aje Status', desc: 'Breakfast, lunch and dinner.' },
-      { id: 'bodyguard', name: 'Personal Bodyguard', emoji: '💪🏾', price: 750_000_000, tier: 'Big Boy', color: 'from-red-400/20 to-red-700/10', cat: 'Aje Status', desc: 'Keep the area boys away.' },
-      { id: 'plate', name: 'Custom Plate Number', emoji: '🔠', price: 1_000_000_000, tier: 'Sharp', color: 'from-blue-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'E.g. "BIG-BOY-1".' },
+      { id: 'bodyguard', name: 'Personal Bodyguard', emoji: '💪🏾', price: 750_000_000, tier: 'Big Boy', color: 'from-red-400/20 to-red-700/10', cat: 'Aje Status', desc: 'Keep area boys away.' },
+      { id: 'plate', name: 'Custom Plate Number', emoji: '🔠', price: 1_000_000_000, tier: 'Sharp', color: 'from-blue-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'E.g. BIG-BOY-1.' },
       { id: 'shrine', name: "Fela's Shrine VIP", emoji: '🎷', price: 5_000_000_000, tier: 'Baller', color: 'from-amber-400/20 to-amber-700/10', cat: 'Aje Status', desc: 'VIP table for life.' },
-      { id: 'patek', name: 'Patek Philippe', emoji: '⌚', price: 10_000_000_000, tier: 'Odogwu', color: 'from-amber-400/25 to-amber-700/10', cat: 'Aje Status', desc: 'You merely look after it.' },
-      { id: 'jet', name: 'Private Jet', emoji: '✈️', price: 500_000_000_000, tier: 'Aje', color: 'from-purple-400/20 to-purple-700/10', cat: 'Aje Status', desc: 'Fly above the traffic.' },
+      { id: 'patek', name: 'Patek Philippe', emoji: '⌚', price: 10_000_000_000, tier: 'Odogwu', color: 'from-amber-400/25 to-amber-700/10', cat: 'Aje Status', desc: 'Merely look after it.' },
+      { id: 'jet', name: 'Private Jet', emoji: '✈️', price: 500_000_000_000, tier: 'Aje', color: 'from-purple-400/20 to-purple-700/10', cat: 'Aje Status', desc: 'Fly above traffic.' },
       { id: 'helicopter', name: 'Helicopter', emoji: '🚁', price: 1_500_000_000_000, tier: 'Aje', color: 'from-indigo-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'Beat the traffic.' },
       { id: 'island', name: 'Private Island', emoji: '🏝️', price: 10_000_000_000_000, tier: 'Legend', color: 'from-teal-400/20 to-teal-700/10', cat: 'Aje Status', desc: 'Your own country.' },
       { id: 'third_mainland', name: 'Third Mainland Bridge', emoji: '🌉', price: 50_000_000_000_000, tier: 'Legend', color: 'from-gray-400/20 to-gray-700/10', cat: 'Aje Status', desc: 'Longest bridge in Africa.' },
@@ -175,7 +170,7 @@
     const BIZ_PRICES = { water: 10_000, suya: 250_000, keke: 500_000, phone: 2_000_000, danfo: 5_000_000, wash: 25_000_000, bet9ja: 50_000_000, lounge: 500_000_000, oil: 5_000_000_000 };
 
     const MARKET_FEED = [
-      "Someone just bought a Lamborghini in Lekki, e dey find where to drive am 🏎️",
+      "Someone just bought a Lamborghini in Lekki 🏎️",
       "G-Wagon just buy am, but no money for fuel ⛽",
       "Air Force 1 clear for market today 👟",
       "Person just buy Banana Island Mansion 🏰",
@@ -235,6 +230,15 @@
       return secs + 's';
     };
 
+    const timeAgo = (diffMs) => {
+      const s = Math.floor(diffMs / 1000);
+      if (s < 5) return 'just now';
+      if (s < 60) return s + 's ago';
+      const m = Math.floor(s / 60);
+      if (m < 60) return m + 'm ago';
+      return Math.floor(m / 60) + 'h ago';
+    };
+
     const AudioEngine = (() => {
       let ctx = null; let musicGain, sfxGain, musicPlaying = false, musicTimer, step = 0;
       const STEP_MS = 300;
@@ -273,7 +277,8 @@
         error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
         purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); },
         jackpot: () => { init(); [523, 659, 783, 1046, 1318].forEach((f,i) => tone(f, 0.2, "triangle", sfxGain, i*0.08, 0.25)); },
-        bid: () => { init(); tone(880, 0.1, "square", sfxGain, 0, 0.25); tone(1046, 0.1, "square", sfxGain, 0.08, 0.25); }
+        bid: () => { init(); tone(880, 0.1, "square", sfxGain, 0, 0.25); tone(1046, 0.1, "square", sfxGain, 0.08, 0.25); },
+        tap: () => { init(); if (ctx.state === "suspended") ctx.resume(); tone(880, 0.09, "triangle", sfxGain, 0, 0.28); }
       };
     })();
 
@@ -301,7 +306,23 @@
       const [showSortMenu, setShowSortMenu] = useState(false);
       const [now, setNow] = useState(Date.now());
 
+      // Market data (fetched on-demand)
       const [listings, setListings] = useState([]);
+      const [campaigns, setCampaigns] = useState([]);
+      const [auctions, setAuctions] = useState([]);
+      const [listingsLastFetch, setListingsLastFetch] = useState(0);
+      const [campaignsLastFetch, setCampaignsLastFetch] = useState(0);
+      const [auctionsLastFetch, setAuctionsLastFetch] = useState(0);
+      const [loadingListings, setLoadingListings] = useState(false);
+      const [loadingCampaigns, setLoadingCampaigns] = useState(false);
+      const [loadingAuctions, setLoadingAuctions] = useState(false);
+
+      const listingsFetchRef = useRef(false);
+      const campaignsFetchRef = useRef(false);
+      const auctionsFetchRef = useRef(false);
+      const settlingAuctionIds = useRef(new Set());
+
+      // UI modals
       const [sellModal, setSellModal] = useState(false);
       const [sellAsset, setSellAsset] = useState(null);
       const [sellPrice, setSellPrice] = useState("");
@@ -310,15 +331,12 @@
       const [buyModal, setBuyModal] = useState(false);
       const [bulkBuyAsset, setBulkBuyAsset] = useState(null);
 
-      const [campaigns, setCampaigns] = useState([]);
       const [createCampaignModal, setCreateCampaignModal] = useState(false);
       const [newTiktokUrl, setNewTiktokUrl] = useState("");
       const [newSlots, setNewSlots] = useState(100);
       const [newReward, setNewReward] = useState(1_000_000_000_000);
-      // 🆕 Track in-flight claims to prevent double-click
       const inFlightClaims = useRef(new Set());
 
-      const [auctions, setAuctions] = useState([]);
       const [auctionModal, setAuctionModal] = useState(false);
       const [auctionAsset, setAuctionAsset] = useState(null);
       const [auctionStartingBid, setAuctionStartingBid] = useState("");
@@ -330,85 +348,172 @@
       const [mysteryResult, setMysteryResult] = useState(null);
       const [isOpeningBox, setIsOpeningBox] = useState(false);
 
+      // ⏱ Local ticker (no Firebase reads)
       useEffect(() => {
         const iv = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(iv);
       }, []);
 
+      // ✅ TASK 2: SETTINGS — get() once on load + interval check every 5 min
       useEffect(() => {
-        const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
-          if (doc.exists && doc.data().maintenance === true) setIsMaintenance(true);
-          else setIsMaintenance(false);
-        }, () => {});
-
-        let userUnsub = null;
-        const authUnsub = auth.onAuthStateChanged((user) => {
-          if (!user) { window.location.href = '/login.html'; return; }
-          if (userUnsub) userUnsub();
-
-          const userId = user.uid;
-          setUid(userId);
-          const userRef = db.collection("users").doc(userId);
-
-          userUnsub = userRef.onSnapshot((doc) => {
-            if (doc.exists) {
-              const dbData = doc.data();
-              setS(prev => {
-                const newData = Object.assign({}, prev, dbData, {
-                  businesses: dbData.businesses || prev.businesses || {},
-                  assets: dbData.assets || prev.assets || {},
-                  transactions: dbData.transactions || [],
-                  history: dbData.history || [],
-                  wishlist: dbData.wishlist || prev.wishlist || [],
-                  flashDealBoughtAt: dbData.flashDealBoughtAt || 0,
-                  cash: dbData.cash !== undefined ? dbData.cash : prev.cash
-                });
-                try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
-                return newData;
-              });
-            } else {
-              const defaultData = {
-                name: user.displayName || localStorage.getItem("lagos_user_name") || 'Hustler',
-                cash: 25000, real: 0, energy: MAX_E,
-                lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
-                taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-                transactions: [], history: [], wishlist: [], flashDealBoughtAt: 0
-              };
-              userRef.set(defaultData).catch(() => {});
-              setS(defaultData);
-              try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
-            }
-          }, (error) => console.error("Snapshot error:", error));
-        });
-
-        return () => { authUnsub(); if (userUnsub) userUnsub(); unsubSettings(); };
+        let cancelled = false;
+        const checkMaintenance = async () => {
+          try {
+            const doc = await db.collection("settings").doc("game").get();
+            if (cancelled) return;
+            if (doc.exists && doc.data().maintenance === true) setIsMaintenance(true);
+            else setIsMaintenance(false);
+          } catch (e) {
+            // Silently ignore — don't block game if settings fail
+          }
+        };
+        checkMaintenance();
+        const iv = setInterval(checkMaintenance, SETTINGS_REFRESH_MS);
+        return () => { cancelled = true; clearInterval(iv); };
       }, []);
 
+      // ✅ Auth state — only sets uid
       useEffect(() => {
-        const unsub = db.collection("market_listings").orderBy("createdAt", "desc").onSnapshot((snap) => {
+        const authUnsub = auth.onAuthStateChanged((user) => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          setUid(user.uid);
+        });
+        return () => authUnsub();
+      }, []);
+
+      // ✅ TASK 1: ONLY ONE onSnapshot — own user doc, with cleanup
+      useEffect(() => {
+        if (!uid) return;
+        const userRef = db.collection("users").doc(uid);
+        const unsub = userRef.onSnapshot((doc) => {
+          if (doc.exists) {
+            const dbData = doc.data();
+            setS(prev => {
+              const newData = Object.assign({}, prev, dbData, {
+                businesses: dbData.businesses || prev.businesses || {},
+                assets: dbData.assets || prev.assets || {},
+                transactions: dbData.transactions || [],
+                history: dbData.history || [],
+                wishlist: dbData.wishlist || prev.wishlist || [],
+                flashDealBoughtAt: dbData.flashDealBoughtAt || 0,
+                cash: dbData.cash !== undefined ? dbData.cash : prev.cash
+              });
+              try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
+              return newData;
+            });
+          } else {
+            const defaultData = {
+              name: localStorage.getItem("lagos_user_name") || 'Hustler',
+              cash: 25000, real: 0, energy: MAX_E,
+              lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
+              taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+              transactions: [], history: [], wishlist: [], flashDealBoughtAt: 0
+            };
+            userRef.set(defaultData).catch(() => {});
+            setS(defaultData);
+            try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
+          }
+        }, (error) => console.error("User snapshot error:", error));
+        return () => unsub();
+      }, [uid]);
+
+      // 🎵 Music unlock
+      useEffect(() => {
+        const unlock = () => { if (!musicOn) { AudioEngine.startMusic(); setMusicOn(true); } };
+        window.addEventListener("pointerdown", unlock, { once: true });
+        return () => window.removeEventListener("pointerdown", unlock);
+      }, [musicOn]);
+
+      // Toast auto-dismiss
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2400);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      // Feed message rotation
+      useEffect(() => {
+        const iv = setInterval(() => {
+          setFeedMsg(MARKET_FEED[Math.floor(Math.random() * MARKET_FEED.length)]);
+        }, 6000);
+        return () => clearInterval(iv);
+      }, []);
+
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+
+      const logHistory = async (title, desc, amount) => {
+        if (!uid) return;
+        await db.collection("users").doc(uid).update({
+          history: firebase.firestore.FieldValue.arrayUnion({
+            title, desc, amount, date: Date.now(), category: 'activity'
+          })
+        }).catch(() => {});
+      };
+
+      // ===== ✅ TASK 4: DATA FETCHERS (no listeners) =====
+
+      const fetchListings = async (force = false) => {
+        const nowT = Date.now();
+        if (!force && listingsLastFetch && nowT - listingsLastFetch < MARKET_CACHE_MS) return;
+        if (listingsFetchRef.current) return;
+        listingsFetchRef.current = true;
+        setLoadingListings(true);
+        try {
+          const snap = await db.collection("market_listings").orderBy("createdAt", "desc").limit(FETCH_LIMIT).get();
           const items = [];
           snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
           setListings(items);
-        }, (e) => console.error("Listings error:", e));
-        return () => unsub();
-      }, []);
+          setListingsLastFetch(nowT);
+        } catch (e) {
+          console.error("fetchListings error:", e);
+        } finally {
+          listingsFetchRef.current = false;
+          setLoadingListings(false);
+        }
+      };
 
-      useEffect(() => {
-        const unsub = db.collection("tiktok_campaigns").orderBy("createdAt", "desc").limit(30).onSnapshot((snap) => {
+      const fetchCampaigns = async (force = false) => {
+        const nowT = Date.now();
+        if (!force && campaignsLastFetch && nowT - campaignsLastFetch < MARKET_CACHE_MS) return;
+        if (campaignsFetchRef.current) return;
+        campaignsFetchRef.current = true;
+        setLoadingCampaigns(true);
+        try {
+          const snap = await db.collection("tiktok_campaigns").orderBy("createdAt", "desc").limit(FETCH_LIMIT).get();
           const items = [];
           snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
           setCampaigns(items);
-        }, (e) => console.error("Campaigns error:", e));
-        return () => unsub();
-      }, []);
+          setCampaignsLastFetch(nowT);
+        } catch (e) {
+          console.error("fetchCampaigns error:", e);
+        } finally {
+          campaignsFetchRef.current = false;
+          setLoadingCampaigns(false);
+        }
+      };
 
-      useEffect(() => {
-        const unsub = db.collection("auctions").orderBy("createdAt", "desc").limit(30).onSnapshot((snap) => {
+      const fetchAuctions = async (force = false) => {
+        const nowT = Date.now();
+        if (!force && auctionsLastFetch && nowT - auctionsLastFetch < MARKET_CACHE_MS) return;
+        if (auctionsFetchRef.current) return;
+        auctionsFetchRef.current = true;
+        setLoadingAuctions(true);
+        try {
+          const snap = await db.collection("auctions").orderBy("createdAt", "desc").limit(FETCH_LIMIT).get();
           const items = [];
           snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
           setAuctions(items);
-          const nowT = Date.now();
-          items.filter(a => a.status === 'active' && a.endsAt < nowT).forEach(async (auction) => {
+          setAuctionsLastFetch(nowT);
+
+          // Auto-settle expired auctions (only when someone opens auction tab)
+          const cutoff = nowT - 60000; // 60s buffer
+          const expired = items.filter(a =>
+            a.status === 'active' &&
+            a.endsAt < cutoff &&
+            !settlingAuctionIds.current.has(a.id)
+          );
+          expired.forEach(async (auction) => {
+            settlingAuctionIds.current.add(auction.id);
             try {
               await db.runTransaction(async (t) => {
                 const aRef = db.collection("auctions").doc(auction.id);
@@ -428,41 +533,26 @@
                   t.update(aRef, { status: 'expired', settledAt: Date.now() });
                 }
               });
-            } catch (e) { console.error("Settle error:", e); }
+              // Refresh to show updated state
+              setTimeout(() => fetchAuctions(true), 1000);
+            } catch (e) {
+              console.error("Settle error:", e);
+            }
           });
-        }, (e) => console.error("Auctions error:", e));
-        return () => unsub();
-      }, []);
-
-      useEffect(() => {
-        const unlock = () => { if (!musicOn) { AudioEngine.startMusic(); setMusicOn(true); } };
-        window.addEventListener("pointerdown", unlock, { once: true });
-        return () => window.removeEventListener("pointerdown", unlock);
-      }, [musicOn]);
-
-      useEffect(() => {
-        if (!toast) return;
-        const t = setTimeout(() => setToast(null), 2400);
-        return () => clearTimeout(t);
-      }, [toast]);
-
-      useEffect(() => {
-        const iv = setInterval(() => {
-          setFeedMsg(MARKET_FEED[Math.floor(Math.random() * MARKET_FEED.length)]);
-        }, 6000);
-        return () => clearInterval(iv);
-      }, []);
-
-      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
-
-      const logHistory = async (title, desc, amount) => {
-        if (!uid) return;
-        await db.collection("users").doc(uid).update({
-          history: firebase.firestore.FieldValue.arrayUnion({
-            title, desc, amount, date: Date.now(), category: 'activity'
-          })
-        }).catch(() => {});
+        } catch (e) {
+          console.error("fetchAuctions error:", e);
+        } finally {
+          auctionsFetchRef.current = false;
+          setLoadingAuctions(false);
+        }
       };
+
+      // ✅ Lazy load on tab switch
+      useEffect(() => {
+        if (viewMode === 'player') fetchListings();
+        else if (viewMode === 'tiktok') fetchCampaigns();
+        else if (viewMode === 'auction') fetchAuctions();
+      }, [viewMode]);
 
       if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' },
         h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError)
@@ -494,16 +584,6 @@
       const flashDealAsset = ASSETS[currentHourSeed % ASSETS.length];
       const flashDealPrice = Math.floor(flashDealAsset.price * (1 - FLASH_DISCOUNT));
       const flashDealEndsIn = ((currentHourSeed + 1) * 3600000) - now;
-
-      const portfolioByCat = useMemo(() => {
-        const map = {};
-        Object.entries(safeAssets).forEach(([id, count]) => {
-          const ast = ASSETS.find(a => a.id === id);
-          if (!ast || count <= 0) return;
-          map[ast.cat] = (map[ast.cat] || 0) + count * ast.price;
-        });
-        return map;
-      }, [safeAssets]);
 
       const filteredAssets = useMemo(() => {
         let arr = activeTab === "All" ? ASSETS.slice() : ASSETS.filter(a => a.cat === activeTab);
@@ -628,6 +708,8 @@
           notify('Asset listed on Player Market! 🛒');
           setSellModal(false);
           setViewMode('player');
+          // Refresh listings to show new listing
+          setTimeout(() => fetchListings(true), 500);
         } catch (e) {
           console.error(e);
           notify('Failed to list item', 'bad');
@@ -671,7 +753,9 @@
           AudioEngine.purchase();
           notify('Bought from ' + listing.sellerName + '! 🎉');
           logHistory('Bought Asset', 'Bought ' + listing.assetName + ' from ' + listing.sellerName, -listing.price);
-
+          // Optimistic remove + refresh
+          setListings(prev => prev.filter(l => l.id !== listing.id));
+          setTimeout(() => fetchListings(true), 500);
         } catch (e) {
           console.error(e);
           notify(e.message, 'bad');
@@ -698,6 +782,8 @@
             return Object.assign({}, prev, { assets: newAssets });
           });
           notify('Listing cancelled.');
+          setListings(prev => prev.filter(l => l.id !== listing.id));
+          setTimeout(() => fetchListings(true), 500);
         } catch(e) {
           console.error(e);
           notify('Failed to cancel', 'bad');
@@ -754,13 +840,13 @@
           setCreateCampaignModal(false);
           setNewTiktokUrl('');
           setViewMode('tiktok');
+          setTimeout(() => fetchCampaigns(true), 500);
         } catch (e) {
           console.error(e);
           notify(e.message || 'Failed to create campaign', 'bad');
         }
       };
 
-      // ✅ ONE-TAP CLAIM — fires immediately on link click, no modal
       const claimCampaign = async (campaign) => {
         if (!uid) return;
         if (campaign.creatorId === uid) return notify('You cannot claim your own campaign', 'bad');
@@ -788,6 +874,8 @@
           AudioEngine.jackpot();
           notify('🎉 You earned ' + fmt(campaign.rewardPerFollow) + '!');
           logHistory('TikTok Campaign', 'Followed ' + campaign.tiktokHandle, campaign.rewardPerFollow);
+          // Refresh to reflect claim
+          setTimeout(() => fetchCampaigns(true), 500);
         } catch(e) {
           console.error(e);
           notify(e.message || 'Claim failed', 'bad');
@@ -813,6 +901,8 @@
           });
           AudioEngine.coin();
           notify('Campaign cancelled. Refunded ' + fmt(refund));
+          setCampaigns(prev => prev.filter(c => c.id !== campaign.id));
+          setTimeout(() => fetchCampaigns(true), 500);
         } catch(e) {
           console.error(e);
           notify(e.message || 'Failed', 'bad');
@@ -852,6 +942,7 @@
           notify('🔨 Auction live!');
           setAuctionModal(false);
           setViewMode('auction');
+          setTimeout(() => fetchAuctions(true), 500);
         } catch(e) {
           console.error(e);
           notify('Failed to create auction', 'bad');
@@ -893,6 +984,7 @@
           notify('🎯 Bid placed!');
           setBidModal(null);
           setBidAmount('');
+          setTimeout(() => fetchAuctions(true), 500);
         } catch(e) {
           console.error(e);
           notify(e.message || 'Bid failed', 'bad');
@@ -966,6 +1058,18 @@
       else if (viewMode === 'player') { heroValue = listings.length + ' Listings'; heroLabel = 'Player Market'; heroSub = 'Buy from other players'; heroEmoji = '🤝'; }
       else if (viewMode === 'tiktok') { heroValue = activeCampaigns.length + ' Live'; heroLabel = 'TikTok Campaigns'; heroSub = 'Tap any card → follow → get paid instantly'; heroEmoji = '🎵'; }
       else { heroValue = activeAuctions.length + ' Live'; heroLabel = 'Auction House'; heroSub = 'Bid or list your assets'; heroEmoji = '🔨'; }
+
+      // Refresh button helper
+      const RefreshBar = ({ lastFetch, loading, onRefresh }) => h('div', { className: 'flex items-center justify-between px-1 py-2 mb-2' },
+        h('div', { className: 'text-[9px] uppercase tracking-wider text-white/30 font-bold' },
+          lastFetch ? 'Updated ' + timeAgo(now - lastFetch) : 'Loading...'
+        ),
+        h('button', {
+          onClick: onRefresh,
+          disabled: loading,
+          className: 'text-[10px] font-black text-[#FFD60A] bg-white/[0.05] border border-white/10 px-2.5 py-1 rounded-lg active:scale-95 disabled:opacity-40'
+        }, loading ? '⏳ Refreshing' : '🔄 Refresh')
+      );
 
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
@@ -1067,7 +1171,6 @@
               )
             ),
 
-            // ===== STORE =====
             viewMode === 'store' && h('div', null,
               h('div', { className: 'mt-4 flex gap-2' },
                 h('div', { className: 'flex-1 flex items-center bg-white/[0.05] border border-white/10 rounded-xl px-3' },
@@ -1172,144 +1275,161 @@
                 )
             ),
 
-            // ===== P2P =====
-            viewMode === 'player' && h('div', { className: 'mt-4 space-y-2.5' },
-              listings.length === 0 ?
+            viewMode === 'player' && h('div', { className: 'mt-4' },
+              h(RefreshBar, { lastFetch: listingsLastFetch, loading: loadingListings, onRefresh: () => fetchListings(true) }),
+              loadingListings && listings.length === 0 ?
                 h('div', { className: 'text-center text-white/40 text-[11px] py-10' },
-                  h('div', { className: 'text-5xl mb-3' }, '🤝'),
-                  h('div', null, 'No one is selling right now.')
+                  h('div', { className: 'text-3xl mb-2 animate-pulse' }, '⏳'),
+                  h('div', null, 'Loading listings...')
                 ) :
-                listings.map((l) => {
-                  const isMe = l.sellerId === uid;
-                  const canAfford = s.cash >= l.price;
-                  const npcPrice = l.npcPrice || (ASSETS.find(x => x.id === l.assetId) || {}).price || l.price;
-                  const isDeal = l.price < npcPrice * 0.9;
-                  return h(Card, { key: l.id, className: 'p-3 flex items-center gap-3 relative' },
-                    isDeal && h('div', { className: 'absolute -top-1 -left-1 text-[8px] font-black bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white px-1.5 py-0.5 rounded shadow' }, '🔥 DEAL'),
-                    h('div', { className: 'w-12 h-12 rounded-xl bg-white/[0.06] grid place-items-center text-2xl shrink-0' }, l.emoji),
-                    h('div', { className: 'flex-1 min-w-0' },
-                      h('div', { className: 'text-[12px] font-extrabold truncate font-display' }, l.assetName),
-                      h('div', { className: 'text-[9px] text-[#FFD60A] font-bold' }, '👤 ' + l.sellerName),
-                      h('div', { className: 'flex items-center gap-2 mt-1' },
-                        h('span', { className: 'text-[11px] font-black text-white/80 tabular-nums' }, fmt(l.price)),
-                        npcPrice > l.price && h('span', { className: 'text-[9px] text-white/40 line-through tabular-nums' }, fmt(npcPrice))
-                      )
-                    ),
-                    isMe ?
-                      h('button', { onClick: () => cancelListing(l), disabled: isTransacting, className: 'shrink-0 text-[10px] font-black bg-red-500/20 text-red-400 px-3 py-2 rounded-lg active:scale-95 transition disabled:opacity-50' }, 'CANCEL') :
-                      h('button', { onClick: () => buyListing(l), disabled: isTransacting || !canAfford, className: 'shrink-0 text-[10px] font-black bg-[#22C55E] text-black px-3 py-2 rounded-lg active:scale-95 transition disabled:opacity-50' }, 'BUY')
-                  );
-                })
+                listings.length === 0 ?
+                  h('div', { className: 'text-center text-white/40 text-[11px] py-10' },
+                    h('div', { className: 'text-5xl mb-3' }, '🤝'),
+                    h('div', null, 'No one is selling right now.'),
+                    h('div', { className: 'mt-2 text-[10px]' }, 'Tap refresh to check again')
+                  ) :
+                  h('div', { className: 'space-y-2.5' },
+                    listings.map((l) => {
+                      const isMe = l.sellerId === uid;
+                      const canAfford = s.cash >= l.price;
+                      const npcPrice = l.npcPrice || (ASSETS.find(x => x.id === l.assetId) || {}).price || l.price;
+                      const isDeal = l.price < npcPrice * 0.9;
+                      return h(Card, { key: l.id, className: 'p-3 flex items-center gap-3 relative' },
+                        isDeal && h('div', { className: 'absolute -top-1 -left-1 text-[8px] font-black bg-gradient-to-r from-[#22C55E] to-[#16A34A] text-white px-1.5 py-0.5 rounded shadow' }, '🔥 DEAL'),
+                        h('div', { className: 'w-12 h-12 rounded-xl bg-white/[0.06] grid place-items-center text-2xl shrink-0' }, l.emoji),
+                        h('div', { className: 'flex-1 min-w-0' },
+                          h('div', { className: 'text-[12px] font-extrabold truncate font-display' }, l.assetName),
+                          h('div', { className: 'text-[9px] text-[#FFD60A] font-bold' }, '👤 ' + l.sellerName),
+                          h('div', { className: 'flex items-center gap-2 mt-1' },
+                            h('span', { className: 'text-[11px] font-black text-white/80 tabular-nums' }, fmt(l.price)),
+                            npcPrice > l.price && h('span', { className: 'text-[9px] text-white/40 line-through tabular-nums' }, fmt(npcPrice))
+                          )
+                        ),
+                        isMe ?
+                          h('button', { onClick: () => cancelListing(l), disabled: isTransacting, className: 'shrink-0 text-[10px] font-black bg-red-500/20 text-red-400 px-3 py-2 rounded-lg active:scale-95 transition disabled:opacity-50' }, 'CANCEL') :
+                          h('button', { onClick: () => buyListing(l), disabled: isTransacting || !canAfford, className: 'shrink-0 text-[10px] font-black bg-[#22C55E] text-black px-3 py-2 rounded-lg active:scale-95 transition disabled:opacity-50' }, 'BUY')
+                      );
+                    })
+                  )
             ),
 
-            // ===== TIKTOK — ONE-TAP CLAIM =====
             viewMode === 'tiktok' && h('div', { className: 'mt-4' },
               h('button', {
                 onClick: () => setCreateCampaignModal(true),
                 className: 'w-full rounded-2xl tiktok-gradient p-3 text-white font-black text-[13px] active:scale-95 transition flex items-center justify-center gap-2 shadow-[0_8px_24px_-8px_rgba(254,44,85,0.7)] font-display'
               }, '✨ CREATE TIKTOK CAMPAIGN'),
-              h('div', { className: 'mt-3 text-[10px] text-white/50 text-center px-4' }, 'Tap any card below → opens TikTok → you get paid instantly. Once per campaign. 💰'),
-              activeCampaigns.length === 0 ?
-                h('div', { className: 'text-center text-white/40 text-[11px] py-10 mt-4' },
-                  h('div', { className: 'text-5xl mb-3' }, '🎵'),
-                  h('div', null, 'No active campaigns yet.'),
-                  h('div', { className: 'mt-2 text-[10px]' }, 'Be the first to promote your TikTok!')
+              h('div', { className: 'mt-3 text-[10px] text-white/50 text-center px-4' }, 'Tap any card → opens TikTok → get paid instantly. Once per campaign. 💰'),
+              h('div', { className: 'mt-3' },
+                h(RefreshBar, { lastFetch: campaignsLastFetch, loading: loadingCampaigns, onRefresh: () => fetchCampaigns(true) })
+              ),
+              loadingCampaigns && campaigns.length === 0 ?
+                h('div', { className: 'text-center text-white/40 text-[11px] py-10 mt-2' },
+                  h('div', { className: 'text-3xl mb-2 animate-pulse' }, '⏳'),
+                  h('div', null, 'Loading campaigns...')
                 ) :
-                h('div', { className: 'mt-4 space-y-2.5' },
-                  activeCampaigns.map((c) => {
-                    const isMine = c.creatorId === uid;
-                    const hasClaimed = (c.claimedBy || []).includes(uid);
-                    const slotsLeft = c.totalSlots - c.claimedSlots;
-                    const pct = (c.claimedSlots / c.totalSlots) * 100;
+                activeCampaigns.length === 0 ?
+                  h('div', { className: 'text-center text-white/40 text-[11px] py-10 mt-2' },
+                    h('div', { className: 'text-5xl mb-3' }, '🎵'),
+                    h('div', null, 'No active campaigns yet.'),
+                    h('div', { className: 'mt-2 text-[10px]' }, 'Be the first to promote your TikTok!')
+                  ) :
+                  h('div', { className: 'space-y-2.5 mt-2' },
+                    activeCampaigns.map((c) => {
+                      const isMine = c.creatorId === uid;
+                      const hasClaimed = (c.claimedBy || []).includes(uid);
+                      const slotsLeft = c.totalSlots - c.claimedSlots;
+                      const pct = (c.claimedSlots / c.totalSlots) * 100;
 
-                    const innerContent = [
-                      h('div', { key: 'badge', className: 'absolute top-0 right-0 text-[8px] font-black tiktok-gradient text-white px-2 py-1 rounded-bl-lg' },
-                        isMine ? 'YOURS' : hasClaimed ? 'CLAIMED ✅' : 'EARN ' + fmt(c.rewardPerFollow)
-                      ),
-                      h('div', { key: 'body', className: 'flex items-center gap-3' },
-                        h('div', { className: 'w-12 h-12 rounded-xl tiktok-gradient grid place-items-center text-2xl shrink-0' }, hasClaimed ? '✅' : '🎵'),
-                        h('div', { className: 'flex-1 min-w-0' },
-                          h('div', { className: 'text-[12px] font-extrabold truncate font-display' }, c.tiktokHandle),
-                          h('div', { className: 'text-[9px] text-white/50' }, 'by ' + c.creatorName),
-                          h('div', { className: 'mt-1 h-1.5 rounded-full bg-white/10 overflow-hidden' },
-                            h('div', { className: 'h-full tiktok-gradient', style: { width: pct + '%' } })
-                          ),
-                          h('div', { className: 'flex items-center justify-between text-[9px] mt-0.5' },
-                            h('span', { className: 'text-[#22C55E] font-black' }, fmt(c.rewardPerFollow) + ' / follow'),
-                            h('span', { className: 'text-white/50' }, slotsLeft + ' / ' + c.totalSlots + ' left')
-                          )
+                      const innerContent = [
+                        h('div', { key: 'badge', className: 'absolute top-0 right-0 text-[8px] font-black tiktok-gradient text-white px-2 py-1 rounded-bl-lg' },
+                          isMine ? 'YOURS' : hasClaimed ? 'CLAIMED ✅' : 'EARN ' + fmt(c.rewardPerFollow)
                         ),
-                        isMine ?
-                          h('button', { key: 'act', onClick: (e) => { e.preventDefault(); e.stopPropagation(); cancelCampaign(c); }, className: 'shrink-0 text-[10px] font-black bg-red-500/20 text-red-400 px-2 py-2 rounded-lg active:scale-95' }, 'CANCEL') :
-                          hasClaimed ?
-                            h('div', { key: 'act', className: 'shrink-0 text-[10px] font-black text-[#22C55E] px-2 py-2' }, '✅') :
-                            h('div', { key: 'act', className: 'shrink-0 text-[10px] font-black bg-gradient-to-b from-[#25F4EE] to-[#FE2C55] text-white px-2.5 py-2 rounded-lg text-center' }, 'GO')
-                      )
-                    ];
+                        h('div', { key: 'body', className: 'flex items-center gap-3' },
+                          h('div', { className: 'w-12 h-12 rounded-xl tiktok-gradient grid place-items-center text-2xl shrink-0' }, hasClaimed ? '✅' : '🎵'),
+                          h('div', { className: 'flex-1 min-w-0' },
+                            h('div', { className: 'text-[12px] font-extrabold truncate font-display' }, c.tiktokHandle),
+                            h('div', { className: 'text-[9px] text-white/50' }, 'by ' + c.creatorName),
+                            h('div', { className: 'mt-1 h-1.5 rounded-full bg-white/10 overflow-hidden' },
+                              h('div', { className: 'h-full tiktok-gradient', style: { width: pct + '%' } })
+                            ),
+                            h('div', { className: 'flex items-center justify-between text-[9px] mt-0.5' },
+                              h('span', { className: 'text-[#22C55E] font-black' }, fmt(c.rewardPerFollow) + ' / follow'),
+                              h('span', { className: 'text-white/50' }, slotsLeft + ' / ' + c.totalSlots + ' left')
+                            )
+                          ),
+                          isMine ?
+                            h('button', { key: 'act', onClick: (e) => { e.preventDefault(); e.stopPropagation(); cancelCampaign(c); }, className: 'shrink-0 text-[10px] font-black bg-red-500/20 text-red-400 px-2 py-2 rounded-lg active:scale-95' }, 'CANCEL') :
+                            hasClaimed ?
+                              h('div', { key: 'act', className: 'shrink-0 text-[10px] font-black text-[#22C55E] px-2 py-2' }, '✅') :
+                              h('div', { key: 'act', className: 'shrink-0 text-[10px] font-black bg-gradient-to-b from-[#25F4EE] to-[#FE2C55] text-white px-2.5 py-2 rounded-lg text-center' }, 'GO')
+                        )
+                      ];
 
-                    // Owner — plain div, no tap
-                    if (isMine) {
-                      return h('div', {
+                      if (isMine) {
+                        return h('div', {
+                          key: c.id,
+                          className: 'rounded-2xl card-gradient p-3 relative overflow-hidden'
+                        }, innerContent);
+                      }
+
+                      if (hasClaimed) {
+                        return h('div', {
+                          key: c.id,
+                          className: 'rounded-2xl card-gradient p-3 relative overflow-hidden opacity-70'
+                        }, innerContent);
+                      }
+
+                      return h('a', {
                         key: c.id,
-                        className: 'rounded-2xl card-gradient p-3 relative overflow-hidden'
+                        href: c.tiktokUrl,
+                        target: '_blank',
+                        rel: 'noopener noreferrer',
+                        onClick: () => claimCampaign(c),
+                        className: 'block rounded-2xl card-gradient p-3 relative overflow-hidden cursor-pointer active:scale-[0.99] transition'
                       }, innerContent);
-                    }
-
-                    // Already claimed — locked, dimmed, plain div
-                    if (hasClaimed) {
-                      return h('div', {
-                        key: c.id,
-                        className: 'rounded-2xl card-gradient p-3 relative overflow-hidden opacity-70'
-                      }, innerContent);
-                    }
-
-                    // Available — <a> tag: tap = open TikTok + claim + lock
-                    return h('a', {
-                      key: c.id,
-                      href: c.tiktokUrl,
-                      target: '_blank',
-                      rel: 'noopener noreferrer',
-                      onClick: () => claimCampaign(c),
-                      className: 'block rounded-2xl card-gradient p-3 relative overflow-hidden cursor-pointer active:scale-[0.99] transition'
-                    }, innerContent);
-                  })
-                )
+                    })
+                  )
             ),
 
-            // ===== AUCTION =====
             viewMode === 'auction' && h('div', { className: 'mt-4' },
-              h('div', { className: 'text-[10px] text-white/50 text-center px-4 mb-3' }, 'List an asset for auction. Highest bidder wins when timer ends. 🔨'),
-              activeAuctions.length === 0 ?
+              h('div', { className: 'text-[10px] text-white/50 text-center px-4 mb-3' }, 'List an asset for auction. Highest bidder wins. 🔨'),
+              h(RefreshBar, { lastFetch: auctionsLastFetch, loading: loadingAuctions, onRefresh: () => fetchAuctions(true) }),
+              loadingAuctions && auctions.length === 0 ?
                 h('div', { className: 'text-center text-white/40 text-[11px] py-10' },
-                  h('div', { className: 'text-5xl mb-3' }, '🔨'),
-                  h('div', null, 'No active auctions right now.'),
-                  h('div', { className: 'mt-2 text-[10px]' }, 'Go to NPC Store → Your Garage → tap an item → Auction')
+                  h('div', { className: 'text-3xl mb-2 animate-pulse' }, '⏳'),
+                  h('div', null, 'Loading auctions...')
                 ) :
-                h('div', { className: 'space-y-2.5' },
-                  activeAuctions.map((a) => {
-                    const isMine = a.sellerId === uid;
-                    const isWinning = a.currentBidderId === uid;
-                    const canBid = !isMine && !isWinning;
-                    return h(Card, { key: a.id, className: 'p-3 relative overflow-hidden' },
-                      h('div', { className: 'absolute top-0 right-0 text-[8px] font-black auction-gradient text-white px-2 py-1 rounded-bl-lg' }, isMine ? 'SELLING' : isWinning ? 'WINNING' : 'LIVE'),
-                      h('div', { className: 'flex items-center gap-3' },
-                        h('div', { className: 'w-12 h-12 rounded-xl bg-white/[0.06] grid place-items-center text-2xl shrink-0' }, a.emoji),
-                        h('div', { className: 'flex-1 min-w-0' },
-                          h('div', { className: 'text-[12px] font-extrabold truncate font-display' }, a.assetName),
-                          h('div', { className: 'text-[9px] text-white/50' }, 'by ' + a.sellerName),
-                          h('div', { className: 'flex items-center gap-2 mt-1' },
-                            h('span', { className: 'text-[11px] font-black text-[#FFD60A] tabular-nums' }, a.currentBid > 0 ? fmt(a.currentBid) : fmt(a.startingBid)),
-                            h('span', { className: 'text-[9px] text-[#FF6B00] font-bold tabular-nums animate-pulse' }, '⏱ ' + timeLeft(a.endsAt - now))
+                activeAuctions.length === 0 ?
+                  h('div', { className: 'text-center text-white/40 text-[11px] py-10' },
+                    h('div', { className: 'text-5xl mb-3' }, '🔨'),
+                    h('div', null, 'No active auctions right now.'),
+                    h('div', { className: 'mt-2 text-[10px]' }, 'Go to NPC Store → Your Garage → tap item → Auction')
+                  ) :
+                  h('div', { className: 'space-y-2.5' },
+                    activeAuctions.map((a) => {
+                      const isMine = a.sellerId === uid;
+                      const isWinning = a.currentBidderId === uid;
+                      const canBid = !isMine && !isWinning;
+                      return h(Card, { key: a.id, className: 'p-3 relative overflow-hidden' },
+                        h('div', { className: 'absolute top-0 right-0 text-[8px] font-black auction-gradient text-white px-2 py-1 rounded-bl-lg' }, isMine ? 'SELLING' : isWinning ? 'WINNING' : 'LIVE'),
+                        h('div', { className: 'flex items-center gap-3' },
+                          h('div', { className: 'w-12 h-12 rounded-xl bg-white/[0.06] grid place-items-center text-2xl shrink-0' }, a.emoji),
+                          h('div', { className: 'flex-1 min-w-0' },
+                            h('div', { className: 'text-[12px] font-extrabold truncate font-display' }, a.assetName),
+                            h('div', { className: 'text-[9px] text-white/50' }, 'by ' + a.sellerName),
+                            h('div', { className: 'flex items-center gap-2 mt-1' },
+                              h('span', { className: 'text-[11px] font-black text-[#FFD60A] tabular-nums' }, a.currentBid > 0 ? fmt(a.currentBid) : fmt(a.startingBid)),
+                              h('span', { className: 'text-[9px] text-[#FF6B00] font-bold tabular-nums animate-pulse' }, '⏱ ' + timeLeft(a.endsAt - now))
+                            ),
+                            a.currentBidderName && h('div', { className: 'text-[9px] text-white/40 mt-0.5' }, '👑 ' + a.currentBidderName)
                           ),
-                          a.currentBidderName && h('div', { className: 'text-[9px] text-white/40 mt-0.5' }, '👑 ' + a.currentBidderName)
-                        ),
-                        canBid ?
-                          h('button', { onClick: () => { setBidModal(a); setBidAmount(String(Math.floor((a.currentBid || a.startingBid) * 1.1))); }, className: 'shrink-0 text-[10px] font-black bg-gradient-to-b from-[#FF6B00] to-[#FF0055] text-white px-2.5 py-2 rounded-lg active:scale-95' }, 'BID') :
-                          h('div', { className: 'shrink-0 text-[9px] font-black text-white/40 px-2 py-2' }, isMine ? '👤' : '👑')
-                      )
-                    );
-                  })
-                )
+                          canBid ?
+                            h('button', { onClick: () => { setBidModal(a); setBidAmount(String(Math.floor((a.currentBid || a.startingBid) * 1.1))); }, className: 'shrink-0 text-[10px] font-black bg-gradient-to-b from-[#FF6B00] to-[#FF0055] text-white px-2.5 py-2 rounded-lg active:scale-95' }, 'BID') :
+                            h('div', { className: 'shrink-0 text-[9px] font-black text-white/40 px-2 py-2' }, isMine ? '👤' : '👑')
+                        )
+                      );
+                    })
+                  )
             )
           ),
 
@@ -1328,7 +1448,6 @@
             )
           ),
 
-          // BULK BUY MODAL
           buyModal && bulkBuyAsset && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setBuyModal(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 animate-popIn text-center' },
@@ -1355,7 +1474,6 @@
             )
           ),
 
-          // SELL MODAL
           sellModal && sellAsset && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => !isTransacting && setSellModal(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 animate-popIn' },
@@ -1395,7 +1513,6 @@
             )
           ),
 
-          // CREATE CAMPAIGN MODAL
           createCampaignModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setCreateCampaignModal(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FE2C55]/30 rounded-3xl p-5 animate-popIn' },
@@ -1458,13 +1575,12 @@
             )
           ),
 
-          // CREATE AUCTION MODAL
           auctionModal && auctionAsset && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setAuctionModal(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FF6B00]/30 rounded-3xl p-5 animate-popIn' },
               h('div', { className: 'text-4xl text-center mb-1' }, auctionAsset.emoji),
               h('div', { className: 'text-center text-[14px] font-black font-display auction-gradient text-white rounded-lg py-1.5' }, 'START AUCTION'),
-              h('p', { className: 'text-[11px] text-white/50 text-center mt-2 mb-3' }, auctionAsset.name + ' · Asset Value: ' + fmt(auctionAsset.price)),
+              h('p', { className: 'text-[11px] text-white/50 text-center mt-2 mb-3' }, auctionAsset.name + ' · Value: ' + fmt(auctionAsset.price)),
 
               h('div', { className: 'space-y-3' },
                 h('div', null,
@@ -1503,7 +1619,6 @@
             )
           ),
 
-          // BID MODAL
           bidModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setBidModal(null) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FF6B00]/30 rounded-3xl p-5 animate-popIn' },
@@ -1540,7 +1655,6 @@
             )
           ),
 
-          // MYSTERY BOX MODAL
           mysteryModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => { if (!isOpeningBox) { setMysteryModal(false); setMysteryResult(null); } } }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#A855F7]/40 rounded-3xl p-5 animate-popIn text-center' },
@@ -1558,7 +1672,7 @@
               h(React.Fragment, null,
                 h('div', { className: 'text-6xl mb-2 ' + (isOpeningBox ? 'animate-shake' : '') }, '🎁'),
                 h('div', { className: 'text-[15px] font-black tracking-widest mystery-gradient text-white rounded-lg py-1.5 font-display' }, 'MYSTERY BOX'),
-                h('p', { className: 'text-[11px] text-white/60 mt-3 mb-3 leading-relaxed' }, 'Roll the dice. Win ANY asset — from a ₦500K Air Force to a ₦50 Quadrillion Crypto Exchange.'),
+                h('p', { className: 'text-[11px] text-white/60 mt-3 mb-3 leading-relaxed' }, 'Roll the dice. Win ANY asset — from ₦500K Air Force to ₦50 Quadrillion Crypto.'),
                 h('div', { className: 'rounded-xl bg-white/[0.03] border border-white/[0.06] p-2.5 text-[10px] text-left space-y-1' },
                   h('div', { className: 'flex justify-between' }, h('span', { className: 'text-white/50' }, '🏆 Legendary'), h('span', { className: 'text-[#FF6B00] font-bold' }, '1%')),
                   h('div', { className: 'flex justify-between' }, h('span', { className: 'text-white/50' }, '💎 Epic'), h('span', { className: 'text-[#A855F7] font-bold' }, '4%')),
