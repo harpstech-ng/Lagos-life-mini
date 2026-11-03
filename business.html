@@ -35,7 +35,6 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-    /* ✅ SCROLL FIX 1: Split html/body, use contain not none, add iOS momentum */
     html { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: contain; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
     body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; -webkit-overflow-scrolling: touch; }
     body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent); }
@@ -54,7 +53,6 @@
     .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
     .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
-    /* ✅ SCROLL FIX 2: Nav backdrop — no more blur */
     .nav-backdrop { background: #08080B; }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
     @keyframes badgePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
@@ -98,15 +96,16 @@
 
     const MAX_E = 100;
     const ENERGY_MS = 5 * 60 * 1000;
-    const MAX_OFFLINE_HOURS = 48; // ✅ Was 24, now 48
+    const MAX_OFFLINE_HOURS = 48;
     const MAX_UPGRADE_LEVEL = 5;
-    const AUTO_COLLECT_COST = 10_000_000_000_000; // ₦10T one-time
+    const AUTO_COLLECT_COST = 10_000_000_000_000;
+    const SETTINGS_REFRESH_MS = 5 * 60 * 1000;
+    const ENERGY_SYNC_MS = 60000;
     const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/DLTh6m6oyUBBIbmk1dS8Um?s=cl&p=i&mlu=4&ilr=4&iam=2';
 
     const CATEGORIES = ["All", "Street", "Small", "Mid", "High", "Cartel", "Ultra", "Cosmic"];
 
     const BUSINESSES = [
-      // ===== STREET =====
       { id: 'water',  name: 'Pure Water Stand', emoji: '💧', price: 10_000, perHr: 2_000, cat: 'Street', desc: 'Cold pure water for the whole street.' },
       { id: 'mai_shai', name: 'Mai Shai', emoji: '☕', price: 50_000, perHr: 8_000, cat: 'Street', desc: 'Tea and bread for the early morning hustlers.' },
       { id: 'corn',   name: 'Roasted Corn', emoji: '🌽', price: 100_000, perHr: 15_000, cat: 'Street', desc: 'With coconut and pear. Sweet!' },
@@ -120,8 +119,6 @@
       { id: 'gala', name: 'Gala Hawker', emoji: '🌭', price: 30_000, perHr: 5_000, cat: 'Street', desc: 'Gala and La Casera for the road.' },
       { id: 'alomo', name: 'Alomo Joint', emoji: '🍶', price: 150_000, perHr: 20_000, cat: 'Street', desc: 'Bitters for the elders.' },
       { id: 'newspaper', name: 'Newspaper Vendor', emoji: '📰', price: 10_000, perHr: 2_500, cat: 'Street', desc: 'Guardian, Punch, and Vanguard.' },
-
-      // ===== SMALL =====
       { id: 'phone_acc', name: 'Phone Accessories', emoji: '📱', price: 2_000_000, perHr: 350_000, cat: 'Small', desc: 'Chargers, cases and screen protectors.' },
       { id: 'barber', name: 'Barber Shop', emoji: '💈', price: 1_500_000, perHr: 250_000, cat: 'Small', desc: 'Sharp haircuts for the guys.' },
       { id: 'salon',  name: 'Hair Salon', emoji: '💇🏾‍♀️', price: 3_000_000, perHr: 500_000, cat: 'Small', desc: 'Braids, weaves and styling for the ladies.' },
@@ -137,8 +134,6 @@
       { id: 'phone_repair', name: 'Phone Repair Kiosk', emoji: '🔧', price: 1_000_000, perHr: 180_000, cat: 'Small', desc: 'Fixing cracked screens.' },
       { id: 'keke_mech', name: 'Keke Mechanic', emoji: '⚙️', price: 700_000, perHr: 120_000, cat: 'Small', desc: 'Fixing tricycles.' },
       { id: 'photocopy', name: 'Photocopy Shop', emoji: '📄', price: 400_000, perHr: 60_000, cat: 'Small', desc: 'Jamb forms and ID cards.' },
-
-      // ===== MID =====
       { id: 'bet9ja', name: 'Bet9ja Shop', emoji: '🎰', price: 50_000_000, perHr: 9_000_000, cat: 'Mid', desc: 'Where people come to lose money.' },
       { id: 'cyber',  name: 'Cyber Cafe', emoji: '💻', price: 15_000_000, perHr: 2_500_000, cat: 'Mid', desc: 'Printing, typing and jamb forms.' },
       { id: 'fastfood', name: 'Fast Food Joint', emoji: '🍔', price: 30_000_000, perHr: 5_000_000, cat: 'Mid', desc: 'Chicken and chips for the workers.' },
@@ -153,8 +148,6 @@
       { id: 'poultry', name: 'Poultry Farm', emoji: '🐔', price: 15_000_000, perHr: 2_500_000, cat: 'Mid', desc: 'Eggs and chicken.' },
       { id: 'video_rental', name: 'Video Rental', emoji: '📼', price: 5_000_000, perHr: 800_000, cat: 'Mid', desc: 'Old Nollywood movies.' },
       { id: 'e_learning', name: 'E-Learning Center', emoji: '🖥️', price: 30_000_000, perHr: 5_000_000, cat: 'Mid', desc: 'Coding classes for kids.' },
-
-      // ===== HIGH =====
       { id: 'lounge', name: 'Lekki Lounge', emoji: '🍾', price: 500_000_000, perHr: 90_000_000, cat: 'High', desc: 'Shisha and champagne for the big boys.' },
       { id: 'club',   name: 'Night Club', emoji: '🎧', price: 1_000_000_000, perHr: 180_000_000, cat: 'High', desc: 'DJ, dancers and plenty dollars.' },
       { id: 'car_deal', name: 'Car Dealership', emoji: '🚘', price: 2_500_000_000, perHr: 450_000_000, cat: 'High', desc: 'Brand new and tokunbo cars.' },
@@ -168,8 +161,6 @@
       { id: 'movie_studio', name: 'Movie Studio', emoji: '🎬', price: 2_000_000_000, perHr: 350_000_000, cat: 'High', desc: 'Producing blockbuster Nollywood films.' },
       { id: 'car_assembly', name: 'Car Assembly', emoji: '🏭', price: 4_000_000_000, perHr: 650_000_000, cat: 'High', desc: 'Building cars locally.' },
       { id: 'microfinance', name: 'Microfinance Bank', emoji: '🏦', price: 1_000_000_000, perHr: 200_000_000, cat: 'High', desc: 'Loans with high interest.' },
-
-      // ===== CARTEL =====
       { id: 'oil',    name: 'Oil & Gas Bloc', emoji: '🛢️', price: 50_000_000_000, perHr: 10_000_000_000, cat: 'Cartel', desc: 'Crude oil money. The real deal.' },
       { id: 'jet',    name: 'Private Jet Charter', emoji: '✈️', price: 150_000_000_000, perHr: 30_000_000_000, cat: 'Cartel', desc: 'Fly the politicians around.' },
       { id: 'yacht',  name: 'Yacht Club', emoji: '🛥️', price: 80_000_000_000, perHr: 15_000_000_000, cat: 'Cartel', desc: 'Party on the water.' },
@@ -185,22 +176,18 @@
       { id: 'crypto_ex', name: 'Crypto Exchange', emoji: '🪙', price: 500_000_000_000, perHr: 90_000_000_000, cat: 'Cartel', desc: 'Buying and selling coins.' },
       { id: 'railway', name: 'Railway Line', emoji: '🚆', price: 800_000_000_000, perHr: 120_000_000_000, cat: 'Cartel', desc: 'Connecting the cities.' },
       { id: 'private_island', name: 'Private Island', emoji: '🏝️', price: 2_000_000_000_000, perHr: 350_000_000_000, cat: 'Cartel', desc: 'A whole island to yourself.' },
-
-      // ===== ULTRA (50T - 750T) — NEW! =====
-      { id: 'satellite', name: 'Satellite Network', emoji: '🛰️', price: 50_000_000_000_000, perHr: 10_000_000_000_000, cat: 'Ultra', desc: 'Own the skies. Broadcast to millions.' },
-      { id: 'private_army', name: 'Private Army', emoji: '⚔️', price: 100_000_000_000_000, perHr: 20_000_000_000_000, cat: 'Ultra', desc: 'Protect your empire with force.' },
-      { id: 'airline', name: 'National Airline', emoji: '🛫', price: 200_000_000_000_000, perHr: 40_000_000_000_000, cat: 'Ultra', desc: 'Fly the continent. 100+ planes.' },
-      { id: 'shipping', name: 'Shipping Empire', emoji: '🚢', price: 300_000_000_000_000, perHr: 60_000_000_000_000, cat: 'Ultra', desc: 'Control global trade routes.' },
-      { id: 'football_club', name: 'Football Club', emoji: '⚽', price: 500_000_000_000_000, perHr: 100_000_000_000_000, cat: 'Ultra', desc: 'Buy the best players in the world.' },
-      { id: 'space_tour', name: 'Space Tourism', emoji: '🚀', price: 750_000_000_000_000, perHr: 150_000_000_000_000, cat: 'Ultra', desc: 'Take billionaires to the moon.' },
-
-      // ===== COSMIC (1Q - 20Q) — NEW! =====
-      { id: 'tech_empire', name: 'Tech Empire', emoji: '🖥️', price: 1_000_000_000_000_000, perHr: 200_000_000_000_000, cat: 'Cosmic', desc: 'Like Apple, Google and Meta combined.' },
+      { id: 'satellite', name: 'Satellite Network', emoji: '🛰️', price: 50_000_000_000_000, perHr: 10_000_000_000_000, cat: 'Ultra', desc: 'Own the skies.' },
+      { id: 'private_army', name: 'Private Army', emoji: '⚔️', price: 100_000_000_000_000, perHr: 20_000_000_000_000, cat: 'Ultra', desc: 'Protect your empire.' },
+      { id: 'airline', name: 'National Airline', emoji: '🛫', price: 200_000_000_000_000, perHr: 40_000_000_000_000, cat: 'Ultra', desc: '100+ planes.' },
+      { id: 'shipping', name: 'Shipping Empire', emoji: '🚢', price: 300_000_000_000_000, perHr: 60_000_000_000_000, cat: 'Ultra', desc: 'Control global trade.' },
+      { id: 'football_club', name: 'Football Club', emoji: '⚽', price: 500_000_000_000_000, perHr: 100_000_000_000_000, cat: 'Ultra', desc: 'Best players in the world.' },
+      { id: 'space_tour', name: 'Space Tourism', emoji: '🚀', price: 750_000_000_000_000, perHr: 150_000_000_000_000, cat: 'Ultra', desc: 'Billionaires to the moon.' },
+      { id: 'tech_empire', name: 'Tech Empire', emoji: '🖥️', price: 1_000_000_000_000_000, perHr: 200_000_000_000_000, cat: 'Cosmic', desc: 'Like Apple + Google combined.' },
       { id: 'central_bank', name: 'Central Bank', emoji: '🏦', price: 2_000_000_000_000_000, perHr: 400_000_000_000_000, cat: 'Cosmic', desc: 'Print the money yourself.' },
       { id: 'nuclear', name: 'Nuclear Plant', emoji: '☢️', price: 3_000_000_000_000_000, perHr: 600_000_000_000_000, cat: 'Cosmic', desc: 'Power entire nations.' },
-      { id: 'space_station', name: 'Space Station', emoji: '🛸', price: 5_000_000_000_000_000, perHr: 1_000_000_000_000_000, cat: 'Cosmic', desc: 'Orbital manufacturing hub.' },
-      { id: 'moon_base', name: 'Moon Base', emoji: '🌕', price: 10_000_000_000_000_000, perHr: 2_000_000_000_000_000, cat: 'Cosmic', desc: 'Mining helium-3 on the moon.' },
-      { id: 'mars_colony', name: 'Mars Colony', emoji: '🔴', price: 20_000_000_000_000_000, perHr: 4_000_000_000_000_000, cat: 'Cosmic', desc: 'The first permanent settlement on Mars.' },
+      { id: 'space_station', name: 'Space Station', emoji: '🛸', price: 5_000_000_000_000_000, perHr: 1_000_000_000_000_000, cat: 'Cosmic', desc: 'Orbital manufacturing.' },
+      { id: 'moon_base', name: 'Moon Base', emoji: '🌕', price: 10_000_000_000_000_000, perHr: 2_000_000_000_000_000, cat: 'Cosmic', desc: 'Mining helium-3.' },
+      { id: 'mars_colony', name: 'Mars Colony', emoji: '🔴', price: 20_000_000_000_000_000, perHr: 4_000_000_000_000_000, cat: 'Cosmic', desc: 'First settlement on Mars.' },
     ];
 
     const ASSET_PRICES = { 
@@ -222,7 +209,7 @@
       "A big man just bought 10 crates of eggs for his mansion 🥚",
       "Your POS stand is making money while NEPA is off 💳",
       "Bet9ja shop just opened, people dey troop in 🎰",
-      "Your Night Club is packed tonight, DJ is playing your favorite song 🎧",
+      "Your Night Club is packed tonight 🎧",
       "Your Real Estate agent just closed a ₦1B deal 🏘️",
       "Your Oil Bloc just shipped 1 million barrels 🛢️",
       "Your Satellite Network just signed a ₦50T government contract 🛰️",
@@ -300,7 +287,7 @@
       return {
         startMusic: () => { init(); if(ctx.state==="suspended") ctx.resume(); if(musicPlaying) return; musicPlaying=true; tick(); musicTimer=setInterval(tick, STEP_MS); },
         stopMusic: () => { musicPlaying=false; clearInterval(musicTimer); },
-        toggle: () => { if (musicPlaying) { stopMusic(); } else { startMusic(); } return musicPlaying; },
+        toggle: () => { if (musicPlaying) { AudioEngine.stopMusic(); } else { AudioEngine.startMusic(); } return musicPlaying; },
         coin: () => { init(); tone(1046, 0.08, "square", sfxGain, 0, 0.15); tone(1318, 0.15, "square", sfxGain, 0.07, 0.15); },
         error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
         purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); },
@@ -317,7 +304,6 @@
         right
       );
 
-    // ✅ Helper: effective income per owned business with upgrade multiplier
     const getEffectivePerHr = (biz, count, level) => {
       return count * biz.perHr * Math.pow(3, level || 0);
     };
@@ -334,24 +320,44 @@
       const [isCollecting, setIsCollecting] = useState(false);
 
       const [dramaEvent, setDramaEvent] = useState(null);
-      const [manageBiz, setManageBiz] = useState(null); // business being managed
+      const [manageBiz, setManageBiz] = useState(null);
 
       const [now, setNow] = useState(Date.now());
+
+      // Refs
+      const stateRef = useRef(s);
+      // Track last synced energy so we only write when it actually changes
+      const lastSyncedEnergyRef = useRef({ energy: -1, lastEnergy: 0 });
+
+      // Keep stateRef in sync
+      useEffect(() => { stateRef.current = s; }, [s]);
+
+      // Local ticker (no Firebase reads)
       useEffect(() => {
         const iv = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(iv);
       }, []);
 
-      // Ref for auto-collect interval to see latest state
-      const stateRef = useRef(s);
-      useEffect(() => { stateRef.current = s; }, [s]);
-
+      // ✅ TASK 2: Settings — get() once + 5min interval (NOT onSnapshot)
       useEffect(() => {
-        const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
-          if (doc.exists && doc.data().maintenance === true) setIsMaintenance(true);
-          else setIsMaintenance(false);
-        }, () => {});
+        let cancelled = false;
+        const checkMaintenance = async () => {
+          try {
+            const doc = await db.collection("settings").doc("game").get();
+            if (cancelled) return;
+            if (doc.exists && doc.data().maintenance === true) setIsMaintenance(true);
+            else setIsMaintenance(false);
+          } catch (e) {
+            // silently ignore
+          }
+        };
+        checkMaintenance();
+        const iv = setInterval(checkMaintenance, SETTINGS_REFRESH_MS);
+        return () => { cancelled = true; clearInterval(iv); };
+      }, []);
 
+      // ✅ TASK 1: Auth + ONLY ONE onSnapshot (own user) with cleanup
+      useEffect(() => {
         let userUnsub = null;
         const authUnsub = auth.onAuthStateChanged((user) => {
           if (!user) { window.location.href = '/login.html'; return; }
@@ -395,21 +401,24 @@
           }, (error) => console.error("Snapshot error:", error));
         });
 
-        return () => { authUnsub(); if (userUnsub) userUnsub(); unsubSettings(); };
+        return () => { authUnsub(); if (userUnsub) userUnsub(); };
       }, []);
 
+      // 🎵 Music unlock
       useEffect(() => {
         const unlock = () => { if (!musicOn) { AudioEngine.startMusic(); setMusicOn(true); } };
         window.addEventListener("pointerdown", unlock, { once: true });
         return () => window.removeEventListener("pointerdown", unlock);
       }, [musicOn]);
 
+      // Toast auto-dismiss
       useEffect(() => {
         if (!toast) return;
         const t = setTimeout(() => setToast(null), 2400);
         return () => clearTimeout(t);
       }, [toast]);
 
+      // Feed rotation
       useEffect(() => {
         const iv = setInterval(() => {
           setFeedMsg(BUSINESS_FEED[Math.floor(Math.random() * BUSINESS_FEED.length)]);
@@ -417,7 +426,7 @@
         return () => clearInterval(iv);
       }, []);
 
-      // Energy regen
+      // ✅ ENERGY REGEN — local only, NO Firestore write
       useEffect(() => {
         if (!uid) return;
         const iv = setInterval(() => {
@@ -428,11 +437,57 @@
             if (gained <= 0) return prev;
             const energy = Math.min(MAX_E, prev.energy + gained);
             const lastEnergy = energy >= MAX_E ? tickNow : prev.lastEnergy + gained * ENERGY_MS;
-            db.collection("users").doc(uid).update({ energy, lastEnergy }).catch(() => {});
-            return Object.assign({}, prev, { energy, lastEnergy });
+            const next = Object.assign({}, prev, { energy, lastEnergy });
+            stateRef.current = next;
+            return next;
           });
         }, 1000);
         return () => clearInterval(iv);
+      }, [uid]);
+
+      // ✅ ENERGY SYNC — every 60s, ONLY if energy changed. No more per-second writes.
+      useEffect(() => {
+        if (!uid) return;
+        const syncEnergy = async () => {
+          const cur = stateRef.current;
+          if (!cur) return;
+          const last = lastSyncedEnergyRef.current;
+          if (cur.energy === last.energy && cur.lastEnergy === last.lastEnergy) return;
+          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
+          try {
+            await db.collection("users").doc(uid).update({
+              energy: cur.energy,
+              lastEnergy: cur.lastEnergy,
+              lastSeen: Date.now()
+            });
+          } catch (e) { console.error("Energy sync error:", e); }
+        };
+        const iv = setInterval(syncEnergy, ENERGY_SYNC_MS);
+        return () => clearInterval(iv);
+      }, [uid]);
+
+      // ✅ Flush energy on tab hidden / unload
+      useEffect(() => {
+        if (!uid) return;
+        const flush = () => {
+          const cur = stateRef.current;
+          if (!cur) return;
+          const last = lastSyncedEnergyRef.current;
+          if (cur.energy === last.energy && cur.lastEnergy === last.lastEnergy) return;
+          // fire-and-forget
+          db.collection("users").doc(uid).update({
+            energy: cur.energy,
+            lastEnergy: cur.lastEnergy,
+            lastSeen: Date.now()
+          }).catch(() => {});
+        };
+        const handleVisibility = () => { if (document.visibilityState === 'hidden') flush(); };
+        document.addEventListener('visibilitychange', handleVisibility);
+        window.addEventListener('beforeunload', flush);
+        return () => {
+          document.removeEventListener('visibilitychange', handleVisibility);
+          window.removeEventListener('beforeunload', flush);
+        };
       }, [uid]);
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
@@ -450,7 +505,7 @@
         }).catch(() => {});
       };
 
-      // ✅ VAULT calc with upgrades
+      // ✅ Vault calculation (client-side only, no writes)
       const vault = useMemo(() => {
         const safeBiz = s.businesses || {};
         const upgrades = s.upgrades || {};
@@ -468,7 +523,6 @@
         return Math.floor((effectiveMs / 3600000) * perHr);
       }, [s.businesses, s.upgrades, s.lastCollected, now]);
 
-      // ✅ perHr total (with upgrades) - used for display and calculations
       const totalPerHr = useMemo(() => {
         const safeBiz = s.businesses || {};
         const upgrades = s.upgrades || {};
@@ -480,7 +534,7 @@
         }, 0);
       }, [s.businesses, s.upgrades]);
 
-      // ✅ AUTO-COLLECT bot
+      // ✅ AUTO-COLLECT bot — 1 write per 60s, includes energy (combined)
       useEffect(() => {
         if (!s.autoCollect || !uid) return;
         const iv = setInterval(async () => {
@@ -499,13 +553,23 @@
           const amount = Math.floor((elapsed / 3600000) * perHrCur);
           if (amount < 1) return;
           const collectNow = Date.now();
-          setS(prev => Object.assign({}, prev, {
-            cash: (prev.cash || 0) + amount,
-            lastCollected: collectNow
-          }));
+
+          setS(prev => {
+            const next = Object.assign({}, prev, {
+              cash: (prev.cash || 0) + amount,
+              lastCollected: collectNow
+            });
+            stateRef.current = next;
+            return next;
+          });
+
+          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
+
           await db.collection("users").doc(uid).update({
             cash: firebase.firestore.FieldValue.increment(amount),
-            lastCollected: collectNow
+            lastCollected: collectNow,
+            energy: cur.energy,
+            lastEnergy: cur.lastEnergy
           }).catch(() => {});
           AudioEngine.coin();
           notify('🤖 Bot collected ' + fmt(amount), 'good');
@@ -527,15 +591,19 @@
             cash: (prev.cash || 0) + amount,
             lastCollected: collectNow
           });
-          try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+          stateRef.current = next;
           return next;
         });
         notify('Collected ' + fmt(amount) + ' from your businesses! 💰');
 
         if (uid) {
+          const cur = stateRef.current;
+          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
           await db.collection("users").doc(uid).update({
             cash: firebase.firestore.FieldValue.increment(amount),
             lastCollected: collectNow,
+            energy: cur.energy,
+            lastEnergy: cur.lastEnergy,
             lastSeen: Date.now()
           }).catch(() => {});
           logHistory('Collected Vault', 'Collected ' + fmt(amount) + ' from businesses', amount);
@@ -584,12 +652,19 @@
             cash: Math.max(0, (prev.cash || 0) + cash),
             businesses: newBiz
           });
-          try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+          stateRef.current = next;
           return next;
         });
         if (cash > 0) AudioEngine.coin(); else AudioEngine.error();
         if (uid) {
-          const updates = { cash: firebase.firestore.FieldValue.increment(cash), lastSeen: Date.now() };
+          const cur = stateRef.current;
+          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
+          const updates = {
+            cash: firebase.firestore.FieldValue.increment(cash),
+            energy: cur.energy,
+            lastEnergy: cur.lastEnergy,
+            lastSeen: Date.now()
+          };
           if (biz) updates['businesses.' + biz] = firebase.firestore.FieldValue.increment(-1);
           await db.collection("users").doc(uid).update(updates).catch(() => {});
           logHistory(dramaEvent.title, dramaEvent.msg, cash);
@@ -644,16 +719,20 @@
             businesses: newBiz,
             lastCollected: buyNow
           });
-          try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+          stateRef.current = next;
           return next;
         });
         AudioEngine.purchase();
         notify(b.emoji + ' ' + b.name + ' bought! +' + fmt(b.perHr) + '/hr');
         try { if (navigator.vibrate) navigator.vibrate(25); } catch(e) {}
         if (uid) {
+          const cur = stateRef.current;
+          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
           const updates = {
             cash: firebase.firestore.FieldValue.increment(currentVault - b.price),
             lastCollected: buyNow,
+            energy: cur.energy,
+            lastEnergy: cur.lastEnergy,
             lastSeen: Date.now()
           };
           updates['businesses.' + b.id] = firebase.firestore.FieldValue.increment(1);
@@ -662,13 +741,12 @@
         }
       };
 
-      // ✅ UPGRADE business
       const upgradeBiz = async (b) => {
         const currentLevel = upgrades[b.id] || 0;
         if (currentLevel >= MAX_UPGRADE_LEVEL) return notify('Already MAX level! 🏆', 'bad');
         const cost = b.price * Math.pow(2, currentLevel);
         if ((s.cash + vault) < cost) { AudioEngine.error(); return notify('Not enough cash 💸', 'bad'); }
-        
+
         const buyNow = Date.now();
         setS(prev => {
           const newUpgrades = Object.assign({}, prev.upgrades || {});
@@ -678,16 +756,20 @@
             upgrades: newUpgrades,
             lastCollected: buyNow
           });
-          try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+          stateRef.current = next;
           return next;
         });
         AudioEngine.purchase();
         try { if (navigator.vibrate) navigator.vibrate([20, 30, 20]); } catch(e) {}
         notify('⚡ ' + b.name + ' upgraded to Lv.' + (currentLevel + 1) + '! ×3 income');
         if (uid) {
+          const cur = stateRef.current;
+          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
           const updates = {
             cash: firebase.firestore.FieldValue.increment(vault - cost),
             lastCollected: buyNow,
+            energy: cur.energy,
+            lastEnergy: cur.lastEnergy,
             lastSeen: Date.now()
           };
           updates['upgrades.' + b.id] = currentLevel + 1;
@@ -697,12 +779,11 @@
         setManageBiz(null);
       };
 
-      // ✅ SELL business
       const sellBiz = async (b) => {
         const owned = safeBiz[b.id] || 0;
         if (owned < 1) return notify('You no own this one', 'bad');
         const sellPrice = Math.floor(b.price * 0.5);
-        
+
         setS(prev => {
           const newBiz = Object.assign({}, prev.businesses || {});
           newBiz[b.id] = (newBiz[b.id] || 0) - 1;
@@ -711,14 +792,18 @@
             cash: (prev.cash || 0) + sellPrice,
             businesses: newBiz
           });
-          try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+          stateRef.current = next;
           return next;
         });
         AudioEngine.coin();
         notify('💸 Sold ' + b.name + ' for ' + fmt(sellPrice));
         if (uid) {
+          const cur = stateRef.current;
+          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
           const updates = {
             cash: firebase.firestore.FieldValue.increment(sellPrice),
+            energy: cur.energy,
+            lastEnergy: cur.lastEnergy,
             lastSeen: Date.now()
           };
           updates['businesses.' + b.id] = firebase.firestore.FieldValue.increment(-1);
@@ -728,7 +813,6 @@
         setManageBiz(null);
       };
 
-      // ✅ BUY auto-collect bot
       const buyAutoCollect = async () => {
         if (s.autoCollect) return notify('Already active! 🤖', 'bad');
         if ((s.cash + vault) < AUTO_COLLECT_COST) { AudioEngine.error(); return notify('Need ' + fmt(AUTO_COLLECT_COST), 'bad'); }
@@ -739,43 +823,50 @@
             autoCollect: true,
             lastCollected: buyNow
           });
-          try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+          stateRef.current = next;
           return next;
         });
         AudioEngine.purchase();
         notify('🤖 Auto-Collect Bot activated!');
         if (uid) {
+          const cur = stateRef.current;
+          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
           await db.collection("users").doc(uid).update({
             cash: firebase.firestore.FieldValue.increment(vault - AUTO_COLLECT_COST),
             autoCollect: true,
             lastCollected: buyNow,
+            energy: cur.energy,
+            lastEnergy: cur.lastEnergy,
             lastSeen: Date.now()
           }).catch(() => {});
           logHistory('Bought Auto-Collect Bot', 'Active forever', -AUTO_COLLECT_COST);
         }
       };
 
-      // ✅ JOIN WhatsApp
       const joinWhatsApp = async () => {
         if (s.whatsappJoined) return notify('Already joined! 💬', 'bad');
         try { window.open(WHATSAPP_GROUP_URL, '_blank', 'noopener,noreferrer'); } catch(e) {}
         notify('Verifying join...', 'good');
         setTimeout(async () => {
-          const bonus = 1_000_000_000_000; // ₦1T
+          const bonus = 1_000_000_000_000;
           setS(prev => {
             const next = Object.assign({}, prev, {
               cash: (prev.cash || 0) + bonus,
               whatsappJoined: true
             });
-            try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+            stateRef.current = next;
             return next;
           });
           AudioEngine.collect();
           notify('💬 Welcome! +' + fmt(bonus));
           if (uid) {
+            const cur = stateRef.current;
+            lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
             await db.collection("users").doc(uid).update({
               cash: firebase.firestore.FieldValue.increment(bonus),
               whatsappJoined: true,
+              energy: cur.energy,
+              lastEnergy: cur.lastEnergy,
               lastSeen: Date.now()
             }).catch(() => {});
             logHistory('Joined WhatsApp', 'Community bonus', bonus);
@@ -804,7 +895,6 @@
             className: 'music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition'
           }, h('span', { className: 'text-base' }, musicOn ? '🔊' : '🔇')),
 
-          /* ✅ SCROLL FIX 3: solid header, no backdrop-blur */
           h('header', { className: 'sticky top-0 z-30 bg-[#08080B] border-b border-white/[0.06]' },
             h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
               h('div', { className: 'flex items-center gap-2 min-w-0' },
@@ -823,13 +913,11 @@
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
 
-            // VAULT CARD
             h(Card, { className: 'p-5 mt-3 relative overflow-hidden', gold: true },
               h('div', { className: 'absolute -top-10 -right-10 w-32 h-32 rounded-full bg-[#FFD60A]/20 blur-2xl pointer-events-none' }),
               h('div', { className: 'text-center relative z-10' },
                 h('div', { className: 'text-[10px] uppercase tracking-widest text-[#FFD60A]/70 font-bold mb-1' }, 'Business Vault'),
                 h('div', { className: 'text-4xl font-black text-gradient-gold tabular-nums font-display drop-shadow-md mb-1' }, fmt(vault)),
-                // ✅ Live per-sec ticker
                 perSec > 0 && h('div', { className: 'text-[10px] text-[#22C55E] font-bold mb-3 tabular-nums' }, '+ ' + fmt(perSec) + ' / second'),
                 h('div', { className: 'text-[10px] text-white/50 mb-4' }, s.autoCollect ? '🤖 Bot auto-collects every 60s' : 'Collect before 48hrs so Sapa no catch you'),
 
@@ -847,7 +935,6 @@
               )
             ),
 
-            // STATS
             h('div', { className: 'grid grid-cols-3 gap-2 mt-3' },
               h(Card, { className: 'p-2.5 text-center' },
                 h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Per Hour'),
@@ -863,7 +950,6 @@
               )
             ),
 
-            // MARQUEE FEED
             h('div', { className: 'mt-4 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center gap-2 overflow-hidden' },
               h('span', { className: 'text-sm shrink-0 animate-pulse' }, '📡'),
               h('div', { className: 'flex-1 overflow-hidden relative h-5' },
@@ -871,7 +957,6 @@
               )
             ),
 
-            // ✅ WHATSAPP COMMUNITY BONUS
             h(Card, { className: 'p-3 mt-4 relative overflow-hidden' },
               h('div', { className: 'flex items-center gap-3' },
                 h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-[#25D366] to-[#128C7E] grid place-items-center text-2xl shrink-0 shadow-lg' }, '💬'),
@@ -888,7 +973,6 @@
               )
             ),
 
-            // ✅ AUTO-COLLECT BOT
             h(Card, { className: 'p-3 mt-2 relative overflow-hidden' },
               h('div', { className: 'flex items-center gap-3' },
                 h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-[#A855F7] to-[#7C3AED] grid place-items-center text-2xl shrink-0 shadow-lg' }, '🤖'),
@@ -905,7 +989,6 @@
               )
             ),
 
-            // CATEGORIES
             h('div', { className: 'mt-4 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar' },
               CATEGORIES.map(cat =>
                 h('button', {
@@ -919,7 +1002,6 @@
               )
             ),
 
-            // EMPIRE — tap to manage
             ownedCount > 0 && activeTab === 'All' && h(React.Fragment, null,
               h(SectionTitle, {
                 right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A] flex items-center gap-1.5' },
@@ -1025,7 +1107,6 @@
             )
           ),
 
-          // ✅ MANAGE BUSINESS MODAL
           manageBiz && (() => {
             const owned = safeBiz[manageBiz.id] || 0;
             const lvl = upgrades[manageBiz.id] || 0;
@@ -1048,7 +1129,6 @@
                   )
                 ),
                 h('div', { className: 'mt-4 space-y-2' },
-                  // UPGRADE
                   lvl < MAX_UPGRADE_LEVEL ? h('button', {
                     onClick: () => upgradeBiz(manageBiz),
                     disabled: !canUpgrade,
@@ -1065,7 +1145,6 @@
                   ) : h('div', { className: 'w-full rounded-xl p-3 bg-[#FFD60A]/15 border border-[#FFD60A]/30 text-center' },
                     h('div', { className: 'text-[12px] font-black text-[#FFD60A]' }, '🏆 MAX LEVEL')
                   ),
-                  // SELL
                   h('button', {
                     onClick: () => sellBiz(manageBiz),
                     className: 'w-full rounded-xl p-3 text-left active:scale-95 transition bg-white/[0.06] border border-white/10'
@@ -1087,7 +1166,6 @@
             );
           })(),
 
-          // ✅ DRAMA MODAL
           dramaEvent && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md' }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-2xl animate-popIn text-center' },
