@@ -48,9 +48,15 @@
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+    @keyframes pulse-glow { 0%,100% { box-shadow: 0 0 20px rgba(255,214,10,0.4); } 50% { box-shadow: 0 0 40px rgba(255,214,10,0.8); } }
+    @keyframes shake-it { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-8deg); } 75% { transform: rotate(8deg); } }
+    @keyframes pop-big { 0% { transform: scale(0); opacity: 0; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
     .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
     .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .animate-glow { animation: pulse-glow 2s infinite; }
+    .animate-shake { animation: shake-it 0.4s infinite; }
+    .animate-pop-big { animation: pop-big 0.6s cubic-bezier(0.22,1,0.36,1); }
     .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: #08080B; }
@@ -65,6 +71,10 @@
     .marquee { animation: marquee 15s linear infinite; white-space: nowrap; }
     @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
     .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
+    .tiktok-gradient { background: linear-gradient(135deg, #25F4EE 0%, #FE2C55 100%); }
+    .auction-gradient { background: linear-gradient(135deg, #FF6B00 0%, #FF0055 100%); }
+    .mystery-gradient { background: linear-gradient(135deg, #A855F7 0%, #6366F1 100%); }
+    .flash-gradient { background: linear-gradient(135deg, #FFD60A 0%, #FF6B00 100%); }
   </style>
 </head>
 <body>
@@ -96,6 +106,11 @@
     const ENERGY_MS = 5 * 60 * 1000;
     const NPC_SELL_PCT = 0.6;
 
+    // 🆕 Campaign/Auction/Mystery config
+    const MYSTERY_BOX_COST = 50_000_000_000;
+    const MIN_REWARD_PER_FOLLOW = 100_000_000_000;
+    const FLASH_DISCOUNT = 0.5;
+
     const CATEGORIES = ["All", "Street Flex", "Rides", "Real Estate", "Aje Status", "Women's Flex"];
     const SORTS = [
       { id: 'default', label: 'Default' },
@@ -105,61 +120,61 @@
     ];
 
     const ASSETS = [
-      // ===== STREET FLEX =====
+      // STREET FLEX
       { id: 'af1', name: 'Air Force 1', emoji: '👟', price: 500_000, tier: 'Starter', color: 'from-gray-400/20 to-gray-700/10', cat: 'Street Flex', desc: 'White on white. Clean. But if you step on my shoe, e go be fight!' },
       { id: 'shades', name: 'Designer Shades', emoji: '🕶️', price: 2_000_000, tier: 'Baller', color: 'from-black/40 to-gray-800/20', cat: 'Street Flex', desc: 'To hide your eyes from haters and police.' },
-      { id: 'chain', name: 'Gold Chain', emoji: '📿', price: 20_000_000, tier: 'Starter', color: 'from-yellow-500/20 to-yellow-700/10', cat: 'Street Flex', desc: 'Heavy neck, heavy pockets. Make area boys no pursue you.' },
+      { id: 'chain', name: 'Gold Chain', emoji: '📿', price: 20_000_000, tier: 'Starter', color: 'from-yellow-500/20 to-yellow-700/10', cat: 'Street Flex', desc: 'Heavy neck, heavy pockets.' },
       { id: 'iphone', name: 'iPhone 15 Pro Max', emoji: '📱', price: 10_000_000, tier: 'Sharp', color: 'from-blue-400/20 to-blue-700/10', cat: 'Street Flex', desc: 'Titanium finish. Sharp. But if you drop am, your heart go break.' },
-      { id: 'grillz', name: 'Gold Grillz', emoji: '🦷', price: 50_000_000, tier: 'Baller', color: 'from-amber-400/20 to-amber-700/10', cat: 'Street Flex', desc: 'Smile and blind them. Just no try bite meat with am.' },
-      { id: 'rolex', name: 'Rolex', emoji: '⌚', price: 250_000_000, tier: 'Baller', color: 'from-amber-400/25 to-amber-700/10', cat: 'Street Flex', desc: 'Time is money. But make e no be fake from Computer Village.' },
+      { id: 'grillz', name: 'Gold Grillz', emoji: '🦷', price: 50_000_000, tier: 'Baller', color: 'from-amber-400/20 to-amber-700/10', cat: 'Street Flex', desc: 'Smile and blind them.' },
+      { id: 'rolex', name: 'Rolex', emoji: '⌚', price: 250_000_000, tier: 'Baller', color: 'from-amber-400/25 to-amber-700/10', cat: 'Street Flex', desc: 'Time is money. But make e no be fake.' },
       { id: 'agbero_army', name: 'Personal Agbero Army', emoji: '🦍', price: 500_000_000, tier: 'Big Boy', color: 'from-slate-400/20 to-slate-700/10', cat: 'Street Flex', desc: '5 agberos to collect tax for you.' },
 
-      // ===== WOMEN'S FLEX =====
-      { id: 'nail_polish', name: 'Gel Nails Set', emoji: '💅', price: 400_000, tier: 'Starter', color: 'from-pink-400/20 to-pink-700/10', cat: "Women's Flex", desc: 'Fresh nails for the gram. #NailGoals 💅' },
-      { id: 'lipstick', name: 'Louboutin Lipstick', emoji: '💄', price: 800_000, tier: 'Starter', color: 'from-red-400/20 to-red-700/10', cat: "Women's Flex", desc: 'Red-bottom lipstick. Very pricey, but that is the flex.' },
-      { id: 'teddy_bear', name: 'Giant Teddy Bear', emoji: '🧸', price: 1_500_000, tier: 'Starter', color: 'from-amber-300/20 to-amber-700/10', cat: "Women's Flex", desc: 'For the babe wey sabi enjoy soft life. Teddy no dey talk back.' },
-      { id: 'panties', name: 'Luxury Panties (5pk)', emoji: '🩲', price: 15_000_000, tier: 'Baller', color: 'from-fuchsia-400/20 to-fuchsia-700/10', cat: "Women's Flex", desc: 'Silk and lace. Pure luxury underneath.' },
-      { id: 'hair_ext', name: 'Brazilian Hair Bundle', emoji: '💇🏾', price: 30_000_000, tier: 'Baller', color: 'from-amber-500/20 to-amber-700/10', cat: "Women's Flex", desc: 'Raw Brazilian. 30 inches. No shedding.' },
-      { id: 'makeup', name: 'Charlotte Tilbury Set', emoji: '💋', price: 30_000_000, tier: 'Baller', color: 'from-rose-400/20 to-rose-700/10', cat: "Women's Flex", desc: 'Full face of Charlotte. Pillow talk on point.' },
-      { id: 'bra_set', name: 'Designer Bra Set', emoji: '👙', price: 50_000_000, tier: 'Baller', color: 'from-pink-400/20 to-pink-700/10', cat: "Women's Flex", desc: 'Victoria Secret, pure silk. Very expensive for something nobody sees.' },
-      { id: 'perfume', name: 'Chanel No. 5', emoji: '🌸', price: 100_000_000, tier: 'Big Boy', color: 'from-amber-300/20 to-amber-700/10', cat: "Women's Flex", desc: 'Smell like money. Every time you walk in, people dey ask "who is that?"' },
-      { id: 'wig', name: 'Human Hair Wig', emoji: '💇🏾‍♀️', price: 200_000_000, tier: 'Big Boy', color: 'from-purple-400/20 to-purple-700/10', cat: "Women's Flex", desc: 'Bone straight. HD lace. Install go cost you extra sef.' },
-      { id: 'louboutin', name: 'Louboutin Heels', emoji: '👠', price: 500_000_000, tier: 'Odogwu', color: 'from-red-500/20 to-red-700/10', cat: "Women's Flex", desc: 'Red bottom. Painful to walk in, but the boys dey look.' },
-      { id: 'designer_dress', name: 'Designer Gown', emoji: '👗', price: 1_000_000_000, tier: 'Odogwu', color: 'from-pink-500/20 to-pink-700/10', cat: "Women's Flex", desc: 'One-of-a-kind couture. Worn once, never again.' },
-      { id: 'purse', name: 'Hermès Birkin Bag', emoji: '👜', price: 5_000_000_000, tier: 'Aje', color: 'from-orange-400/20 to-orange-700/10', cat: "Women's Flex", desc: 'You cannot just buy am — you must be invited by Hermès. True Aje status.' },
-      { id: 'jewelry_set', name: 'Diamond Jewelry Set', emoji: '💎', price: 25_000_000_000, tier: 'Legend', color: 'from-cyan-400/20 to-cyan-700/10', cat: "Women's Flex", desc: 'Necklace, earrings, bracelet and ring. All real diamonds.' },
-      { id: 'handbag_set', name: 'Handbag Collection', emoji: '🛍️', price: 50_000_000_000, tier: 'Legend', color: 'from-rose-400/20 to-rose-700/10', cat: "Women's Flex", desc: 'Birkin, Kelly, Chanel — the full collection.' },
+      // WOMEN'S FLEX
+      { id: 'nail_polish', name: 'Gel Nails Set', emoji: '💅', price: 400_000, tier: 'Starter', color: 'from-pink-400/20 to-pink-700/10', cat: "Women's Flex", desc: 'Fresh nails for the gram.' },
+      { id: 'lipstick', name: 'Louboutin Lipstick', emoji: '💄', price: 800_000, tier: 'Starter', color: 'from-red-400/20 to-red-700/10', cat: "Women's Flex", desc: 'Red-bottom lipstick.' },
+      { id: 'teddy_bear', name: 'Giant Teddy Bear', emoji: '🧸', price: 1_500_000, tier: 'Starter', color: 'from-amber-300/20 to-amber-700/10', cat: "Women's Flex", desc: 'For the babe wey sabi enjoy soft life.' },
+      { id: 'panties', name: 'Luxury Panties (5pk)', emoji: '🩲', price: 15_000_000, tier: 'Baller', color: 'from-fuchsia-400/20 to-fuchsia-700/10', cat: "Women's Flex", desc: 'Silk and lace.' },
+      { id: 'hair_ext', name: 'Brazilian Hair Bundle', emoji: '💇🏾', price: 30_000_000, tier: 'Baller', color: 'from-amber-500/20 to-amber-700/10', cat: "Women's Flex", desc: 'Raw Brazilian. 30 inches.' },
+      { id: 'makeup', name: 'Charlotte Tilbury Set', emoji: '💋', price: 30_000_000, tier: 'Baller', color: 'from-rose-400/20 to-rose-700/10', cat: "Women's Flex", desc: 'Full face of Charlotte.' },
+      { id: 'bra_set', name: 'Designer Bra Set', emoji: '👙', price: 50_000_000, tier: 'Baller', color: 'from-pink-400/20 to-pink-700/10', cat: "Women's Flex", desc: 'Victoria Secret, pure silk.' },
+      { id: 'perfume', name: 'Chanel No. 5', emoji: '🌸', price: 100_000_000, tier: 'Big Boy', color: 'from-amber-300/20 to-amber-700/10', cat: "Women's Flex", desc: 'Smell like money.' },
+      { id: 'wig', name: 'Human Hair Wig', emoji: '💇🏾‍♀️', price: 200_000_000, tier: 'Big Boy', color: 'from-purple-400/20 to-purple-700/10', cat: "Women's Flex", desc: 'Bone straight. HD lace.' },
+      { id: 'louboutin', name: 'Louboutin Heels', emoji: '👠', price: 500_000_000, tier: 'Odogwu', color: 'from-red-500/20 to-red-700/10', cat: "Women's Flex", desc: 'Red bottom.' },
+      { id: 'designer_dress', name: 'Designer Gown', emoji: '👗', price: 1_000_000_000, tier: 'Odogwu', color: 'from-pink-500/20 to-pink-700/10', cat: "Women's Flex", desc: 'One-of-a-kind couture.' },
+      { id: 'purse', name: 'Hermès Birkin Bag', emoji: '👜', price: 5_000_000_000, tier: 'Aje', color: 'from-orange-400/20 to-orange-700/10', cat: "Women's Flex", desc: 'You must be invited by Hermès.' },
+      { id: 'jewelry_set', name: 'Diamond Jewelry Set', emoji: '💎', price: 25_000_000_000, tier: 'Legend', color: 'from-cyan-400/20 to-cyan-700/10', cat: "Women's Flex", desc: 'All real diamonds.' },
+      { id: 'handbag_set', name: 'Handbag Collection', emoji: '🛍️', price: 50_000_000_000, tier: 'Legend', color: 'from-rose-400/20 to-rose-700/10', cat: "Women's Flex", desc: 'Birkin, Kelly, Chanel.' },
 
-      // ===== RIDES =====
-      { id: 'honda', name: 'Honda Accord', emoji: '🚗', price: 60_000_000, tier: 'Sharp', color: 'from-slate-400/20 to-slate-700/10', cat: 'Rides', desc: 'End of discussion. E dey spoil but e go still carry you go church.' },
-      { id: 'camry', name: 'Toyota Camry', emoji: '🚘', price: 120_000_000, tier: 'Sharp', color: 'from-gray-400/20 to-gray-700/10', cat: 'Rides', desc: 'Muscle car for the big boys. Very reliable.' },
+      // RIDES
+      { id: 'honda', name: 'Honda Accord', emoji: '🚗', price: 60_000_000, tier: 'Sharp', color: 'from-slate-400/20 to-slate-700/10', cat: 'Rides', desc: 'End of discussion.' },
+      { id: 'camry', name: 'Toyota Camry', emoji: '🚘', price: 120_000_000, tier: 'Sharp', color: 'from-gray-400/20 to-gray-700/10', cat: 'Rides', desc: 'Muscle car for the big boys.' },
       { id: 'traffic_lane', name: 'Private Traffic Lane', emoji: '🛣️', price: 2_500_000_000, tier: 'Odogwu', color: 'from-gray-400/20 to-gray-700/10', cat: 'Rides', desc: 'Bypass Lagos traffic permanently.' },
-      { id: 'tesla', name: 'Tesla', emoji: '⚡', price: 3_000_000_000, tier: 'Sharp', color: 'from-red-500/20 to-red-700/10', cat: 'Rides', desc: 'Electric. Zero noise. But where you wan see charging station for Lagos?' },
-      { id: 'gwag', name: 'G-Wagon', emoji: '🚙', price: 25_000_000_000, tier: 'Big Boy', color: 'from-slate-400/20 to-slate-700/10', cat: 'Rides', desc: 'Boxy but expensive. Fuel alone go finish your money.' },
-      { id: 'rr', name: 'Range Rover', emoji: '🚐', price: 75_000_000_000, tier: 'Odogwu', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Rides', desc: 'The official car of the rich. E dey leak oil but na flex.' },
-      { id: 'lambo', name: 'Lamborghini', emoji: '🏎️', price: 250_000_000_000, tier: 'Aje', color: 'from-yellow-400/20 to-yellow-700/10', cat: 'Rides', desc: 'Scissor doors. Pure flex. You no fit speed am for Third Mainland.' },
+      { id: 'tesla', name: 'Tesla', emoji: '⚡', price: 3_000_000_000, tier: 'Sharp', color: 'from-red-500/20 to-red-700/10', cat: 'Rides', desc: 'Electric. Zero noise.' },
+      { id: 'gwag', name: 'G-Wagon', emoji: '🚙', price: 25_000_000_000, tier: 'Big Boy', color: 'from-slate-400/20 to-slate-700/10', cat: 'Rides', desc: 'Boxy but expensive.' },
+      { id: 'rr', name: 'Range Rover', emoji: '🚐', price: 75_000_000_000, tier: 'Odogwu', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Rides', desc: 'The official car of the rich.' },
+      { id: 'lambo', name: 'Lamborghini', emoji: '🏎️', price: 250_000_000_000, tier: 'Aje', color: 'from-yellow-400/20 to-yellow-700/10', cat: 'Rides', desc: 'Scissor doors. Pure flex.' },
 
-      // ===== REAL ESTATE =====
-      { id: 'landlord_house', name: 'Lagos Landlord Special', emoji: '🏚️', price: 250_000_000, tier: 'Sharp', color: 'from-slate-400/20 to-slate-700/10', cat: 'Real Estate', desc: 'Face-me-I-face-you but you are the boss.' },
-      { id: 'lekki_flat', name: 'Lekki 2-Bedroom', emoji: '🏢', price: 500_000_000, tier: 'Baller', color: 'from-amber-400/20 to-amber-700/10', cat: 'Real Estate', desc: 'Where the tech bros live. Rent go finish your salary.' },
-      { id: 'ikeja_duplex', name: 'Ikeja Duplex', emoji: '🏡', price: 1_500_000_000, tier: 'Big Boy', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Real Estate', desc: 'Close to the airport. Every time you hear plane, you think say you don travel.' },
-      { id: 'ikoyi_penthouse', name: 'Ikoyi Penthouse', emoji: '🏙️', price: 7_500_000_000, tier: 'Odogwu', color: 'from-cyan-400/20 to-cyan-700/10', cat: 'Real Estate', desc: 'High above the noise. Only politicians and yahoo boys dey here.' },
-      { id: 'yacht', name: 'Private Yacht', emoji: '🛥️', price: 100_000_000_000, tier: 'Odogwu', color: 'from-cyan-400/20 to-blue-700/10', cat: 'Real Estate', desc: 'Party on the water. But make water no enter your engine.' },
+      // REAL ESTATE
+      { id: 'landlord_house', name: 'Lagos Landlord Special', emoji: '🏚️', price: 250_000_000, tier: 'Sharp', color: 'from-slate-400/20 to-slate-700/10', cat: 'Real Estate', desc: 'Face-me-I-face-you.' },
+      { id: 'lekki_flat', name: 'Lekki 2-Bedroom', emoji: '🏢', price: 500_000_000, tier: 'Baller', color: 'from-amber-400/20 to-amber-700/10', cat: 'Real Estate', desc: 'Where the tech bros live.' },
+      { id: 'ikeja_duplex', name: 'Ikeja Duplex', emoji: '🏡', price: 1_500_000_000, tier: 'Big Boy', color: 'from-emerald-400/20 to-emerald-700/10', cat: 'Real Estate', desc: 'Close to the airport.' },
+      { id: 'ikoyi_penthouse', name: 'Ikoyi Penthouse', emoji: '🏙️', price: 7_500_000_000, tier: 'Odogwu', color: 'from-cyan-400/20 to-cyan-700/10', cat: 'Real Estate', desc: 'High above the noise.' },
+      { id: 'yacht', name: 'Private Yacht', emoji: '🛥️', price: 100_000_000_000, tier: 'Odogwu', color: 'from-cyan-400/20 to-blue-700/10', cat: 'Real Estate', desc: 'Party on the water.' },
       { id: 'lekki_bridge', name: 'Lekki-Ikoyi Bridge', emoji: '🌉', price: 2_500_000_000_000, tier: 'Legend', color: 'from-blue-400/20 to-blue-700/10', cat: 'Real Estate', desc: 'You own the toll gate now.' },
-      { id: 'mansion', name: 'Banana Island Mansion', emoji: '🏰', price: 5_000_000_000_000, tier: 'Legend', color: 'from-pink-400/20 to-pink-700/10', cat: 'Real Estate', desc: 'The ultimate Lagos dream. You buy am, your village people go start to work overtime.' },
+      { id: 'mansion', name: 'Banana Island Mansion', emoji: '🏰', price: 5_000_000_000_000, tier: 'Legend', color: 'from-pink-400/20 to-pink-700/10', cat: 'Real Estate', desc: 'The ultimate Lagos dream.' },
 
-      // ===== AJE STATUS =====
-      { id: 'chef', name: 'Private Chef', emoji: '👨🏾‍🍳', price: 250_000_000, tier: 'Baller', color: 'from-white/20 to-gray-700/10', cat: 'Aje Status', desc: 'Breakfast, lunch and dinner. You go still dey buy street suya.' },
-      { id: 'bodyguard', name: 'Personal Bodyguard', emoji: '💪🏾', price: 750_000_000, tier: 'Big Boy', color: 'from-red-400/20 to-red-700/10', cat: 'Aje Status', desc: 'Keep the area boys away. But if you offend politician, he no go fit save you.' },
-      { id: 'plate', name: 'Custom Plate Number', emoji: '🔠', price: 1_000_000_000, tier: 'Sharp', color: 'from-blue-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'E.g. "BIG-BOY-1". Police go still stop you for check point.' },
+      // AJE STATUS
+      { id: 'chef', name: 'Private Chef', emoji: '👨🏾‍🍳', price: 250_000_000, tier: 'Baller', color: 'from-white/20 to-gray-700/10', cat: 'Aje Status', desc: 'Breakfast, lunch and dinner.' },
+      { id: 'bodyguard', name: 'Personal Bodyguard', emoji: '💪🏾', price: 750_000_000, tier: 'Big Boy', color: 'from-red-400/20 to-red-700/10', cat: 'Aje Status', desc: 'Keep the area boys away.' },
+      { id: 'plate', name: 'Custom Plate Number', emoji: '🔠', price: 1_000_000_000, tier: 'Sharp', color: 'from-blue-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'E.g. "BIG-BOY-1".' },
       { id: 'shrine', name: "Fela's Shrine VIP", emoji: '🎷', price: 5_000_000_000, tier: 'Baller', color: 'from-amber-400/20 to-amber-700/10', cat: 'Aje Status', desc: 'VIP table for life.' },
-      { id: 'patek', name: 'Patek Philippe', emoji: '⌚', price: 10_000_000_000, tier: 'Odogwu', color: 'from-amber-400/25 to-amber-700/10', cat: 'Aje Status', desc: 'You never actually own a Patek. You merely look after it for the next generation.' },
-      { id: 'jet', name: 'Private Jet', emoji: '✈️', price: 500_000_000_000, tier: 'Aje', color: 'from-purple-400/20 to-purple-700/10', cat: 'Aje Status', desc: 'Fly above the traffic. No more LASTMA to disturb you.' },
-      { id: 'helicopter', name: 'Helicopter', emoji: '🚁', price: 1_500_000_000_000, tier: 'Aje', color: 'from-indigo-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'Beat the traffic. But where you wan land am for Mushin?' },
-      { id: 'island', name: 'Private Island', emoji: '🏝️', price: 10_000_000_000_000, tier: 'Legend', color: 'from-teal-400/20 to-teal-700/10', cat: 'Aje Status', desc: 'For when Lagos is too loud. You fit build your own country here.' },
-      { id: 'third_mainland', name: 'Third Mainland Bridge', emoji: '🌉', price: 50_000_000_000_000, tier: 'Legend', color: 'from-gray-400/20 to-gray-700/10', cat: 'Aje Status', desc: 'You own the longest bridge in Africa.' },
-      { id: 'football', name: 'Football Club', emoji: '⚽', price: 25_000_000_000_000, tier: 'Legend', color: 'from-lime-400/20 to-lime-700/10', cat: 'Aje Status', desc: 'Buy a whole team. Make sure say dem no go lose every match.' },
-      { id: 'crypto', name: 'Crypto Exchange', emoji: '🪙', price: 50_000_000_000_000, tier: 'Legend', color: 'from-orange-400/20 to-orange-700/10', cat: 'Aje Status', desc: 'Control the blockchain. But Binance fit still hack you.' },
+      { id: 'patek', name: 'Patek Philippe', emoji: '⌚', price: 10_000_000_000, tier: 'Odogwu', color: 'from-amber-400/25 to-amber-700/10', cat: 'Aje Status', desc: 'You merely look after it.' },
+      { id: 'jet', name: 'Private Jet', emoji: '✈️', price: 500_000_000_000, tier: 'Aje', color: 'from-purple-400/20 to-purple-700/10', cat: 'Aje Status', desc: 'Fly above the traffic.' },
+      { id: 'helicopter', name: 'Helicopter', emoji: '🚁', price: 1_500_000_000_000, tier: 'Aje', color: 'from-indigo-400/20 to-indigo-700/10', cat: 'Aje Status', desc: 'Beat the traffic.' },
+      { id: 'island', name: 'Private Island', emoji: '🏝️', price: 10_000_000_000_000, tier: 'Legend', color: 'from-teal-400/20 to-teal-700/10', cat: 'Aje Status', desc: 'Your own country.' },
+      { id: 'third_mainland', name: 'Third Mainland Bridge', emoji: '🌉', price: 50_000_000_000_000, tier: 'Legend', color: 'from-gray-400/20 to-gray-700/10', cat: 'Aje Status', desc: 'Longest bridge in Africa.' },
+      { id: 'football', name: 'Football Club', emoji: '⚽', price: 25_000_000_000_000, tier: 'Legend', color: 'from-lime-400/20 to-lime-700/10', cat: 'Aje Status', desc: 'Buy a whole team.' },
+      { id: 'crypto', name: 'Crypto Exchange', emoji: '🪙', price: 50_000_000_000_000, tier: 'Legend', color: 'from-orange-400/20 to-orange-700/10', cat: 'Aje Status', desc: 'Control the blockchain.' },
     ];
 
     const BIZ_PRICES = { water: 10_000, suya: 250_000, keke: 500_000, phone: 2_000_000, danfo: 5_000_000, wash: 25_000_000, bet9ja: 50_000_000, lounge: 500_000_000, oil: 5_000_000_000 };
@@ -167,14 +182,16 @@
     const MARKET_FEED = [
       "Someone just bought a Lamborghini in Lekki, e dey find where to drive am 🏎️",
       "G-Wagon just buy am, but no money for fuel ⛽",
-      "Air Force 1 clear for market today, everybody dey wear am 👟",
-      "Person just buy Banana Island Mansion, aunty Bisi don beg am for money 🏰",
-      "Fake Rolex seller just catch one customer for Computer Village ⌚",
+      "Air Force 1 clear for market today 👟",
+      "Person just buy Banana Island Mansion 🏰",
+      "Fake Rolex seller just catch one customer ⌚",
       "Yacht just buy am but e no sabi swim 🛥️",
-      "Private Jet just land for Murtala Muhammed, traffic hold everywhere ✈️",
-      "Custom plate number 'BIG-BOY-1' just sell out 🔠",
-      "Hermès Birkin just finish for Player Market, one aunty quickly grab am 👜",
-      "Diamond Jewelry just sell for ₦25B, chai! 💎"
+      "Private Jet just land for Murtala Muhammed ✈️",
+      "Hermès Birkin just finish for Player Market 👜",
+      "Someone just created a TikTok campaign for 100T! 🎵",
+      "Auction House is hot today — bids dey fly! 🔨",
+      "Mystery Box just drop Lamborghini for one lucky player 🎁",
+      "Flash deal don activate — 50% off! ⚡"
     ];
 
     const getCachedData = () => {
@@ -182,7 +199,10 @@
         const cached = localStorage.getItem("lagos_user_data");
         if (cached) {
           const parsed = JSON.parse(cached);
-          return Object.assign({}, parsed, { wishlist: parsed.wishlist || [] });
+          return Object.assign({}, parsed, {
+            wishlist: parsed.wishlist || [],
+            flashDealBoughtAt: parsed.flashDealBoughtAt || 0
+          });
         }
       } catch (e) {}
       return {
@@ -190,7 +210,7 @@
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-        transactions: [], history: [], wishlist: []
+        transactions: [], history: [], wishlist: [], flashDealBoughtAt: 0
       };
     };
 
@@ -206,6 +226,19 @@
       return s + '₦' + n.toLocaleString();
     };
     const fmtReal = (n) => '₦' + (n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const timeLeft = (ms) => {
+      if (ms <= 0) return 'Ended';
+      const s = Math.floor(ms / 1000);
+      const d = Math.floor(s / 86400);
+      const hrs = Math.floor((s % 86400) / 3600);
+      const mins = Math.floor((s % 3600) / 60);
+      const secs = s % 60;
+      if (d > 0) return d + 'd ' + hrs + 'h';
+      if (hrs > 0) return hrs + 'h ' + mins + 'm';
+      if (mins > 0) return mins + 'm ' + secs + 's';
+      return secs + 's';
+    };
 
     const AudioEngine = (() => {
       let ctx = null; let musicGain, sfxGain, musicPlaying = false, musicTimer, step = 0;
@@ -243,7 +276,9 @@
         toggle: () => { if (musicPlaying) { AudioEngine.stopMusic(); } else { AudioEngine.startMusic(); } return musicPlaying; },
         coin: () => { init(); tone(1046, 0.08, "square", sfxGain, 0, 0.15); tone(1318, 0.15, "square", sfxGain, 0.07, 0.15); },
         error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
-        purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); }
+        purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); },
+        jackpot: () => { init(); [523, 659, 783, 1046, 1318].forEach((f,i) => tone(f, 0.2, "triangle", sfxGain, i*0.08, 0.25)); },
+        bid: () => { init(); tone(880, 0.1, "square", sfxGain, 0, 0.25); tone(1046, 0.1, "square", sfxGain, 0.08, 0.25); }
       };
     })();
 
@@ -269,16 +304,46 @@
       const [searchQuery, setSearchQuery] = useState("");
       const [sortBy, setSortBy] = useState("default");
       const [showSortMenu, setShowSortMenu] = useState(false);
+      const [now, setNow] = useState(Date.now());
 
+      // P2P
       const [listings, setListings] = useState([]);
       const [sellModal, setSellModal] = useState(false);
       const [sellAsset, setSellAsset] = useState(null);
       const [sellPrice, setSellPrice] = useState("");
       const [isTransacting, setIsTransacting] = useState(false);
 
-      // ✅ Bulk buy modal state (renamed to avoid collision with buyAsset function)
+      // Bulk buy
       const [buyModal, setBuyModal] = useState(false);
       const [bulkBuyAsset, setBulkBuyAsset] = useState(null);
+
+      // 🆕 TikTok Campaigns
+      const [campaigns, setCampaigns] = useState([]);
+      const [createCampaignModal, setCreateCampaignModal] = useState(false);
+      const [newTiktokUrl, setNewTiktokUrl] = useState("");
+      const [newHandle, setNewHandle] = useState("");
+      const [newSlots, setNewSlots] = useState(100);
+      const [newReward, setNewReward] = useState(1_000_000_000_000);
+      const [claimingCampaign, setClaimingCampaign] = useState(null);
+
+      // 🆕 Auctions
+      const [auctions, setAuctions] = useState([]);
+      const [auctionModal, setAuctionModal] = useState(false);
+      const [auctionAsset, setAuctionAsset] = useState(null);
+      const [auctionStartingBid, setAuctionStartingBid] = useState("");
+      const [auctionDuration, setAuctionDuration] = useState(3600000);
+      const [bidModal, setBidModal] = useState(null);
+      const [bidAmount, setBidAmount] = useState("");
+
+      // 🆕 Mystery Box
+      const [mysteryModal, setMysteryModal] = useState(false);
+      const [mysteryResult, setMysteryResult] = useState(null);
+      const [isOpeningBox, setIsOpeningBox] = useState(false);
+
+      useEffect(() => {
+        const iv = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(iv);
+      }, []);
 
       useEffect(() => {
         const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
@@ -305,6 +370,7 @@
                   transactions: dbData.transactions || [],
                   history: dbData.history || [],
                   wishlist: dbData.wishlist || prev.wishlist || [],
+                  flashDealBoughtAt: dbData.flashDealBoughtAt || 0,
                   cash: dbData.cash !== undefined ? dbData.cash : prev.cash
                 });
                 try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
@@ -316,7 +382,7 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-                transactions: [], history: [], wishlist: []
+                transactions: [], history: [], wishlist: [], flashDealBoughtAt: 0
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
@@ -334,6 +400,50 @@
           snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
           setListings(items);
         }, (e) => console.error("Listings error:", e));
+        return () => unsub();
+      }, []);
+
+      // 🆕 Campaigns listener
+      useEffect(() => {
+        const unsub = db.collection("tiktok_campaigns").orderBy("createdAt", "desc").limit(30).onSnapshot((snap) => {
+          const items = [];
+          snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+          setCampaigns(items);
+        }, (e) => console.error("Campaigns error:", e));
+        return () => unsub();
+      }, []);
+
+      // 🆕 Auctions listener + auto-settle
+      useEffect(() => {
+        const unsub = db.collection("auctions").orderBy("createdAt", "desc").limit(30).onSnapshot((snap) => {
+          const items = [];
+          snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+          setAuctions(items);
+          // Auto-settle expired auctions
+          const now = Date.now();
+          items.filter(a => a.status === 'active' && a.endsAt < now).forEach(async (auction) => {
+            try {
+              await db.runTransaction(async (t) => {
+                const aRef = db.collection("auctions").doc(auction.id);
+                const doc = await t.get(aRef);
+                if (!doc.exists) return;
+                const data = doc.data();
+                if (data.status !== 'active') return;
+                if (data.currentBidderId) {
+                  const winnerRef = db.collection("users").doc(data.currentBidderId);
+                  const sellerRef = db.collection("users").doc(data.sellerId);
+                  t.update(winnerRef, { [`assets.${data.assetId}`]: firebase.firestore.FieldValue.increment(1) });
+                  t.update(sellerRef, { cash: firebase.firestore.FieldValue.increment(data.currentBid) });
+                  t.update(aRef, { status: 'completed', settledAt: Date.now() });
+                } else {
+                  const sellerRef = db.collection("users").doc(data.sellerId);
+                  t.update(sellerRef, { [`assets.${data.assetId}`]: firebase.firestore.FieldValue.increment(1) });
+                  t.update(aRef, { status: 'expired', settledAt: Date.now() });
+                }
+              });
+            } catch (e) { console.error("Settle error:", e); }
+          });
+        }, (e) => console.error("Auctions error:", e));
         return () => unsub();
       }, []);
 
@@ -375,7 +485,7 @@
         return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center bg-[#08080B]' },
           h('div', { className: 'text-7xl animate-bounce' }, '🚧'),
           h('h1', { className: 'text-2xl font-black text-[#FFD60A] font-display mt-4' }, 'GAME UNDER MAINTENANCE'),
-          h('p', { className: 'text-white/50 text-sm max-w-xs' }, 'We dey upgrade the game for you. Check back in a few minutes!')
+          h('p', { className: 'text-white/50 text-sm max-w-xs' }, 'We dey upgrade the game for you.')
         );
       }
 
@@ -390,6 +500,14 @@
       }, 0);
       const netWorth = Math.floor((s.cash || 0) + bizValue + assetValue);
       const ownedCount = Object.values(safeAssets).reduce((a, c) => a + c, 0);
+
+      // 🆕 Flash deal — per hour
+      const currentHourSeed = Math.floor(now / 3600000);
+      const lastFlashHour = Math.floor((s.flashDealBoughtAt || 0) / 3600000);
+      const canBuyFlash = currentHourSeed > lastFlashHour;
+      const flashDealAsset = ASSETS[currentHourSeed % ASSETS.length];
+      const flashDealPrice = Math.floor(flashDealAsset.price * (1 - FLASH_DISCOUNT));
+      const flashDealEndsIn = ((currentHourSeed + 1) * 3600000) - now;
 
       const portfolioByCat = useMemo(() => {
         const map = {};
@@ -417,36 +535,34 @@
         const has = wishlist.includes(assetId);
         const next = has ? wishlist.filter(x => x !== assetId) : [...wishlist, assetId];
         setS(prev => Object.assign({}, prev, { wishlist: next }));
-        if (uid) {
-          await db.collection("users").doc(uid).update({ wishlist: next }).catch(() => {});
-        }
+        if (uid) await db.collection("users").doc(uid).update({ wishlist: next }).catch(() => {});
         notify(has ? 'Removed from wishlist' : '❤️ Added to wishlist');
       };
 
-      // ✅ buyAsset function — the actual purchase handler (name kept)
-      const buyAsset = async (a, qty = 1) => {
-        const totalCost = a.price * qty;
-        if (s.cash < totalCost) { AudioEngine.error(); return notify('Not enough Lagos Cash 💸. Go and hustle!', 'bad'); }
+      const buyAsset = async (a, qty = 1, customPrice = null) => {
+        const totalCost = (customPrice || a.price) * qty;
+        if (s.cash < totalCost) { AudioEngine.error(); return notify('Not enough Lagos Cash 💸', 'bad'); }
 
+        const updates = {};
         setS((p) => {
           const currentAssets = p.assets || {};
           const newAssets = Object.assign({}, currentAssets);
           newAssets[a.id] = (newAssets[a.id] || 0) + qty;
           const next = Object.assign({}, p, { cash: p.cash - totalCost, assets: newAssets });
+          if (customPrice) next.flashDealBoughtAt = Date.now();
           try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
           return next;
         });
 
         AudioEngine.purchase();
         try { if (navigator.vibrate) navigator.vibrate(30); } catch(e) {}
-        notify(a.emoji + ' ×' + qty + ' ' + a.name + ' bought!');
+        notify(a.emoji + ' ×' + qty + ' ' + a.name + (customPrice ? ' (FLASH DEAL!)' : '') + ' bought!');
 
         if (uid) {
-          const updates = {
-            cash: firebase.firestore.FieldValue.increment(-totalCost),
-            lastSeen: Date.now()
-          };
+          updates.cash = firebase.firestore.FieldValue.increment(-totalCost);
+          updates.lastSeen = Date.now();
           updates['assets.' + a.id] = firebase.firestore.FieldValue.increment(qty);
+          if (customPrice) updates.flashDealBoughtAt = Date.now();
           await db.collection("users").doc(uid).update(updates).catch(() => {});
           logHistory('Bought Asset', 'Bought ×' + qty + ' ' + a.name, -totalCost);
         }
@@ -468,7 +584,7 @@
         });
 
         AudioEngine.coin();
-        notify('⚡ Instantly sold to NPC for ' + fmt(sellPriceCalc));
+        notify('⚡ Sold to NPC for ' + fmt(sellPriceCalc));
 
         if (uid) {
           const updates = {
@@ -595,13 +711,249 @@
             newAssets[listing.assetId] = (newAssets[listing.assetId] || 0) + 1;
             return Object.assign({}, prev, { assets: newAssets });
           });
-          notify('Listing cancelled. Item returned to garage.');
+          notify('Listing cancelled.');
         } catch(e) {
           console.error(e);
-          notify('Failed to cancel listing', 'bad');
+          notify('Failed to cancel', 'bad');
         } finally {
           setIsTransacting(false);
         }
+      };
+
+      // 🆕 TikTok Campaign functions
+      const parseTiktokUrl = (url) => {
+        if (!url) return { handle: '', fullUrl: '' };
+        let handle = url;
+        try {
+          const u = new URL(url.startsWith('http') ? url : 'https://' + url);
+          if (u.pathname.includes('@')) handle = u.pathname.split('@')[1].split('/')[0];
+          return { handle: '@' + handle.replace('@',''), fullUrl: 'https://www.tiktok.com/@' + handle.replace('@','') };
+        } catch(e) {
+          const clean = url.replace('@','').trim();
+          return { handle: '@' + clean, fullUrl: 'https://www.tiktok.com/@' + clean };
+        }
+      };
+
+      const createCampaign = async () => {
+        const parsed = parseTiktokUrl(newTiktokUrl);
+        if (!parsed.handle || parsed.handle.length < 3) return notify('Enter a valid TikTok handle/link', 'bad');
+        if (newSlots < 1 || newSlots > 10000) return notify('Slots must be 1-10,000', 'bad');
+        if (newReward < MIN_REWARD_PER_FOLLOW) return notify('Min reward is ' + fmt(MIN_REWARD_PER_FOLLOW), 'bad');
+        const totalCost = newSlots * newReward;
+        if ((s.cash || 0) < totalCost) { AudioEngine.error(); return notify('You need ' + fmt(totalCost) + ' total', 'bad'); }
+
+        try {
+          await db.runTransaction(async (t) => {
+            const userRef = db.collection("users").doc(uid);
+            const userDoc = await t.get(userRef);
+            if (userDoc.data().cash < totalCost) throw new Error("Not enough cash");
+            const campRef = db.collection("tiktok_campaigns").doc();
+            t.update(userRef, { cash: firebase.firestore.FieldValue.increment(-totalCost) });
+            t.set(campRef, {
+              creatorId: uid,
+              creatorName: s.name || 'Hustler',
+              tiktokHandle: parsed.handle,
+              tiktokUrl: parsed.fullUrl,
+              rewardPerFollow: newReward,
+              totalSlots: newSlots,
+              claimedSlots: 0,
+              claimedBy: [],
+              totalCost: totalCost,
+              createdAt: Date.now(),
+              expiresAt: Date.now() + 7 * 24 * 3600000
+            });
+          });
+          AudioEngine.jackpot();
+          notify('🎵 Campaign live! ' + newSlots + ' followers × ' + fmt(newReward));
+          logHistory('TikTok Campaign', 'Created campaign for ' + parsed.handle, -totalCost);
+          setCreateCampaignModal(false);
+          setNewTiktokUrl('');
+          setNewHandle('');
+          setViewMode('tiktok');
+        } catch (e) {
+          console.error(e);
+          notify(e.message || 'Failed to create campaign', 'bad');
+        }
+      };
+
+      const claimCampaign = async (campaign) => {
+        if (campaign.creatorId === uid) return notify('You cannot claim your own campaign', 'bad');
+        if ((campaign.claimedBy || []).includes(uid)) return notify('You already claimed this', 'bad');
+        if (campaign.claimedSlots >= campaign.totalSlots) return notify('All slots filled!', 'bad');
+
+        try {
+          await db.runTransaction(async (t) => {
+            const campRef = db.collection("tiktok_campaigns").doc(campaign.id);
+            const doc = await t.get(campRef);
+            if (!doc.exists) throw new Error("Campaign not found");
+            const data = doc.data();
+            if (data.claimedBy?.includes(uid)) throw new Error("Already claimed");
+            if (data.claimedSlots >= data.totalSlots) throw new Error("Slots full");
+
+            const userRef = db.collection("users").doc(uid);
+            t.update(userRef, { cash: firebase.firestore.FieldValue.increment(data.rewardPerFollow) });
+            t.update(campRef, {
+              claimedSlots: firebase.firestore.FieldValue.increment(1),
+              claimedBy: firebase.firestore.FieldValue.arrayUnion(uid)
+            });
+          });
+          AudioEngine.jackpot();
+          notify('🎉 Claimed ' + fmt(campaign.rewardPerFollow) + '!');
+          logHistory('TikTok Campaign', 'Followed ' + campaign.tiktokHandle, campaign.rewardPerFollow);
+          setClaimingCampaign(null);
+        } catch(e) {
+          console.error(e);
+          notify(e.message || 'Claim failed', 'bad');
+        }
+      };
+
+      const cancelCampaign = async (campaign) => {
+        if (campaign.creatorId !== uid) return;
+        const remaining = campaign.totalSlots - campaign.claimedSlots;
+        const refund = remaining * campaign.rewardPerFollow;
+        try {
+          await db.runTransaction(async (t) => {
+            const campRef = db.collection("tiktok_campaigns").doc(campaign.id);
+            const doc = await t.get(campRef);
+            if (!doc.exists) return;
+            const data = doc.data();
+            if (data.creatorId !== uid) throw new Error("Not your campaign");
+            const userRef = db.collection("users").doc(uid);
+            if (refund > 0) t.update(userRef, { cash: firebase.firestore.FieldValue.increment(refund) });
+            t.delete(campRef);
+          });
+          AudioEngine.coin();
+          notify('Campaign cancelled. Refunded ' + fmt(refund));
+        } catch(e) {
+          console.error(e);
+          notify(e.message || 'Failed', 'bad');
+        }
+      };
+
+      // 🆕 Auction functions
+      const createAuction = async (asset, startingBid, duration) => {
+        if ((safeAssets[asset.id] || 0) < 1) return notify('You do not own this', 'bad');
+        if (startingBid < 1000) return notify('Min bid ₦1,000', 'bad');
+        try {
+          await db.runTransaction(async (t) => {
+            const userRef = db.collection("users").doc(uid);
+            t.update(userRef, { [`assets.${asset.id}`]: firebase.firestore.FieldValue.increment(-1) });
+            const aRef = db.collection("auctions").doc();
+            t.set(aRef, {
+              sellerId: uid,
+              sellerName: s.name || 'Hustler',
+              assetId: asset.id,
+              assetName: asset.name,
+              emoji: asset.emoji,
+              startingBid: startingBid,
+              currentBid: 0,
+              currentBidderId: null,
+              currentBidderName: null,
+              createdAt: Date.now(),
+              endsAt: Date.now() + duration,
+              status: 'active'
+            });
+          });
+          setS(prev => {
+            const newAssets = Object.assign({}, prev.assets);
+            newAssets[asset.id] -= 1;
+            if (newAssets[asset.id] <= 0) delete newAssets[asset.id];
+            return Object.assign({}, prev, { assets: newAssets });
+          });
+          AudioEngine.purchase();
+          notify('🔨 Auction live!');
+          setAuctionModal(false);
+          setViewMode('auction');
+        } catch(e) {
+          console.error(e);
+          notify('Failed to create auction', 'bad');
+        }
+      };
+
+      const placeBid = async (auction, amount) => {
+        if (auction.status !== 'active') return notify('Auction ended', 'bad');
+        if (amount <= auction.currentBid && auction.currentBid > 0) return notify('Bid must be higher than ' + fmt(auction.currentBid), 'bad');
+        if (amount < auction.startingBid) return notify('Bid must be at least ' + fmt(auction.startingBid), 'bad');
+        if (s.cash < amount) return notify('Not enough cash', 'bad');
+
+        try {
+          await db.runTransaction(async (t) => {
+            const aRef = db.collection("auctions").doc(auction.id);
+            const doc = await t.get(aRef);
+            if (!doc.exists) throw new Error("Auction gone");
+            const data = doc.data();
+            if (data.status !== 'active') throw new Error("Ended");
+            if (data.endsAt < Date.now()) throw new Error("Expired");
+            if (amount <= data.currentBid && data.currentBid > 0) throw new Error("Bid too low");
+
+            const buyerRef = db.collection("users").doc(uid);
+            const buyerDoc = await t.get(buyerRef);
+            if (buyerDoc.data().cash < amount) throw new Error("Not enough cash");
+
+            if (data.currentBidderId) {
+              const prevRef = db.collection("users").doc(data.currentBidderId);
+              t.update(prevRef, { cash: firebase.firestore.FieldValue.increment(data.currentBid) });
+            }
+            t.update(buyerRef, { cash: firebase.firestore.FieldValue.increment(-amount) });
+            t.update(aRef, {
+              currentBid: amount,
+              currentBidderId: uid,
+              currentBidderName: s.name || 'Hustler'
+            });
+          });
+          AudioEngine.bid();
+          notify('🎯 Bid placed!');
+          setBidModal(null);
+          setBidAmount('');
+        } catch(e) {
+          console.error(e);
+          notify(e.message || 'Bid failed', 'bad');
+        }
+      };
+
+      // 🆕 Mystery Box
+      const openMysteryBox = async () => {
+        if ((s.cash || 0) < MYSTERY_BOX_COST) { AudioEngine.error(); return notify('Need ' + fmt(MYSTERY_BOX_COST), 'bad'); }
+        setIsOpeningBox(true);
+        setMysteryResult(null);
+        AudioEngine.tap();
+
+        setTimeout(async () => {
+          const roll = Math.random();
+          let pool;
+          if (roll < 0.50) pool = ASSETS.filter(a => a.price < 50_000_000);
+          else if (roll < 0.80) pool = ASSETS.filter(a => a.price >= 50_000_000 && a.price < 500_000_000);
+          else if (roll < 0.95) pool = ASSETS.filter(a => a.price >= 500_000_000 && a.price < 10_000_000_000);
+          else if (roll < 0.99) pool = ASSETS.filter(a => a.price >= 10_000_000_000 && a.price < 500_000_000_000);
+          else pool = ASSETS.filter(a => a.price >= 500_000_000_000);
+          if (pool.length === 0) pool = ASSETS;
+          const won = pool[Math.floor(Math.random() * pool.length)];
+
+          try {
+            await db.runTransaction(async (t) => {
+              const userRef = db.collection("users").doc(uid);
+              const doc = await t.get(userRef);
+              if (doc.data().cash < MYSTERY_BOX_COST) throw new Error("Not enough cash");
+              t.update(userRef, {
+                cash: firebase.firestore.FieldValue.increment(-MYSTERY_BOX_COST),
+                [`assets.${won.id}`]: firebase.firestore.FieldValue.increment(1)
+              });
+            });
+            setS(prev => {
+              const newAssets = Object.assign({}, prev.assets);
+              newAssets[won.id] = (newAssets[won.id] || 0) + 1;
+              return Object.assign({}, prev, { cash: prev.cash - MYSTERY_BOX_COST, assets: newAssets });
+            });
+            setMysteryResult(won);
+            if (won.price >= 10_000_000_000) AudioEngine.jackpot();
+            else AudioEngine.purchase();
+            logHistory('Mystery Box', 'Won ' + won.name, -MYSTERY_BOX_COST);
+          } catch(e) {
+            notify('Box failed', 'bad');
+          } finally {
+            setIsOpeningBox(false);
+          }
+        }, 1800);
       };
 
       const NAV = [
@@ -618,6 +970,16 @@
         if (matches.length === 0) return null;
         return matches.reduce((min, l) => l.price < min.price ? l : min);
       };
+
+      const activeAuctions = auctions.filter(a => a.status === 'active' && a.endsAt > now);
+      const activeCampaigns = campaigns.filter(c => c.claimedSlots < c.totalSlots && c.expiresAt > now);
+
+      // Hero value per view
+      let heroValue = '', heroLabel = '', heroSub = '', heroEmoji = '';
+      if (viewMode === 'store') { heroValue = fmt(assetValue); heroLabel = 'Your Asset Value'; heroSub = ownedCount + ' assets · ' + wishlist.length + ' wishlisted'; heroEmoji = '🛒'; }
+      else if (viewMode === 'player') { heroValue = listings.length + ' Listings'; heroLabel = 'Player Market'; heroSub = 'Buy from other players'; heroEmoji = '🤝'; }
+      else if (viewMode === 'tiktok') { heroValue = activeCampaigns.length + ' Live'; heroLabel = 'TikTok Campaigns'; heroSub = 'Earn cash for following'; heroEmoji = '🎵'; }
+      else { heroValue = activeAuctions.length + ' Live'; heroLabel = 'Auction House'; heroSub = 'Bid or list your assets'; heroEmoji = '🔨'; }
 
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
@@ -645,53 +1007,78 @@
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
 
-            h('div', { className: 'mt-3 flex gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06]' },
+            // 4 view modes
+            h('div', { className: 'mt-3 grid grid-cols-4 gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06]' },
               [
-                { id: 'store', label: '🏪 NPC Store' },
-                { id: 'player', label: '🤝 Player Market (' + listings.length + ')' }
+                { id: 'store', label: '🏪 NPC' },
+                { id: 'player', label: '🤝 P2P' },
+                { id: 'tiktok', label: '🎵 TikTok' },
+                { id: 'auction', label: '🔨 Bids' }
               ].map(tab =>
                 h('button', {
                   key: tab.id,
                   onClick: () => setViewMode(tab.id),
-                  className: 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ' +
+                  className: 'py-2 rounded-lg text-[9.5px] font-black uppercase tracking-wider transition-all ' +
                     (viewMode === tab.id ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-md' : 'text-white/50')
                 }, tab.label)
               )
             ),
 
+            // Hero
             h(Card, { className: 'relative overflow-hidden p-4 mt-3 hero-grid', gold: true },
               h('div', { className: 'absolute -top-16 -right-12 w-48 h-48 rounded-full bg-[#FFD60A]/25 blur-3xl pointer-events-none' }),
               h('div', { className: 'relative' },
                 h('div', { className: 'flex items-center justify-between' },
-                  h('div', { className: 'text-[9px] uppercase tracking-widest text-white/45 font-bold' }, viewMode === 'store' ? 'Your Asset Value' : 'Player Listings'),
-                  h('div', { className: 'text-2xl' }, viewMode === 'store' ? '🛒' : '🤝')
+                  h('div', { className: 'text-[9px] uppercase tracking-widest text-white/45 font-bold' }, heroLabel),
+                  h('div', { className: 'text-2xl' }, heroEmoji)
                 ),
-                viewMode === 'store' ?
-                  h(React.Fragment, null,
-                    h('div', { className: 'text-3xl font-black tabular-nums font-display mt-1 text-gradient-gold' }, fmt(assetValue)),
-                    h('div', { className: 'mt-2 flex items-center gap-3 text-[10px] font-bold text-white/45 flex-wrap' },
-                      h('span', null, h('span', { className: 'text-[#FFD60A] font-black' }, String(ownedCount)), ' assets'),
-                      h('span', { className: 'w-1 h-1 rounded-full bg-white/20' }),
-                      h('span', null, 'Wishlist: ', h('span', { className: 'text-[#FF6B6B] font-black' }, String(wishlist.length)))
-                    )
-                  )
-                  :
-                  h(React.Fragment, null,
-                    h('div', { className: 'text-3xl font-black tabular-nums font-display mt-1 text-gradient-gold' }, listings.length + ' Listings'),
-                    h('div', { className: 'mt-2 text-[10px] font-bold text-white/45' }, 'Buy rare assets from other players.')
-                  )
+                h('div', { className: 'text-3xl font-black tabular-nums font-display mt-1 text-gradient-gold' }, heroValue),
+                h('div', { className: 'mt-2 text-[10px] font-bold text-white/45' }, heroSub)
               )
             ),
 
-            viewMode === 'store' && Object.keys(portfolioByCat).length > 0 && h('div', { className: 'mt-3 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar' },
-              Object.entries(portfolioByCat).map(([cat, val]) =>
-                h('div', { key: cat, className: 'shrink-0 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.06]' },
-                  h('div', { className: 'text-[8.5px] uppercase tracking-wider text-white/40 font-bold' }, cat),
-                  h('div', { className: 'text-[11px] font-black text-[#FFD60A] tabular-nums mt-0.5' }, fmt(val))
+            // 🆕 FLASH DEAL (store view only)
+            viewMode === 'store' && h('div', { className: 'mt-3 relative overflow-hidden rounded-2xl flash-gradient p-[1px] animate-glow' },
+              h('div', { className: 'rounded-2xl bg-[#121218] p-3 relative overflow-hidden' },
+                h('div', { className: 'flex items-center gap-3' },
+                  h('div', { className: 'text-3xl shrink-0 animate-pulse' }, '⚡'),
+                  h('div', { className: 'flex-1 min-w-0' },
+                    h('div', { className: 'text-[9px] uppercase tracking-widest text-[#FF6B00] font-black' }, '⚡ FLASH DEAL'),
+                    h('div', { className: 'text-[12px] font-black font-display truncate' }, flashDealAsset.emoji + ' ' + flashDealAsset.name),
+                    h('div', { className: 'flex items-center gap-2 mt-0.5' },
+                      h('span', { className: 'text-[10px] font-black text-[#22C55E] tabular-nums line-through opacity-50' }, fmt(flashDealAsset.price)),
+                      h('span', { className: 'text-[12px] font-black text-[#FFD60A] tabular-nums' }, fmt(flashDealPrice))
+                    )
+                  ),
+                  h('button', {
+                    onClick: () => { if (canBuyFlash) buyAsset(flashDealAsset, 1, flashDealPrice); else notify('Flash deal used this hour!', 'bad'); },
+                    disabled: !canBuyFlash || s.cash < flashDealPrice,
+                    className: 'shrink-0 rounded-lg text-[10px] font-black px-3 py-2 active:scale-95 transition ' +
+                      (canBuyFlash && s.cash >= flashDealPrice ? 'bg-gradient-to-b from-[#FFD60A] to-[#FF6B00] text-black' : 'bg-white/[0.06] text-white/30')
+                  }, canBuyFlash ? 'GRAB' : '⏱ ' + timeLeft(flashDealEndsIn))
                 )
               )
             ),
 
+            // 🆕 MYSTERY BOX (store view only)
+            viewMode === 'store' && h('button', {
+              onClick: () => setMysteryModal(true),
+              className: 'mt-2 w-full text-left'
+            },
+              h('div', { className: 'relative overflow-hidden rounded-2xl mystery-gradient p-[1px]' },
+                h('div', { className: 'rounded-2xl bg-[#121218] p-3 flex items-center gap-3' },
+                  h('div', { className: 'text-3xl shrink-0' }, '🎁'),
+                  h('div', { className: 'flex-1 min-w-0' },
+                    h('div', { className: 'text-[9px] uppercase tracking-widest text-[#A855F7] font-black' }, '🎁 MYSTERY BOX'),
+                    h('div', { className: 'text-[12px] font-black font-display' }, 'Win up to ₦50 Quadrillion'),
+                    h('div', { className: 'text-[10px] text-white/50 font-bold' }, 'Cost: ' + fmt(MYSTERY_BOX_COST))
+                  ),
+                  h('div', { className: 'shrink-0 rounded-lg text-[10px] font-black px-3 py-2 bg-gradient-to-b from-[#A855F7] to-[#6366F1] text-white' }, 'OPEN')
+                )
+              )
+            ),
+
+            // Feed marquee
             h('div', { className: 'mt-3 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center gap-2 overflow-hidden' },
               h('span', { className: 'text-sm shrink-0 animate-pulse' }, '📡'),
               h('div', { className: 'flex-1 overflow-hidden relative h-5' },
@@ -699,6 +1086,7 @@
               )
             ),
 
+            // ========== STORE VIEW ==========
             viewMode === 'store' && h('div', null,
               h('div', { className: 'mt-4 flex gap-2' },
                 h('div', { className: 'flex-1 flex items-center bg-white/[0.05] border border-white/10 rounded-xl px-3' },
@@ -718,14 +1106,12 @@
                 }, '📊 ' + (SORTS.find(x => x.id === sortBy) || SORTS[0]).label)
               ),
               showSortMenu && h('div', { className: 'mt-2 grid grid-cols-4 gap-1.5' },
-                SORTS.map(so =>
-                  h('button', {
-                    key: so.id,
-                    onClick: () => { setSortBy(so.id); setShowSortMenu(false); },
-                    className: 'px-2 py-2 rounded-lg text-[10px] font-black active:scale-95 transition ' +
-                      (sortBy === so.id ? 'bg-[#FFD60A] text-black' : 'bg-white/[0.06] text-white/70 border border-white/10')
-                  }, so.label)
-                )
+                SORTS.map(so => h('button', {
+                  key: so.id,
+                  onClick: () => { setSortBy(so.id); setShowSortMenu(false); },
+                  className: 'px-2 py-2 rounded-lg text-[10px] font-black active:scale-95 transition ' +
+                    (sortBy === so.id ? 'bg-[#FFD60A] text-black' : 'bg-white/[0.06] text-white/70 border border-white/10')
+                }, so.label))
               ),
 
               h('div', { className: 'mt-3 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar' },
@@ -739,32 +1125,8 @@
                 )
               ),
 
-              wishlist.length > 0 && h(React.Fragment, null,
-                h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FF6B6B]' }, wishlist.length + ' items') }, '❤️ Wishlist'),
-                h('div', { className: 'space-y-2' },
-                  wishlist.map(id => {
-                    const a = ASSETS.find(x => x.id === id);
-                    if (!a) return null;
-                    const canAfford = (s.cash || 0) >= a.price;
-                    return h(Card, { key: a.id, className: 'p-2.5 flex items-center gap-3' },
-                      h('div', { className: 'w-10 h-10 rounded-lg bg-white/[0.06] grid place-items-center text-xl shrink-0' }, a.emoji),
-                      h('div', { className: 'flex-1 min-w-0' },
-                        h('div', { className: 'text-[11.5px] font-extrabold truncate' }, a.name),
-                        h('div', { className: 'text-[10px] font-black text-white/60 tabular-nums' }, fmt(a.price))
-                      ),
-                      h('button', { onClick: () => toggleWishlist(a.id), className: 'text-[#FF6B6B] text-lg' }, '❤️'),
-                      h('button', {
-                        onClick: () => buyAsset(a, 1),
-                        disabled: !canAfford,
-                        className: 'rounded-lg text-[10px] font-black px-2.5 py-1.5 ' + (canAfford ? 'bg-[#FFD60A] text-black' : 'bg-white/[0.06] text-white/30')
-                      }, 'BUY')
-                    );
-                  })
-                )
-              ),
-
               ownedCount > 0 && h(React.Fragment, null,
-                h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A]' }, 'TAP TO SELL') }, 'Your Garage'),
+                h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A]' }, 'TAP TO SELL/AUCTION') }, 'Your Garage'),
                 h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden' },
                   ASSETS.filter((a) => (safeAssets[a.id] || 0) > 0).map((a) => {
                     const owned = safeAssets[a.id];
@@ -786,7 +1148,7 @@
 
               h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-white/30' }, filteredAssets.length + ' items') }, activeTab === "All" ? "NPC Store" : activeTab),
               filteredAssets.length === 0 ?
-                h('div', { className: 'text-center text-white/40 text-[11px] py-10' }, 'No items match your search.') :
+                h('div', { className: 'text-center text-white/40 text-[11px] py-10' }, 'No items match.') :
                 h('div', { className: 'space-y-2.5' },
                   filteredAssets.map((a) => {
                     const owned = safeAssets[a.id] || 0;
@@ -829,12 +1191,12 @@
                 )
             ),
 
+            // ========== PLAYER VIEW ==========
             viewMode === 'player' && h('div', { className: 'mt-4 space-y-2.5' },
               listings.length === 0 ?
                 h('div', { className: 'text-center text-white/40 text-[11px] py-10' },
                   h('div', { className: 'text-5xl mb-3' }, '🤝'),
-                  h('div', null, 'No one is selling right now.'),
-                  h('div', { className: 'mt-2 text-[10px]' }, 'Go to NPC Store → Your Garage → tap any item to list it!')
+                  h('div', null, 'No one is selling right now.')
                 ) :
                 listings.map((l) => {
                   const isMe = l.sellerId === uid;
@@ -857,6 +1219,87 @@
                       h('button', { onClick: () => buyListing(l), disabled: isTransacting || !canAfford, className: 'shrink-0 text-[10px] font-black bg-[#22C55E] text-black px-3 py-2 rounded-lg active:scale-95 transition disabled:opacity-50' }, 'BUY')
                   );
                 })
+            ),
+
+            // ========== TIKTOK VIEW ==========
+            viewMode === 'tiktok' && h('div', { className: 'mt-4' },
+              h('button', {
+                onClick: () => setCreateCampaignModal(true),
+                className: 'w-full rounded-2xl tiktok-gradient p-3 text-white font-black text-[13px] active:scale-95 transition flex items-center justify-center gap-2 shadow-[0_8px_24px_-8px_rgba(254,44,85,0.7)] font-display'
+              }, '✨ CREATE TIKTOK CAMPAIGN'),
+              h('div', { className: 'mt-3 text-[10px] text-white/50 text-center px-4' }, 'Pay to promote your TikTok. Hustlers follow you and earn cash. Win-win. 💰'),
+              activeCampaigns.length === 0 ?
+                h('div', { className: 'text-center text-white/40 text-[11px] py-10 mt-4' },
+                  h('div', { className: 'text-5xl mb-3' }, '🎵'),
+                  h('div', null, 'No active campaigns yet.'),
+                  h('div', { className: 'mt-2 text-[10px]' }, 'Be the first to promote your TikTok!')
+                ) :
+                h('div', { className: 'mt-4 space-y-2.5' },
+                  activeCampaigns.map((c) => {
+                    const isMine = c.creatorId === uid;
+                    const hasClaimed = (c.claimedBy || []).includes(uid);
+                    const slotsLeft = c.totalSlots - c.claimedSlots;
+                    const pct = (c.claimedSlots / c.totalSlots) * 100;
+                    return h(Card, { key: c.id, className: 'p-3 relative overflow-hidden' },
+                      h('div', { className: 'absolute top-0 right-0 text-[8px] font-black tiktok-gradient text-white px-2 py-1 rounded-bl-lg' }, isMine ? 'YOURS' : 'EARN ' + fmt(c.rewardPerFollow)),
+                      h('div', { className: 'flex items-center gap-3' },
+                        h('div', { className: 'w-12 h-12 rounded-xl tiktok-gradient grid place-items-center text-2xl shrink-0' }, '🎵'),
+                        h('div', { className: 'flex-1 min-w-0' },
+                          h('div', { className: 'text-[12px] font-extrabold truncate font-display' }, c.tiktokHandle),
+                          h('div', { className: 'text-[9px] text-white/50' }, 'by ' + c.creatorName),
+                          h('div', { className: 'mt-1 h-1.5 rounded-full bg-white/10 overflow-hidden' },
+                            h('div', { className: 'h-full tiktok-gradient', style: { width: pct + '%' } })
+                          ),
+                          h('div', { className: 'flex items-center justify-between text-[9px] mt-0.5' },
+                            h('span', { className: 'text-[#22C55E] font-black' }, fmt(c.rewardPerFollow) + ' / follow'),
+                            h('span', { className: 'text-white/50' }, slotsLeft + ' / ' + c.totalSlots + ' left')
+                          )
+                        ),
+                        isMine ?
+                          h('button', { onClick: () => cancelCampaign(c), className: 'shrink-0 text-[10px] font-black bg-red-500/20 text-red-400 px-2 py-2 rounded-lg active:scale-95' }, 'CANCEL') :
+                          hasClaimed ?
+                            h('div', { className: 'shrink-0 text-[10px] font-black text-[#22C55E] px-2 py-2' }, '✅') :
+                            h('button', { onClick: () => setClaimingCampaign(c), className: 'shrink-0 text-[10px] font-black bg-gradient-to-b from-[#25F4EE] to-[#FE2C55] text-white px-2.5 py-2 rounded-lg active:scale-95' }, 'GO')
+                      )
+                    );
+                  })
+                )
+            ),
+
+            // ========== AUCTION VIEW ==========
+            viewMode === 'auction' && h('div', { className: 'mt-4' },
+              h('div', { className: 'text-[10px] text-white/50 text-center px-4 mb-3' }, 'List an asset for auction. Highest bidder wins when timer ends. 🔨'),
+              activeAuctions.length === 0 ?
+                h('div', { className: 'text-center text-white/40 text-[11px] py-10' },
+                  h('div', { className: 'text-5xl mb-3' }, '🔨'),
+                  h('div', null, 'No active auctions right now.'),
+                  h('div', { className: 'mt-2 text-[10px]' }, 'Go to NPC Store → Your Garage → tap an item → Auction')
+                ) :
+                h('div', { className: 'space-y-2.5' },
+                  activeAuctions.map((a) => {
+                    const isMine = a.sellerId === uid;
+                    const isWinning = a.currentBidderId === uid;
+                    const canBid = !isMine && !isWinning;
+                    return h(Card, { key: a.id, className: 'p-3 relative overflow-hidden' },
+                      h('div', { className: 'absolute top-0 right-0 text-[8px] font-black auction-gradient text-white px-2 py-1 rounded-bl-lg' }, isMine ? 'SELLING' : isWinning ? 'WINNING' : 'LIVE'),
+                      h('div', { className: 'flex items-center gap-3' },
+                        h('div', { className: 'w-12 h-12 rounded-xl bg-white/[0.06] grid place-items-center text-2xl shrink-0' }, a.emoji),
+                        h('div', { className: 'flex-1 min-w-0' },
+                          h('div', { className: 'text-[12px] font-extrabold truncate font-display' }, a.assetName),
+                          h('div', { className: 'text-[9px] text-white/50' }, 'by ' + a.sellerName),
+                          h('div', { className: 'flex items-center gap-2 mt-1' },
+                            h('span', { className: 'text-[11px] font-black text-[#FFD60A] tabular-nums' }, a.currentBid > 0 ? fmt(a.currentBid) : fmt(a.startingBid)),
+                            h('span', { className: 'text-[9px] text-[#FF6B00] font-bold tabular-nums animate-pulse' }, '⏱ ' + timeLeft(a.endsAt - now))
+                          ),
+                          a.currentBidderName && h('div', { className: 'text-[9px] text-white/40 mt-0.5' }, '👑 ' + a.currentBidderName)
+                        ),
+                        canBid ?
+                          h('button', { onClick: () => { setBidModal(a); setBidAmount(String(Math.floor((a.currentBid || a.startingBid) * 1.1))); }, className: 'shrink-0 text-[10px] font-black bg-gradient-to-b from-[#FF6B00] to-[#FF0055] text-white px-2.5 py-2 rounded-lg active:scale-95' }, 'BID') :
+                          h('div', { className: 'shrink-0 text-[9px] font-black text-white/40 px-2 py-2' }, isMine ? '👤' : '👑')
+                      )
+                    );
+                  })
+                )
             )
           ),
 
@@ -875,7 +1318,7 @@
             )
           ),
 
-          // ✅ BULK BUY MODAL — uses bulkBuyAsset (no collision)
+          // ===== BULK BUY MODAL =====
           buyModal && bulkBuyAsset && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setBuyModal(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 animate-popIn text-center' },
@@ -902,28 +1345,23 @@
             )
           ),
 
-          // SELL MODAL
+          // ===== SELL MODAL (with AUCTION option) =====
           sellModal && sellAsset && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => !isTransacting && setSellModal(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 animate-popIn' },
               h('div', { className: 'text-3xl text-center mb-2' }, '🏷️'),
-              h('div', { className: 'text-center text-[14px] font-black tracking-widest text-[#FFD60A] font-display' }, 'SELL ' + sellAsset.name.toUpperCase()),
-              h('p', { className: 'text-center text-[11px] text-white/50 mt-1 mb-4' }, 'Sell instantly to NPC or list on Player Market.'),
+              h('div', { className: 'text-center text-[14px] font-black tracking-widest text-[#FFD60A] font-display' }, sellAsset.name.toUpperCase()),
+              h('p', { className: 'text-center text-[11px] text-white/50 mt-1 mb-4' }, 'Choose how to sell'),
 
               h('div', null,
-                h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Your Price (₦)'),
+                h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Player Market Price (₦)'),
                 h('input', {
                   type: 'tel',
                   inputMode: 'numeric',
                   value: sellPrice,
                   onChange: (e) => setSellPrice(e.target.value.replace(/\D/g, '').slice(0, 18)),
-                  className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[16px] font-black text-white focus:border-[#FFD60A]/50 transition tabular-nums',
-                  autoFocus: true
-                }),
-                sellPrice && Number(sellPrice) > 0 && h('div', { className: 'mt-2 px-3 py-2 rounded-xl bg-[#FFD60A]/10 border border-[#FFD60A]/30 flex items-center justify-between' },
-                  h('span', { className: 'text-[10px] uppercase tracking-widest font-bold text-white/50' }, 'Listing for'),
-                  h('span', { className: 'font-black tabular-nums font-display text-[14px] text-[#FFD60A]' }, fmt(Math.floor(Number(sellPrice))))
-                )
+                  className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[16px] font-black text-white focus:border-[#FFD60A]/50 transition tabular-nums'
+                })
               ),
 
               h('div', { className: 'mt-4 space-y-2' },
@@ -936,9 +1374,225 @@
                   onClick: () => sellToNPC(sellAsset),
                   disabled: isTransacting,
                   className: 'w-full py-3 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black text-[12px] font-black active:scale-95 transition disabled:opacity-50'
-                }, '⚡ Instant Sell — ' + fmt(Math.floor(sellAsset.price * NPC_SELL_PCT)) + ' (60%)')
+                }, '⚡ Instant NPC — ' + fmt(Math.floor(sellAsset.price * NPC_SELL_PCT))),
+                h('button', {
+                  onClick: () => { setSellModal(false); setAuctionAsset(sellAsset); setAuctionStartingBid(String(Math.floor(sellAsset.price * 0.7))); setAuctionModal(true); },
+                  disabled: isTransacting,
+                  className: 'w-full py-3 rounded-xl auction-gradient text-white text-[12px] font-black active:scale-95 transition disabled:opacity-50'
+                }, '🔨 List on Auction')
               ),
               h('button', { onClick: () => setSellModal(false), disabled: isTransacting, className: 'mt-2 w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 text-[11px] font-bold' }, 'Cancel')
+            )
+          ),
+
+          // ===== CREATE CAMPAIGN MODAL =====
+          createCampaignModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setCreateCampaignModal(false) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FE2C55]/30 rounded-3xl p-5 animate-popIn' },
+              h('div', { className: 'text-3xl text-center mb-2' }, '🎵'),
+              h('div', { className: 'text-center text-[14px] font-black tracking-widest tiktok-gradient text-white rounded-lg py-1.5 font-display' }, 'CREATE TIKTOK CAMPAIGN'),
+              h('p', { className: 'text-[11px] text-white/50 text-center mt-2 mb-3' }, 'Pay to get followers. Hustlers get paid for following you.'),
+
+              h('div', { className: 'space-y-3' },
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Your TikTok Handle or Link'),
+                  h('input', {
+                    type: 'text',
+                    value: newTiktokUrl,
+                    onChange: (e) => setNewTiktokUrl(e.target.value),
+                    placeholder: '@yourhandle or full URL',
+                    className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[13px] font-bold text-white placeholder-white/30 focus:border-[#FE2C55]/50 transition'
+                  })
+                ),
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Followers Wanted'),
+                  h('div', { className: 'mt-1 grid grid-cols-5 gap-1.5' },
+                    [10, 50, 100, 500, 1000].map(n =>
+                      h('button', {
+                        key: n,
+                        onClick: () => setNewSlots(n),
+                        className: 'px-2 py-2 rounded-lg text-[10px] font-black transition ' +
+                          (newSlots === n ? 'bg-gradient-to-b from-[#25F4EE] to-[#FE2C55] text-white' : 'bg-white/[0.06] border border-white/10 text-white/60')
+                      }, String(n))
+                    )
+                  )
+                ),
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Reward Per Follow (₦)'),
+                  h('div', { className: 'mt-1 grid grid-cols-4 gap-1.5' },
+                    [100_000_000_000, 500_000_000_000, 1_000_000_000_000, 5_000_000_000_000].map(n =>
+                      h('button', {
+                        key: n,
+                        onClick: () => setNewReward(n),
+                        className: 'px-2 py-2 rounded-lg text-[10px] font-black transition ' +
+                          (newReward === n ? 'bg-gradient-to-b from-[#25F4EE] to-[#FE2C55] text-white' : 'bg-white/[0.06] border border-white/10 text-white/60')
+                      }, fmt(n))
+                    )
+                  )
+                ),
+                h('div', { className: 'rounded-xl bg-[#FFD60A]/10 border border-[#FFD60A]/30 p-3 flex items-center justify-between' },
+                  h('div', { className: 'text-[10px] uppercase tracking-widest text-white/50 font-bold' }, 'TOTAL COST'),
+                  h('div', { className: 'text-[14px] font-black text-[#FFD60A] tabular-nums font-display' }, fmt(newSlots * newReward))
+                ),
+                h('div', { className: 'text-[10px] text-white/40 text-center' }, 'You have: ' + fmt(s.cash))
+              ),
+
+              h('div', { className: 'mt-4 space-y-2' },
+                h('button', {
+                  onClick: createCampaign,
+                  disabled: s.cash < newSlots * newReward,
+                  className: 'w-full py-3 rounded-xl tiktok-gradient text-white text-[12px] font-black active:scale-95 transition disabled:opacity-40'
+                }, '🚀 Launch Campaign'),
+                h('button', { onClick: () => setCreateCampaignModal(false), className: 'w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 text-[11px] font-bold' }, 'Cancel')
+              )
+            )
+          ),
+
+          // ===== CLAIM CAMPAIGN MODAL =====
+          claimingCampaign && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setClaimingCampaign(null) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FE2C55]/30 rounded-3xl p-5 animate-popIn text-center' },
+              h('div', { className: 'text-5xl mb-2' }, '🎵'),
+              h('div', { className: 'text-[14px] font-black font-display text-white' }, claimingCampaign.tiktokHandle),
+              h('div', { className: 'text-[11px] text-white/50 mt-1' }, 'by ' + claimingCampaign.creatorName),
+              h('div', { className: 'my-4 px-3 py-2 rounded-xl bg-[#22C55E]/15 border border-[#22C55E]/30' },
+                h('div', { className: 'text-[9px] uppercase tracking-widest text-white/50 font-bold' }, 'You Will Earn'),
+                h('div', { className: 'text-[18px] font-black text-[#22C55E] tabular-nums font-display' }, fmt(claimingCampaign.rewardPerFollow))
+              ),
+              h('p', { className: 'text-[11px] text-white/60 mb-3' }, '1. Tap "Open TikTok" below. 2. Follow the account. 3. Come back and claim.'),
+              h('div', { className: 'space-y-2' },
+                h('button', {
+                  onClick: () => { window.open(claimingCampaign.tiktokUrl, '_blank', 'noopener,noreferrer'); notify('Open TikTok → follow → come back', 'good'); },
+                  className: 'w-full py-3 rounded-xl tiktok-gradient text-white text-[12px] font-black active:scale-95'
+                }, '🔗 Open TikTok & Follow'),
+                h('button', {
+                  onClick: () => claimCampaign(claimingCampaign),
+                  className: 'w-full py-3 rounded-xl bg-gradient-to-b from-[#22C55E] to-[#16A34A] text-black text-[12px] font-black active:scale-95'
+                }, '✅ I Followed — Claim ' + fmt(claimingCampaign.rewardPerFollow)),
+                h('button', { onClick: () => setClaimingCampaign(null), className: 'w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 text-[11px] font-bold' }, 'Cancel')
+              )
+            )
+          ),
+
+          // ===== CREATE AUCTION MODAL =====
+          auctionModal && auctionAsset && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setAuctionModal(false) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FF6B00]/30 rounded-3xl p-5 animate-popIn' },
+              h('div', { className: 'text-4xl text-center mb-1' }, auctionAsset.emoji),
+              h('div', { className: 'text-center text-[14px] font-black font-display auction-gradient text-white rounded-lg py-1.5' }, 'START AUCTION'),
+              h('p', { className: 'text-[11px] text-white/50 text-center mt-2 mb-3' }, auctionAsset.name + ' · Asset Value: ' + fmt(auctionAsset.price)),
+
+              h('div', { className: 'space-y-3' },
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Starting Bid (₦)'),
+                  h('input', {
+                    type: 'tel',
+                    inputMode: 'numeric',
+                    value: auctionStartingBid,
+                    onChange: (e) => setAuctionStartingBid(e.target.value.replace(/\D/g, '').slice(0, 18)),
+                    className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[16px] font-black text-white focus:border-[#FF6B00]/50 transition tabular-nums'
+                  })
+                ),
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Duration'),
+                  h('div', { className: 'mt-1 grid grid-cols-3 gap-1.5' },
+                    [{l:'1hr',v:3600000},{l:'6hr',v:21600000},{l:'24hr',v:86400000}].map(d =>
+                      h('button', {
+                        key: d.v,
+                        onClick: () => setAuctionDuration(d.v),
+                        className: 'px-2 py-2 rounded-lg text-[11px] font-black transition ' +
+                          (auctionDuration === d.v ? 'auction-gradient text-white' : 'bg-white/[0.06] border border-white/10 text-white/60')
+                      }, d.l)
+                    )
+                  )
+                )
+              ),
+
+              h('div', { className: 'mt-4 space-y-2' },
+                h('button', {
+                  onClick: () => createAuction(auctionAsset, Number(auctionStartingBid), auctionDuration),
+                  disabled: Number(auctionStartingBid) < 1000,
+                  className: 'w-full py-3 rounded-xl auction-gradient text-white text-[12px] font-black active:scale-95 disabled:opacity-40'
+                }, '🔨 Launch Auction'),
+                h('button', { onClick: () => setAuctionModal(false), className: 'w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 text-[11px] font-bold' }, 'Cancel')
+              )
+            )
+          ),
+
+          // ===== BID MODAL =====
+          bidModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setBidModal(null) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FF6B00]/30 rounded-3xl p-5 animate-popIn' },
+              h('div', { className: 'text-4xl text-center mb-1' }, bidModal.emoji),
+              h('div', { className: 'text-center text-[14px] font-black font-display' }, bidModal.assetName),
+              h('div', { className: 'text-center text-[10px] text-[#FF6B00] font-bold mt-1 tabular-nums animate-pulse' }, '⏱ Ends in ' + timeLeft(bidModal.endsAt - now)),
+
+              h('div', { className: 'my-3 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between' },
+                h('span', { className: 'text-[10px] uppercase tracking-widest text-white/50 font-bold' }, 'Current Bid'),
+                h('span', { className: 'text-[13px] font-black text-[#FFD60A] tabular-nums font-display' }, bidModal.currentBid > 0 ? fmt(bidModal.currentBid) : 'None — ' + fmt(bidModal.startingBid) + ' min')
+              ),
+
+              h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Your Bid (₦)'),
+              h('input', {
+                type: 'tel',
+                inputMode: 'numeric',
+                value: bidAmount,
+                onChange: (e) => setBidAmount(e.target.value.replace(/\D/g, '').slice(0, 18)),
+                className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-3 text-[16px] font-black text-white focus:border-[#FF6B00]/50 transition tabular-nums'
+              }),
+              bidAmount && Number(bidAmount) > 0 && h('div', { className: 'mt-2 px-3 py-2 rounded-xl bg-[#FFD60A]/10 border border-[#FFD60A]/30 flex items-center justify-between' },
+                h('span', { className: 'text-[10px] uppercase tracking-widest font-bold text-white/50' }, 'You are bidding'),
+                h('span', { className: 'font-black tabular-nums font-display text-[14px] text-[#FFD60A]' }, fmt(Number(bidAmount)))
+              ),
+
+              h('div', { className: 'mt-4 space-y-2' },
+                h('button', {
+                  onClick: () => placeBid(bidModal, Number(bidAmount)),
+                  disabled: !bidAmount || Number(bidAmount) < (bidModal.currentBid || bidModal.startingBid) || s.cash < Number(bidAmount),
+                  className: 'w-full py-3 rounded-xl auction-gradient text-white text-[12px] font-black active:scale-95 disabled:opacity-40'
+                }, '🎯 Place Bid'),
+                h('button', { onClick: () => setBidModal(null), className: 'w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 text-[11px] font-bold' }, 'Cancel')
+              )
+            )
+          ),
+
+          // ===== MYSTERY BOX MODAL =====
+          mysteryModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => { if (!isOpeningBox) { setMysteryModal(false); setMysteryResult(null); } } }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#A855F7]/40 rounded-3xl p-5 animate-popIn text-center' },
+              mysteryResult ? h(React.Fragment, null,
+                h('div', { className: 'text-[10px] uppercase tracking-widest text-white/50 font-bold' }, '🎉 You won'),
+                h('div', { className: 'text-6xl my-3 animate-pop-big' }, mysteryResult.emoji),
+                h('div', { className: 'text-[16px] font-black font-display text-gradient-gold' }, mysteryResult.name),
+                h('div', { className: 'text-[11px] text-white/50 mt-1' }, 'Worth ' + fmt(mysteryResult.price)),
+                h('button', {
+                  onClick: () => { setMysteryResult(null); },
+                  className: 'mt-4 w-full py-3 rounded-xl mystery-gradient text-white text-[12px] font-black active:scale-95'
+                }, '🎁 Open Another'),
+                h('button', { onClick: () => { setMysteryModal(false); setMysteryResult(null); }, className: 'mt-2 w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 text-[11px] font-bold' }, 'Close')
+              ) :
+              h(React.Fragment, null,
+                h('div', { className: 'text-6xl mb-2 ' + (isOpeningBox ? 'animate-shake' : '') }, '🎁'),
+                h('div', { className: 'text-[15px] font-black tracking-widest mystery-gradient text-white rounded-lg py-1.5 font-display' }, 'MYSTERY BOX'),
+                h('p', { className: 'text-[11px] text-white/60 mt-3 mb-3 leading-relaxed' }, 'Roll the dice. Win ANY asset — from a ₦500K Air Force to a ₦50 Quadrillion Crypto Exchange.'),
+                h('div', { className: 'rounded-xl bg-white/[0.03] border border-white/[0.06] p-2.5 text-[10px] text-left space-y-1' },
+                  h('div', { className: 'flex justify-between' }, h('span', { className: 'text-white/50' }, '🏆 Legendary'), h('span', { className: 'text-[#FF6B00] font-bold' }, '1%')),
+                  h('div', { className: 'flex justify-between' }, h('span', { className: 'text-white/50' }, '💎 Epic'), h('span', { className: 'text-[#A855F7] font-bold' }, '4%')),
+                  h('div', { className: 'flex justify-between' }, h('span', { className: 'text-white/50' }, '⭐ Rare'), h('span', { className: 'text-[#3B82F6] font-bold' }, '15%')),
+                  h('div', { className: 'flex justify-between' }, h('span', { className: 'text-white/50' }, '✨ Uncommon'), h('span', { className: 'text-[#22C55E] font-bold' }, '30%')),
+                  h('div', { className: 'flex justify-between' }, h('span', { className: 'text-white/50' }, '📦 Common'), h('span', { className: 'text-white/70 font-bold' }, '50%'))
+                ),
+                h('div', { className: 'mt-3 px-3 py-2 rounded-xl bg-[#FFD60A]/10 border border-[#FFD60A]/30 flex items-center justify-between' },
+                  h('span', { className: 'text-[10px] uppercase tracking-widest font-bold text-white/50' }, 'Cost'),
+                  h('span', { className: 'font-black tabular-nums font-display text-[14px] text-[#FFD60A]' }, fmt(MYSTERY_BOX_COST))
+                ),
+                h('button', {
+                  onClick: openMysteryBox,
+                  disabled: isOpeningBox || s.cash < MYSTERY_BOX_COST,
+                  className: 'mt-4 w-full py-3 rounded-xl mystery-gradient text-white text-[13px] font-black active:scale-95 disabled:opacity-40'
+                }, isOpeningBox ? 'Opening...' : '🎁 OPEN BOX'),
+                h('button', { onClick: () => setMysteryModal(false), disabled: isOpeningBox, className: 'mt-2 w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 text-[11px] font-bold' }, 'Cancel')
+              )
             )
           ),
 
