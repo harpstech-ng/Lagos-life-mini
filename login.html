@@ -7,12 +7,10 @@
   
   <title>Lagos Life Mini — Enter the Hustle</title>
 
-  <!-- 🔥 SEO & GOOGLE SEARCH TAGS -->
   <meta name="description" content="The funniest Naija money game! Tap hustle, buy businesses, scam yahoo boys, and withdraw real money. Build your empire from Mushin to Banana Island." />
   <meta name="keywords" content="Lagos Life Mini, Nigerian game, tap game, play to earn, real money game, hustle game" />
   <link rel="canonical" href="https://lagoslifemini.online/login" />
 
-  <!-- 🔥 WHATSAPP LINK PREVIEW (OPEN GRAPH) TAGS -->
   <meta property="og:title" content="Lagos Life Mini — Enter the Hustle 🇳🇬" />
   <meta property="og:description" content="Tap your way to becoming an Aje Butler! Join the biggest Naija hustle game. Play now and win real money! 💸" />
   <meta property="og:url" content="https://lagoslifemini.online" />
@@ -20,18 +18,14 @@
   <meta property="og:image" content="https://lagoslifemini.online/IMG_0484.jpeg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  
-  <!-- TWITTER / X CARD -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Lagos Life Mini — Enter the Hustle 🇳🇬" />
-  <meta name="twitter:description" content="Tap your way to becoming an Aje Butler! Join the biggest Naija hustle game. Play now and win real money! 💸" />
+  <meta name="twitter:description" content="Tap your way to becoming an Aje Butler! Play now and win real money! 💸" />
   <meta name="twitter:image" content="https://lagoslifemini.online/IMG_0484.jpeg" />
 
-  <!-- FAVICON -->
   <link rel="icon" type="image/jpeg" href="/IMG_0484.jpeg" />
 
   <script src="https://cdn.tailwindcss.com"></script>
-
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -51,7 +45,7 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; min-height: 100vh; }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: contain; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; min-height: 100vh; }
     body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.1), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.06), transparent); }
     ::-webkit-scrollbar { width: 0; height: 0; }
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
@@ -59,7 +53,6 @@
     .text-gradient-gold { background: linear-gradient(135deg, #FFE566 0%, #FFD60A 40%, #FFB800 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
     .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
     .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); box-shadow: 0 8px 30px -10px rgba(255,214,10,0.3); }
-    .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
 
     .btn-gold {
       border-radius: 16px;
@@ -132,8 +125,21 @@
     }
 
     .progress-bar-fill { transition: width 0.4s cubic-bezier(0.22,1,0.36,1); }
+    .loading-progress { transition: width 0.6s cubic-bezier(0.22,1,0.36,1); }
 
     .safe-pad { padding-top: max(24px, env(safe-area-inset-top)); padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+
+    @keyframes bounce-slow { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+    .bounce-slow { animation: bounce-slow 2s ease-in-out infinite; }
+
+    .strength-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); overflow: hidden; }
+    .strength-bar-fill { height: 100%; transition: width 0.25s ease, background 0.25s ease; }
+
+    .pulse-red { animation: pulse-red 2s infinite; }
+    @keyframes pulse-red { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.6); } 50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); } }
+
+    .sparkle { position: absolute; font-size: 16px; pointer-events: none; animation: sparkleAnim 2s ease-in-out infinite; }
+    @keyframes sparkleAnim { 0%,100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
   </style>
 </head>
 <body>
@@ -144,25 +150,30 @@
 <!-- ============ SPLASH ============ -->
 <div class="screen active" id="splash">
   <div class="max-w-md mx-auto min-h-screen flex flex-col px-6 relative z-10 safe-pad">
-    <div class="flex-1 flex flex-col items-center justify-center text-center">
-      
-      <!-- 🔥 ADDED IMAGE HERE -->
+    <div class="flex-1 flex flex-col items-center justify-center text-center relative">
+      <span class="sparkle" style="top: 15%; left: 20%; animation-delay: 0s;">✨</span>
+      <span class="sparkle" style="top: 25%; right: 15%; animation-delay: 0.5s;">💰</span>
+      <span class="sparkle" style="bottom: 25%; left: 10%; animation-delay: 1s;">🔥</span>
+      <span class="sparkle" style="bottom: 15%; right: 20%; animation-delay: 1.5s;">💵</span>
+
       <div class="logo-glow w-24 h-24 rounded-3xl overflow-hidden shadow-[0_20px_60px_-10px_rgba(255,214,10,0.7)] mb-6 border-2 border-[#FFD60A]/50 bg-gradient-to-br from-[#FFE566] via-[#FFD60A] to-[#FFB800] grid place-items-center relative">
-        <img 
-          src="/IMG_0484.jpeg" 
-          alt="Lagos Life Logo" 
-          class="w-full h-full object-cover absolute inset-0 z-10" 
-          onerror="this.style.display='none';" 
-        />
+        <img src="/IMG_0484.jpeg" alt="Lagos Life Logo" class="w-full h-full object-cover absolute inset-0 z-10" onerror="this.style.display='none';" />
         <span class="text-black text-5xl font-black font-display z-0">L</span>
       </div>
 
       <h1 class="text-[44px] leading-none font-black text-gradient-gold font-display tracking-tighter">LAGOS LIFE</h1>
       <div class="text-[15px] tracking-[0.5em] font-black text-white/50 font-display mt-1">MINI</div>
-      <p class="mt-6 text-[13px] text-white/50 font-bold italic max-w-[280px] min-h-[40px]" id="tagline">
+      <p class="mt-6 text-[13px] text-white/50 font-bold italic max-w-[280px] min-h-[40px] transition-opacity duration-300" id="tagline">
         "Sapa no dey kill person… e just dey wound."
       </p>
       <div class="mt-2 text-[10px] uppercase tracking-widest text-white/25 font-extrabold">The Hustle Begins Here</div>
+
+      <!-- Animated player count -->
+      <div class="mt-5 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#22C55E]/15 border border-[#22C55E]/30">
+        <span class="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" style="box-shadow: 0 0 6px #22C55E;"></span>
+        <span class="text-[11px] font-black text-[#22C55E] tabular-nums" id="player-count">12,847</span>
+        <span class="text-[10px] font-bold text-white/50">hustlers online</span>
+      </div>
     </div>
 
     <div class="pb-6">
@@ -181,9 +192,14 @@
   <div class="max-w-md mx-auto min-h-screen flex flex-col px-6 relative z-10 safe-pad">
     <div class="flex-1 flex flex-col justify-center">
       <div class="text-center mb-8 pop-in">
-        <div class="text-5xl mb-3">🤔</div>
+        <div class="text-5xl mb-3 bounce-slow">🤔</div>
         <h2 class="text-2xl font-black text-gradient-gold font-display">Oya, who you be?</h2>
         <p class="text-[12px] text-white/40 mt-2 font-bold">No lie o, we go know if you dey lie.</p>
+        <!-- Returning user hint -->
+        <div id="returning-hint" style="display:none;" class="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#FFD60A]/15 border border-[#FFD60A]/40">
+          <span class="text-[13px]">👋</span>
+          <span class="text-[10.5px] font-black text-[#FFD60A]">Welcome back, <span id="returning-name">Hustler</span>! Day <span id="returning-streak">1</span> streak 🔥</span>
+        </div>
       </div>
 
       <div class="space-y-3">
@@ -237,8 +253,17 @@
         </div>
         <div>
           <label class="text-[10px] uppercase tracking-widest text-white/40 font-extrabold">Password</label>
-          <input id="auth-password" type="password" placeholder="Make am strong pass your hustle" class="input-field mt-1.5" autocomplete="current-password" minlength="6" required />
-          <div class="text-[10px] text-white/30 mt-1 font-bold">Minimum 6 characters. No use "123456" o 😂</div>
+          <input id="auth-password" type="password" placeholder="Make am strong pass your hustle" class="input-field mt-1.5" autocomplete="current-password" minlength="6" required oninput="updatePasswordStrength()" />
+          <!-- Password strength meter -->
+          <div id="pw-strength-wrap" style="display:none;" class="mt-2">
+            <div class="strength-bar">
+              <div class="strength-bar-fill" id="pw-strength-fill" style="width: 0%;"></div>
+            </div>
+            <div class="flex justify-between text-[9px] mt-1 font-bold">
+              <span id="pw-strength-label" class="text-white/40">Weak</span>
+              <button type="button" id="forgot-pw-btn" onclick="onForgotPassword()" class="text-[#FFD60A] underline hidden">Forgot password?</button>
+            </div>
+          </div>
         </div>
 
         <button id="auth-submit" type="submit" class="btn-gold w-full py-3.5 text-[14px] font-display mt-2">
@@ -279,7 +304,7 @@
       <div class="h-full bg-gradient-to-r from-[#FFD60A] to-[#FFB800] progress-bar-fill" id="quiz-progress" style="width: 20%;"></div>
     </div>
 
-    <div class="flex-1" id="quiz-content"><!-- filled by JS --></div>
+    <div class="flex-1" id="quiz-content"></div>
 
     <div class="pb-6 pt-6">
       <button onclick="quizNext()" id="quiz-next-btn" class="btn-gold w-full py-4 text-[14px] font-display" disabled>
@@ -289,16 +314,95 @@
   </div>
 </div>
 
+<!-- ============ PASSWORD SETUP (for Google users) ============ -->
+<div class="screen" id="password-setup">
+  <div class="max-w-md mx-auto min-h-screen flex flex-col px-6 relative z-10 safe-pad">
+    <div class="flex-1 flex flex-col justify-center">
+      <div class="text-center mb-6 pop-in">
+        <div class="text-6xl mb-3 bounce-slow">🔐</div>
+        <h2 class="text-[24px] font-black text-gradient-gold font-display">One more thing, boss</h2>
+        <p class="text-[12px] text-white/50 mt-2 font-bold max-w-xs mx-auto leading-relaxed">
+          You signed up with Google. Add a password make you fit also login with email if Google no work one day.
+        </p>
+      </div>
+
+      <div class="card-gradient rounded-2xl p-4 mb-4">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-sm">📧</span>
+          <span class="text-[10px] uppercase tracking-widest text-white/40 font-extrabold">Your email</span>
+        </div>
+        <div class="text-[13px] font-black text-[#FFD60A] truncate" id="pw-setup-email">—</div>
+      </div>
+
+      <form id="pw-setup-form" onsubmit="setPasswordAfterGoogle(event)" class="space-y-3">
+        <div>
+          <label class="text-[10px] uppercase tracking-widest text-white/40 font-extrabold">New Password</label>
+          <input id="setup-password" type="password" placeholder="Min 6 characters" class="input-field mt-1.5" minlength="6" required oninput="updateSetupStrength()" />
+          <div id="setup-strength-wrap" style="display:none;" class="mt-2">
+            <div class="strength-bar">
+              <div class="strength-bar-fill" id="setup-strength-fill" style="width: 0%;"></div>
+            </div>
+            <div class="text-[9px] mt-1 font-bold text-white/40" id="setup-strength-label">Weak</div>
+          </div>
+        </div>
+        <div>
+          <label class="text-[10px] uppercase tracking-widest text-white/40 font-extrabold">Confirm Password</label>
+          <input id="setup-confirm" type="password" placeholder="Type am again" class="input-field mt-1.5" minlength="6" required />
+          <div class="text-[9px] mt-1 font-bold text-red-400 hidden" id="setup-mismatch">Passwords no match 😬</div>
+        </div>
+
+        <button id="pw-setup-submit" type="submit" class="btn-gold w-full py-3.5 text-[13px] font-display mt-2">
+          🔒 SET PASSWORD & ENTER
+        </button>
+      </form>
+
+      <button onclick="skipPasswordSetup()" class="mt-3 w-full text-center text-white/40 text-[11px] font-bold underline py-2">
+        Skip for now — I go add am later
+      </button>
+
+      <div class="mt-4 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+        <div class="text-[9.5px] text-white/40 leading-relaxed font-bold">
+          💡 Why? If Google login ever fails, you fit still enter with your email + password. No lockout.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ============ LOADING ============ -->
 <div class="screen" id="loading">
   <div class="max-w-md mx-auto min-h-screen flex flex-col items-center justify-center px-6 relative z-10 text-center safe-pad">
-    <div id="loading-emoji" class="text-7xl mb-6">🔮</div>
+    <div id="loading-emoji" class="text-7xl mb-6 bounce-slow">🔮</div>
     <h2 class="text-[20px] font-black text-gradient-gold font-display mb-2" id="loading-title">Hold on…</h2>
     <p class="text-[13px] text-white/60 font-bold min-h-[40px] transition-all" id="loading-msg">We dey check your village people…</p>
-    <div class="flex gap-2 mt-8" id="loading-dots">
+    
+    <div class="w-full max-w-[240px] mt-6">
+      <div class="h-2 rounded-full bg-white/[0.06] overflow-hidden">
+        <div class="h-full bg-gradient-to-r from-[#FFD60A] to-[#FFB800] loading-progress" id="loading-progress" style="width: 5%;"></div>
+      </div>
+      <div class="text-[9px] uppercase tracking-widest text-white/30 font-extrabold mt-2" id="loading-percent">LOADING...</div>
+    </div>
+
+    <div class="flex gap-2 mt-6" id="loading-dots">
       <div class="w-2 h-2 rounded-full bg-[#FFD60A] animate-pulse"></div>
       <div class="w-2 h-2 rounded-full bg-[#FFD60A] animate-pulse" style="animation-delay: 0.15s;"></div>
       <div class="w-2 h-2 rounded-full bg-[#FFD60A] animate-pulse" style="animation-delay: 0.3s;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FORGOT PASSWORD MODAL ============ -->
+<div id="forgot-modal" style="display:none; position: fixed; inset: 0; z-index: 99998; background: rgba(0,0,0,0.9); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 24px;">
+  <div class="pop-in" style="width: 100%; max-width: 360px; background: #121218; border: 1px solid rgba(255,214,10,0.3); border-radius: 24px; padding: 24px;">
+    <div class="text-center mb-3">
+      <div class="text-4xl mb-2">🔑</div>
+      <div class="text-[15px] font-black tracking-widest text-[#FFD60A] font-display">FORGOT PASSWORD?</div>
+      <p class="text-[11px] text-white/50 mt-2 font-bold">Enter your email make we send reset link.</p>
+    </div>
+    <input id="forgot-email" type="email" placeholder="you@lagos.com" class="input-field mt-3" autocomplete="email" />
+    <div class="flex gap-2 mt-4">
+      <button onclick="closeForgotModal()" class="flex-1 rounded-xl bg-white/[0.06] border border-white/10 py-3 text-[12px] font-extrabold text-white/70 active:scale-95">Cancel</button>
+      <button onclick="sendResetEmail()" id="forgot-submit" class="flex-1 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] py-3 text-[12px] font-black text-black active:scale-95">Send Link</button>
     </div>
   </div>
 </div>
@@ -308,7 +412,7 @@
 
 <script>
 /* ============================================================
-   LAGOS LIFE MINI — LOGIN / SIGNUP
+   LAGOS LIFE MINI — LOGIN / SIGNUP (UPGRADED)
    ============================================================ */
 
 const firebaseConfig = {
@@ -348,15 +452,19 @@ const Audio = (() => {
     success: () => { tone(523, 0.1, 'triangle', 0.12); tone(659, 0.1, 'triangle', 0.12); tone(783, 0.2, 'triangle', 0.12); },
     error: () => { tone(220, 0.12, 'sawtooth', 0.12); tone(165, 0.2, 'sawtooth', 0.1); },
     whoosh: () => tone(1200, 0.15, 'sine', 0.06),
+    unlock: () => tone(523, 0.15, 'triangle', 0.1),
   };
 })();
 
 /* ---------- STATE ---------- */
 const state = {
-  mode: 'new', // 'new' or 'login'
+  mode: 'new',
   quizStep: 1,
   answers: { name: '', location: '', hustle: '', motto: '', gender: '' },
   pendingUser: null,
+  isGoogleSignup: false,
+  referrerId: null,
+  savedUserData: null,
 };
 
 /* ---------- UTILITIES ---------- */
@@ -400,7 +508,7 @@ function confettiBurst() {
 }
 
 function spawnBgEmojis() {
-  const emojis = ['💰', '🌴', '🚌', '💵', '₦', '🥇', '🔥', '💸'];
+  const emojis = ['💰', '🌴', '🚌', '💵', '₦', '🥇', '🔥', '💸', '🛒', '🎉'];
   const layer = $('bg-layer');
   for (let i = 0; i < 14; i++) {
     const el = document.createElement('div');
@@ -413,6 +521,46 @@ function spawnBgEmojis() {
     el.style.fontSize = (16 + Math.random() * 20) + 'px';
     layer.appendChild(el);
   }
+}
+
+/* ---------- PASSWORD STRENGTH ---------- */
+function getStrength(pw) {
+  if (!pw) return { score: 0, label: 'Weak', color: '#EF4444' };
+  let score = 0;
+  if (pw.length >= 6) score++;
+  if (pw.length >= 10) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  if (score <= 1) return { score: 20, label: 'Weak', color: '#EF4444' };
+  if (score <= 3) return { score: 60, label: 'Medium', color: '#FFD60A' };
+  return { score: 100, label: 'Strong 💪', color: '#22C55E' };
+}
+
+function updatePasswordStrength() {
+  const pw = $('auth-password').value;
+  const wrap = $('pw-strength-wrap');
+  if (!pw) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  const s = getStrength(pw);
+  $('pw-strength-fill').style.width = s.score + '%';
+  $('pw-strength-fill').style.background = s.color;
+  $('pw-strength-label').textContent = s.label;
+  $('pw-strength-label').style.color = s.color;
+}
+
+function updateSetupStrength() {
+  const pw = $('setup-password').value;
+  const wrap = $('setup-strength-wrap');
+  const mismatch = $('setup-confirm').value && $('setup-confirm').value !== pw;
+  if (!pw) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  const s = getStrength(pw);
+  $('setup-strength-fill').style.width = s.score + '%';
+  $('setup-strength-fill').style.background = s.color;
+  $('setup-strength-label').textContent = s.label;
+  $('setup-strength-label').style.color = s.color;
+  $('setup-mismatch').classList.toggle('hidden', !mismatch);
 }
 
 /* ---------- SPLASH ---------- */
@@ -432,11 +580,28 @@ setInterval(() => {
   el.style.opacity = '0';
   setTimeout(() => { el.textContent = TAGLINES[taglineIdx]; el.style.opacity = '1'; }, 200);
 }, 3500);
-$('tagline') && ($('tagline').style.transition = 'opacity 0.3s');
+
+// Animated player counter
+let playerCount = 12847;
+setInterval(() => {
+  if (!$('splash').classList.contains('active')) return;
+  playerCount += Math.floor(Math.random() * 4) - 1;
+  if (playerCount < 12000) playerCount = 12000;
+  const el = $('player-count');
+  if (el) el.textContent = playerCount.toLocaleString();
+}, 2000);
 
 function onSplashEnter() {
   Audio.whoosh();
   vibrate(20);
+  // Check returning user
+  const savedName = localStorage.getItem('lagos_user_name');
+  if (savedName) {
+    $('returning-hint').style.display = 'inline-flex';
+    $('returning-name').textContent = savedName;
+    const streak = parseInt(localStorage.getItem('login_streak') || '1', 10);
+    $('returning-streak').textContent = String(streak);
+  }
   goScreen('choice');
 }
 
@@ -459,6 +624,9 @@ function updateAuthScreen() {
     ? 'Use real email o — no use <em>mugu@gmail.com</em> 😂'
     : 'We miss you. Enter your details make we open the gate 🔑';
   $('auth-submit-text').textContent = isNew ? 'CREATE ACCOUNT' : 'LOG ME IN';
+  // Show forgot password only on login mode
+  $('forgot-pw-btn').classList.toggle('hidden', isNew);
+  $('pw-strength-wrap').style.display = 'none';
 }
 
 function friendlyAuthError(err) {
@@ -472,8 +640,10 @@ function friendlyAuthError(err) {
     'auth/invalid-credential': 'Email or password no correct. Try again.',
     'auth/too-many-requests': 'You don try too many times. Calm down, wait small.',
     'auth/popup-closed-by-user': 'You close the popup before we finish. Try again.',
+    'auth/popup-blocked': 'Popup blocked. Allow popups for this site, try again.',
     'auth/operation-not-allowed': 'This login method no dey enabled. Tell the admin.',
     'auth/network-request-failed': 'Network wahala. Check your data.',
+    'auth/account-exists-with-different-credential': 'This email already get account with password. Log in with email + password instead.',
   };
   return map[code] || (err && err.message) || 'Something went wrong. Try again.';
 }
@@ -499,7 +669,9 @@ async function onEmailAuth(e) {
       cred = await auth.signInWithEmailAndPassword(email, password);
     }
     Audio.success();
-    await routeAfterAuth(cred.user);
+    // Track login streak for returning users
+    updateLoginStreak();
+    await routeAfterAuth(cred.user, false);
   } catch (err) {
     console.error(err);
     Audio.error();
@@ -517,7 +689,12 @@ async function onGoogleAuth() {
     const provider = new firebase.auth.GoogleAuthProvider();
     const cred = await auth.signInWithPopup(provider);
     Audio.success();
-    await routeAfterAuth(cred.user);
+    updateLoginStreak();
+
+    // Check if this is a Google user with no password provider (new signup)
+    const hasPassword = (cred.user.providerData || []).some(p => p.providerId === 'password');
+    const isGoogleOnly = !hasPassword;
+    await routeAfterAuth(cred.user, isGoogleOnly);
   } catch (err) {
     console.error(err);
     Audio.error();
@@ -529,8 +706,7 @@ async function onGoogleAuth() {
   }
 }
 
-async function routeAfterAuth(user) {
-  // Check if user doc already exists in Firestore
+async function routeAfterAuth(user, isGoogleOnly) {
   try {
     const docRef = db.collection('users').doc(user.uid);
     const doc = await docRef.get();
@@ -542,6 +718,7 @@ async function routeAfterAuth(user) {
     } else {
       // New user → quiz
       state.pendingUser = user;
+      state.isGoogleSignup = isGoogleOnly;
       state.quizStep = 1;
       state.answers = { name: '', location: '', hustle: '', motto: '', gender: '' };
       renderQuiz();
@@ -549,38 +726,86 @@ async function routeAfterAuth(user) {
     }
   } catch (err) {
     console.error('routeAfterAuth error', err);
-    // Fallback: assume new user
     state.pendingUser = user;
+    state.isGoogleSignup = isGoogleOnly;
     state.quizStep = 1;
     renderQuiz();
     goScreen('quiz');
   }
 }
 
+/* ---------- LOGIN STREAK ---------- */
+function updateLoginStreak() {
+  const today = new Date().toISOString().slice(0, 10);
+  const lastLogin = localStorage.getItem('last_login_date');
+  const streak = parseInt(localStorage.getItem('login_streak') || '0', 10);
+
+  let newStreak = 1;
+  if (lastLogin === today) {
+    newStreak = streak || 1;
+  } else {
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    newStreak = (lastLogin === yesterday) ? streak + 1 : 1;
+  }
+  localStorage.setItem('last_login_date', today);
+  localStorage.setItem('login_streak', String(newStreak));
+}
+
 /* ---------- WELCOME BACK ---------- */
 async function welcomeBack(name) {
+  const streak = parseInt(localStorage.getItem('login_streak') || '1', 10);
   const roasts = [
-    `Ah, ${name}. You still dey hustle or you don give up? 😏`,
     `${name}! We bin think say sapa carry you. Welcome back 💪`,
     `Back again, ${name}? Your money no go make itself o 😂`,
     `Oya ${name}, enter. We save your spot. 👑`,
+    `${name}, your enemies don fail. Welcome back 🔥`,
+    `They try to stop you, ${name}. But you still land. 💯`,
   ];
+  const randomRoast = roasts[Math.floor(Math.random() * roasts.length)];
+
+  const streakMsg = streak > 1
+    ? `🔥 Day ${streak} streak. Keep am up!`
+    : 'New day, new hustle 🌅';
+
   $('loading-emoji').textContent = '🔑';
   $('loading-title').textContent = `Welcome back, ${name}!`;
-  $('loading-msg').textContent = roasts[Math.floor(Math.random() * roasts.length)];
+  $('loading-msg').textContent = randomRoast;
   goScreen('loading');
+  startLoadingProgress(['Opening the gates of Lagos…', streakMsg, 'Chop life, no let life chop you 🚀']);
+
   localStorage.setItem('lagos_user_name', name);
   localStorage.setItem('lagos_user_id', auth.currentUser.uid);
   Audio.success();
   confettiBurst();
+}
 
-  setTimeout(() => {
-    $('loading-msg').textContent = 'Opening the gates of Lagos…';
-    setTimeout(() => {
-      $('loading-msg').textContent = 'Chop life, no let life chop you 🚀';
-      setTimeout(() => { window.location.href = '/index.html'; }, 900);
-    }, 900);
-  }, 1200);
+/* ---------- LOADING PROGRESS ---------- */
+function startLoadingProgress(messages) {
+  const bar = $('loading-progress');
+  const pct = $('loading-percent');
+  let progress = 5;
+  bar.style.width = '5%';
+  pct.textContent = 'LOADING 5%';
+
+  const iv = setInterval(() => {
+    progress += Math.random() * 18 + 8;
+    if (progress >= 100) {
+      progress = 100;
+      clearInterval(iv);
+      setTimeout(() => { window.location.href = '/index.html'; }, 600);
+    }
+    bar.style.width = progress + '%';
+    pct.textContent = 'LOADING ' + Math.floor(progress) + '%';
+  }, 700);
+
+  if (messages && messages.length) {
+    let idx = 0;
+    const msgIv = setInterval(() => {
+      idx = (idx + 1) % messages.length;
+      $('loading-msg').textContent = messages[idx];
+      if (progress >= 100) clearInterval(msgIv);
+    }, 1100);
+  }
 }
 
 /* ---------- QUIZ ---------- */
@@ -704,7 +929,6 @@ function renderQuiz() {
         Audio.select();
         vibrate(8);
         updateQuizNextState();
-        // Auto-advance after short delay for smooth feel
         setTimeout(() => { if (state.answers[q.key] === btn.dataset.value) quizNext(); }, 280);
       });
     });
@@ -745,7 +969,6 @@ async function quizNext() {
     return;
   }
 
-  // FINISH
   await finishQuiz();
 }
 
@@ -754,7 +977,6 @@ async function finishQuiz() {
   btn.disabled = true;
   btn.textContent = 'SAVING…';
 
-  // Unique name check (query Firestore)
   const name = state.answers.name.trim();
   try {
     const snap = await db.collection('users').where('name', '==', name).limit(1).get();
@@ -769,11 +991,9 @@ async function finishQuiz() {
       return;
     }
   } catch (e) {
-    // Fail open
     console.warn('Name uniqueness check failed:', e);
   }
 
-  // Save user doc
   const user = state.pendingUser || auth.currentUser;
   if (!user) {
     toast('Lost authentication. Please log in again.', 'bad');
@@ -802,37 +1022,24 @@ async function finishQuiz() {
       transactions: [],
       bankName: null,
       goldName: false,
+      referrerId: state.referrerId || null,
       createdAt: Date.now(),
     };
     await db.collection('users').doc(user.uid).set(data);
     localStorage.setItem('lagos_user_name', data.name);
     localStorage.setItem('lagos_user_id', user.uid);
+    state.savedUserData = data;
 
-    // Success screen
-    $('loading-emoji').textContent = '🎉';
-    $('loading-title').textContent = `Welcome to Lagos, ${data.name}!`;
-    const msgs = [
-      'We don open your account with ₦25,000 starter cash 💰',
-      'Your village people don try but dem fail 😂',
-      'Time to hustle. No sleep!',
-    ];
-    let idx = 0;
-    $('loading-msg').textContent = msgs[0];
-    goScreen('loading');
-    Audio.success();
-    confettiBurst();
-    vibrate([30, 60, 30]);
+    // If Google user (no password) → show password setup
+    if (state.isGoogleSignup) {
+      $('pw-setup-email').textContent = user.email || 'your account';
+      goScreen('password-setup');
+      Audio.unlock();
+      return;
+    }
 
-    const msgTimer = setInterval(() => {
-      idx = (idx + 1) % msgs.length;
-      $('loading-msg').textContent = msgs[idx];
-    }, 1200);
-
-    setTimeout(() => {
-      clearInterval(msgTimer);
-      window.location.href = '/index.html';
-    }, 3600);
-
+    // Otherwise, go to loading → redirect
+    showSuccessAndRedirect(data.name);
   } catch (err) {
     console.error(err);
     Audio.error();
@@ -842,21 +1049,147 @@ async function finishQuiz() {
   }
 }
 
+/* ---------- PASSWORD SETUP AFTER GOOGLE ---------- */
+async function setPasswordAfterGoogle(e) {
+  e.preventDefault();
+  const pw = $('setup-password').value;
+  const confirm = $('setup-confirm').value;
+  const submitBtn = $('pw-setup-submit');
+
+  if (!pw || pw.length < 6) return toast('Password must be at least 6 characters', 'bad');
+  if (pw !== confirm) return toast('Passwords no match 😬', 'bad');
+
+  const user = auth.currentUser;
+  if (!user || !user.email) return toast('No email found on account', 'bad');
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'SETTING…';
+
+  try {
+    const cred = firebase.auth.EmailAuthProvider.credential(user.email, pw);
+    await user.linkWithCredential(cred);
+    Audio.success();
+    toast('✅ Password added! You can now login with email too', 'good');
+    const name = state.savedUserData ? state.savedUserData.name : 'Hustler';
+    showSuccessAndRedirect(name);
+  } catch (err) {
+    console.error('linkWithCredential error:', err);
+    Audio.error();
+    const code = err.code || '';
+    if (code === 'auth/provider-already-linked') {
+      toast('Password already set ✅', 'good');
+      const name = state.savedUserData ? state.savedUserData.name : 'Hustler';
+      showSuccessAndRedirect(name);
+      return;
+    } else if (code === 'auth/credential-already-in-use' || code === 'auth/email-already-in-use') {
+      toast('That email already has a password on another account. Use email login.', 'bad');
+    } else if (code === 'auth/requires-recent-login') {
+      toast('Please log out and sign in again, then set password.', 'bad');
+    } else if (code === 'auth/weak-password') {
+      toast('Password too weak. Use 6+ chars.', 'bad');
+    } else {
+      toast(err.message || 'Failed to set password', 'bad');
+    }
+    submitBtn.disabled = false;
+    submitBtn.textContent = '🔒 SET PASSWORD & ENTER';
+  }
+}
+
+function skipPasswordSetup() {
+  Audio.tap();
+  vibrate(10);
+  const name = state.savedUserData ? state.savedUserData.name : 'Hustler';
+  toast('No wahala. You can add am later in settings.', 'good');
+  showSuccessAndRedirect(name);
+}
+
+/* ---------- SUCCESS SCREEN ---------- */
+function showSuccessAndRedirect(name) {
+  $('loading-emoji').textContent = '🎉';
+  $('loading-title').textContent = `Welcome to Lagos, ${name}!`;
+  $('loading-msg').textContent = 'We don open your account with ₦25,000 starter cash 💰';
+  goScreen('loading');
+  Audio.success();
+  confettiBurst();
+  vibrate([30, 60, 30]);
+
+  startLoadingProgress([
+    'We don open your account with ₦25,000 starter cash 💰',
+    'Your village people don try but dem fail 😂',
+    'Time to hustle. No sleep!',
+    'Loading Lagos traffic… 🚦',
+    'You ready? Oya make we go! 🚀',
+  ]);
+}
+
+/* ---------- FORGOT PASSWORD ---------- */
+function onForgotPassword() {
+  const email = $('auth-email').value.trim();
+  $('forgot-email').value = email;
+  $('forgot-modal').style.display = 'flex';
+  setTimeout(() => $('forgot-email').focus(), 100);
+  Audio.tap();
+}
+
+function closeForgotModal() {
+  $('forgot-modal').style.display = 'none';
+  Audio.tap();
+}
+
+async function sendResetEmail() {
+  const email = $('forgot-email').value.trim();
+  if (!email) return toast('Enter your email o', 'bad');
+  const btn = $('forgot-submit');
+  btn.disabled = true;
+  btn.textContent = 'SENDING…';
+  try {
+    await auth.sendPasswordResetEmail(email);
+    Audio.success();
+    toast('📧 Reset link sent! Check your email', 'good');
+    closeForgotModal();
+  } catch (err) {
+    console.error(err);
+    Audio.error();
+    const code = err.code || '';
+    if (code === 'auth/user-not-found') {
+      toast('No account with that email', 'bad');
+    } else if (code === 'auth/invalid-email') {
+      toast('That email no correct', 'bad');
+    } else {
+      toast(err.message || 'Failed to send', 'bad');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send Link';
+  }
+}
+
+/* ---------- REFERRAL DETECTION ---------- */
+(function detectReferral() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      state.referrerId = ref;
+      console.log('Referral detected:', ref);
+    }
+  } catch (e) {}
+})();
+
 /* ---------- INIT ---------- */
 document.addEventListener('DOMContentLoaded', () => {
   spawnBgEmojis();
 
-  // Unlock audio on first touch
-  const unlock = () => { Audio.tap(); document.removeEventListener('touchstart', unlock); };
+  const unlock = () => { Audio.unlock(); document.removeEventListener('touchstart', unlock); };
   document.addEventListener('touchstart', unlock, { once: true });
 
-  // If already logged in → check doc, go to app
+  // If already logged in with a user doc, straight to app
   auth.onAuthStateChanged(async (user) => {
     if (user) {
       try {
         const doc = await db.collection('users').doc(user.uid).get();
         if (doc.exists) {
-          // Already has an account → straight in
+          localStorage.setItem('lagos_user_name', doc.data().name || 'Hustler');
           window.location.href = '/index.html';
           return;
         }
