@@ -55,7 +55,9 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+    /* FIX 1: Split html/body — overscroll-behavior contain instead of none, added iOS momentum */
+    html { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: contain; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+    body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; -webkit-overflow-scrolling: touch; }
     body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent); }
     ::-webkit-scrollbar { width: 0; height: 0; }
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
@@ -80,7 +82,8 @@
     .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
     .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
-    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    /* FIX 2: Removed backdrop-filter blur — this was the biggest scroll-killer on Android */
+    .nav-backdrop { background: #08080B; border-top: 1px solid rgba(255,255,255,0.08); }
     input { -webkit-user-select: text; user-select: text; }
     input:focus { outline: none; }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
@@ -332,6 +335,8 @@
       const comboRef = useRef({ lastTap: 0, count: 0, timer: null });
       const bankAutoShownRef = useRef(false);
       const achievementsLock = useRef(new Set());
+      // FIX 4: track touch start to prevent accidental taps during scroll
+      const touchStart = useRef({ x: 0, y: 0, isScroll: false });
 
       useEffect(() => {
         return () => { if (comboRef.current.timer) clearTimeout(comboRef.current.timer); };
@@ -707,7 +712,6 @@
         try { window.open('https://www.tiktok.com/', '_blank'); } catch(e) {}
       };
 
-      // ===== RECEIPT GENERATOR (FIXED — handles 50T+ without cutting off) =====
       const generateReceipt = (fromName, toName, bank, accountNumber, amount, ref) => {
         const c = document.createElement('canvas');
         c.width = 1080; c.height = 1080;
@@ -730,7 +734,6 @@
         ctx.strokeStyle = 'rgba(34,197,94,0.5)'; ctx.lineWidth = 4;
         roundRect(ctx, 40, 40, 1000, 1000, 40); ctx.stroke();
         
-        // Success check
         ctx.fillStyle = 'rgba(34,197,94,0.15)';
         ctx.beginPath(); ctx.arc(540, 175, 55, 0, Math.PI*2); ctx.fill();
         ctx.strokeStyle = 'rgba(34,197,94,0.7)'; ctx.lineWidth = 3;
@@ -741,7 +744,6 @@
         ctx.fillStyle = '#22C55E'; ctx.font = 'bold 32px Sora, Inter, sans-serif';
         ctx.fillText('TRANSFER SUCCESSFUL', 540, 280);
         
-        // ===== AMOUNT — abbreviation hero + full number below =====
         ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = 'bold 24px Inter, sans-serif';
         ctx.fillText('AMOUNT SENT', 540, 360);
 
@@ -761,11 +763,9 @@
         ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = 'bold 28px Inter, sans-serif';
         ctx.fillText('₦' + amount.toLocaleString(), 540, 520);
 
-        // Divider
         ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(120, 560); ctx.lineTo(960, 560); ctx.stroke();
         
-        // Details
         const details = [
           ['FROM', fromName],
           ['TO', toName],
@@ -784,7 +784,6 @@
           ctx.fillText(String(val), 960, y);
         });
         
-        // Footer
         ctx.textAlign = 'center';
         ctx.fillStyle = '#FFD60A'; ctx.font = 'bold 22px Sora, Inter, sans-serif';
         ctx.fillText('🌴 LAGOS LIFE MINI 🇳🇬', 540, 1010);
@@ -876,7 +875,8 @@
             className: 'music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition backdrop-blur'
           }, h('span', { className: 'text-base' }, musicOn ? '🔊' : '🔇')),
 
-          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+          /* FIX 3: Removed backdrop-blur-xl from header — solid background for smooth scroll */
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B] border-b border-white/[0.06]' },
             h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
               h('div', { className: 'flex items-center gap-2 min-w-0' },
                 h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display' }, 'L'),
@@ -967,7 +967,23 @@
                 comboMult > 1 && h('div', { 
                   className: 'absolute -top-8 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-gradient-to-r from-[#FF6B00] to-[#FF0055] text-white text-[11px] font-black shadow-lg animate-popIn whitespace-nowrap z-20' 
                 }, '🔥 ' + comboMult.toFixed(1) + 'x COMBO!'),
-                h('button', { onClick: doTap, className: 'tap-btn w-56 h-56 grid place-items-center text-black' },
+                /* FIX 4: Touch detection — ignores taps if user is scrolling */
+                h('button', {
+                  onClick: () => {
+                    if (touchStart.current.isScroll) { touchStart.current.isScroll = false; return; }
+                    doTap();
+                  },
+                  onTouchStart: (e) => {
+                    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, isScroll: false };
+                  },
+                  onTouchMove: (e) => {
+                    if (!touchStart.current || touchStart.current.isScroll) return;
+                    const dx = Math.abs(e.touches[0].clientX - touchStart.current.x);
+                    const dy = Math.abs(e.touches[0].clientY - touchStart.current.y);
+                    if (dx > 8 || dy > 8) touchStart.current.isScroll = true;
+                  },
+                  className: 'tap-btn w-56 h-56 grid place-items-center text-black'
+                },
                   h('div', { className: 'text-center relative z-10' },
                     h('div', { className: 'text-5xl drop-shadow-md' }, '👊🏾'),
                     h('div', { className: 'text-2xl font-black tracking-tighter mt-1 font-display' }, 'HUSTLE'),
@@ -1157,15 +1173,58 @@
                     )
                   )
                 ),
+                /* FIX 5: Formatted amount with live preview + quick buttons */
                 h('div', null,
                   h('div', { className: 'flex justify-between items-end' },
-                    h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Amount'),
+                    h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Amount (₦)'),
                     !s.bankName && h('button', { onClick: () => { setSendOpen(false); setSettingsOpen(true); }, className: 'text-[9px] text-[#FFD60A] underline' }, 'Setup your bank')
                   ),
                   h('input', {
-                    type: 'number', value: sendAmt, onChange: (e) => setSendAmt(e.target.value), placeholder: 'Minimum ₦100', disabled: isSending,
-                    className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[13px] font-extrabold text-white placeholder-white/25 focus:border-[#FFD60A]/50 transition tabular-nums disabled:opacity-50'
-                  })
+                    type: 'tel',
+                    inputMode: 'numeric',
+                    value: sendAmt,
+                    onChange: (e) => setSendAmt(e.target.value.replace(/\D/g, '').slice(0, 15)),
+                    placeholder: 'e.g. 5000',
+                    disabled: isSending,
+                    className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[15px] font-extrabold text-white placeholder-white/25 focus:border-[#FFD60A]/50 transition tabular-nums disabled:opacity-50'
+                  }),
+                  /* Live formatted amount preview */
+                  sendAmt && Number(sendAmt) > 0 && h('div', {
+                    className: 'mt-2 px-3 py-2 rounded-xl flex items-center justify-between border ' +
+                      (Number(sendAmt) > s.cash ? 'bg-red-500/15 border-red-500/40' : 'bg-[#FFD60A]/10 border-[#FFD60A]/30')
+                  },
+                    h('span', { className: 'text-[10px] uppercase tracking-widest font-bold text-white/50' }, 'You are sending'),
+                    h('span', {
+                      className: 'font-black tabular-nums font-display text-[14px] ' +
+                        (Number(sendAmt) > s.cash ? 'text-red-400' : 'text-[#FFD60A]')
+                    }, fmt(Math.floor(Number(sendAmt))))
+                  ),
+                  /* Quick amount buttons */
+                  h('div', { className: 'mt-2 flex gap-1.5 flex-wrap' },
+                    [1000, 5000, 10000, 100000, 1000000].map(a =>
+                      h('button', {
+                        key: a,
+                        onClick: () => setSendAmt(String(a)),
+                        disabled: isSending || a > s.cash,
+                        className: 'px-2.5 py-1 rounded-lg text-[10px] font-black active:scale-95 transition ' +
+                          (a > s.cash
+                            ? 'bg-white/[0.03] text-white/20 border border-white/[0.05]'
+                            : Number(sendAmt) === a
+                              ? 'bg-[#FFD60A] text-black'
+                              : 'bg-white/[0.06] border border-white/10 text-white/70')
+                      }, fmt(a))
+                    ),
+                    h('button', {
+                      onClick: () => setSendAmt(String(Math.floor(s.cash))),
+                      disabled: isSending || s.cash < 100,
+                      className: 'px-2.5 py-1 rounded-lg text-[10px] font-black active:scale-95 transition ' +
+                        (s.cash < 100
+                          ? 'bg-white/[0.03] text-white/20 border border-white/[0.05]'
+                          : Number(sendAmt) === Math.floor(s.cash)
+                            ? 'bg-[#22C55E] text-black'
+                            : 'bg-[#22C55E]/20 border border-[#22C55E]/40 text-[#22C55E]')
+                    }, 'MAX')
+                  )
                 ),
                 h('div', { className: 'text-[10px] text-white/40 tabular-nums' }, 'Available: ' + fmt(s.cash))
               ),
@@ -1263,7 +1322,7 @@
             )
           ),
 
-          h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop border-t border-white/[0.08]' },
+          h('nav', { className: 'fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-30 nav-backdrop' },
             h('div', { className: 'grid grid-cols-6 px-1 pt-1.5 safe-bottom' },
               NAV.map((n) => {
                 const active = n.id === 'home';
