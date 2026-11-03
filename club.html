@@ -47,9 +47,13 @@
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideInRight { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes streakPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
     .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideInRight { animation: slideInRight 0.25s ease-out; }
+    .animate-popIn { animation: popIn 0.35s cubic-bezier(0.22,1,0.36,1); }
+    .animate-streakPulse { animation: streakPulse 0.8s ease-in-out infinite; }
     .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
@@ -57,6 +61,7 @@
     .hero-grid { background-image: linear-gradient(rgba(255,214,10,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,214,10,0.04) 1px, transparent 1px); background-size: 22px 22px; -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); }
     .neon-text { text-shadow: 0 0 5px #FFD60A, 0 0 10px #FFD60A, 0 0 20px #FFD60A; }
     .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
+    .spin-wheel { background: conic-gradient(from 0deg, #FFD60A, #FFB800, #F87171, #A855F7, #3B82F6, #22C55E, #FFD60A); }
   </style>
 </head>
 <body>
@@ -87,24 +92,51 @@
     const MAX_E = 100;
     const ENERGY_MS = 5 * 60 * 1000;
 
+    // 🎯 NEW PRICING — Real ₦ → Fake cash
     const REGULAR_ACTIONS = [
-      { id: 'bail',   label: 'Bail a Hustler', price: 100, emoji: '⛓️', desc: 'Free your guy from cell. He go owe you.', multiplier: 5_000_000, color: 'from-slate-400/25 to-slate-700/10' },
-      { id: 'spray',  label: 'Spray Dancer',   price: 200, emoji: '💸', desc: 'Make it rain on the dancer. She go smile.', multiplier: 5_000_000, color: 'from-fuchsia-400/25 to-fuchsia-700/10' },
-      { id: 'bouncer', label: 'Bribe Bouncer', price: 150, emoji: '🦍', desc: 'Enter VIP without queue. No wahala.', multiplier: 5_000_000, color: 'from-red-400/25 to-red-700/10' },
-      { id: 'babe',   label: 'Buy Babe Drink', price: 500, emoji: '🍹', desc: 'Impress the finest babe. But she might scam you.', multiplier: 5_000_000, color: 'from-pink-400/25 to-pink-700/10' },
+      { id: 'bail',    label: 'Bail a Hustler', price: 100, emoji: '⛓️', desc: 'Free your guy from cell. He go owe you.', multiplier: 5_000_000_000, color: 'from-slate-400/25 to-slate-700/10' },
+      { id: 'bouncer', label: 'Bribe Bouncer',  price: 150, emoji: '🦍', desc: 'Enter VIP without queue. No wahala.', multiplier: 1_000_000_000_000, color: 'from-red-400/25 to-red-700/10' },
+      { id: 'spray',   label: 'Spray Dancer',   price: 200, emoji: '💸', desc: 'Make it rain on the dancer. She go smile.', multiplier: 1_000_000_000_000, color: 'from-fuchsia-400/25 to-fuchsia-700/10' },
+      { id: 'babe',    label: 'Buy Babe Drink', price: 500, emoji: '🍹', desc: 'Impress the finest babe. But she might scam you.', multiplier: 1_000_000_000_000, color: 'from-pink-400/25 to-pink-700/10' },
     ];
 
     const VIP_ACTIONS = [
-      { id: 'escort', label: 'Police Escort', price: 300, emoji: '🚔', desc: 'Clear traffic to the club.', multiplier: 5_000_000, color: 'from-blue-400/25 to-blue-700/10' },
-      { id: 'gold',   label: 'Gold Name',     price: 200, emoji: '⭐', desc: 'Forever shining in gold.', multiplier: 5_000_000, color: 'from-amber-400/25 to-amber-700/10' },
-      { id: 'japa',   label: 'Japa the Club', price: 500, emoji: '✈️', desc: 'Take over the whole club.', multiplier: 10_000_000, color: 'from-cyan-400/25 to-cyan-700/10' },
-      { id: 'dj',     label: 'Buy the DJ',    price: 1000, emoji: '🎧', desc: 'DJ plays your song all night.', multiplier: 15_000_000, color: 'from-purple-400/25 to-purple-700/10' },
-      { id: 'wig',    label: 'Buy Dancer Wig', price: 1500, emoji: '💇🏾‍♀️', desc: 'She takes it off for you.', multiplier: 20_000_000, color: 'from-rose-400/25 to-rose-700/10' },
-      { id: 'shutdown', label: 'Shutdown Club', price: 5000, emoji: '🚨', desc: 'The ultimate flex. Game over.', multiplier: 100_000_000, color: 'from-red-500/30 to-orange-700/20' },
+      { id: 'escort',   label: 'Police Escort',    price: 300,  emoji: '🚔', desc: 'Clear traffic to the club.', multiplier: 1_000_000_000_000, color: 'from-blue-400/25 to-blue-700/10' },
+      { id: 'gold',     label: 'Gold Name',        price: 200,  emoji: '⭐', desc: 'Forever shining in gold.', multiplier: 1_000_000_000_000, color: 'from-amber-400/25 to-amber-700/10' },
+      { id: 'japa',     label: 'Japa the Club',    price: 500,  emoji: '✈️', desc: 'Take over the whole club.', multiplier: 1_000_000_000_000, color: 'from-cyan-400/25 to-cyan-700/10' },
+      { id: 'dj',       label: 'Buy the DJ',       price: 1000, emoji: '🎧', desc: 'DJ plays your song all night.', multiplier: 1_000_000_000_000, color: 'from-purple-400/25 to-purple-700/10' },
+      { id: 'wig',      label: 'Buy Dancer Wig',   price: 1500, emoji: '💇🏾‍♀️', desc: 'She takes it off for you.', multiplier: 1_000_000_000_000, color: 'from-rose-400/25 to-rose-700/10' },
+      { id: 'shutdown', label: 'Shutdown Club',    price: 5000, emoji: '🚨', desc: 'The ultimate flex. Game over.', multiplier: 1_200_000_000_000, color: 'from-red-500/30 to-orange-700/20' },
     ];
 
+    // 💎 BALLER LEVEL SYSTEM
+    const LEVELS = [
+      { name: 'Ajebutter',    xp: 0,     bonus: 0,    emoji: '🥱' },
+      { name: 'Club Rat',     xp: 500,   bonus: 0.05, emoji: '🐀' },
+      { name: 'Baller',       xp: 2000,  bonus: 0.10, emoji: '💎' },
+      { name: 'Odogwu',       xp: 5000,  bonus: 0.20, emoji: '🦁' },
+      { name: 'Club Owner',   xp: 10000, bonus: 0.30, emoji: '👑' },
+      { name: 'Lagos Legend', xp: 25000, bonus: 0.50, emoji: '🌟' },
+    ];
+
+    const getLevelIdx = (xp) => {
+      let idx = 0;
+      for (let i = 0; i < LEVELS.length; i++) if ((xp || 0) >= LEVELS[i].xp) idx = i;
+      return idx;
+    };
+
+    // 🔥 COMBO STREAK
+    const STREAK_WINDOW_MS = 8000;
+    const MAX_STREAK = 10;
+    const STREAK_BONUS_PER = 0.05;
+
+    // 🎰 SPIN
+    const SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+    const SPIN_MIN = 1e12;   // ₦1T
+    const SPIN_MAX = 100e12; // ₦100T
+
     const NAMES = ['Tunde', 'Chidi', 'Bisi', 'Emeka', 'Ngozi', 'Femi', 'Yemi', 'Ada', 'Kelechi', 'Seyi', 'Ifeanyi', 'Amaka', 'Bola', 'Dapo', 'Funke', 'Uche', 'Tope', 'Zainab', 'Musa', 'Chioma', 'Segun', 'Kemi', 'Olamide', 'Davido', 'Wizkid', 'Burna'];
-    
+
     const FEED_LINES = [
       () => 'just paid ₦100 to bail a hustler ⛓️',
       () => 'sprayed ₦200 on the dancer and she smiled 💸',
@@ -134,13 +166,20 @@
     const getCachedData = () => {
       try {
         const cached = localStorage.getItem("lagos_user_data");
-        if (cached) return JSON.parse(cached);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (typeof parsed.xp !== 'number') parsed.xp = 0;
+          if (typeof parsed.lastSpinAt !== 'number') parsed.lastSpinAt = 0;
+          if (!Array.isArray(parsed.flexHistory)) parsed.flexHistory = [];
+          return parsed;
+        }
       } catch (e) {}
       return {
         name: localStorage.getItem("lagos_user_name") || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+        xp: 0, lastSpinAt: 0, flexHistory: [],
         transactions: []
       };
     };
@@ -149,6 +188,7 @@
       n = Math.floor(n || 0);
       const s = n < 0 ? '-' : '';
       n = Math.abs(n);
+      if (n >= 1e15) return s + '₦' + (n / 1e15).toFixed(2) + 'Q';
       if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
       if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
       if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
@@ -156,6 +196,16 @@
       return s + '₦' + n.toLocaleString();
     };
     const fmtReal = (n) => '₦' + (n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const timeAgo = (t) => {
+      const secs = Math.floor((Date.now() - t) / 1000);
+      if (secs < 60) return secs + 's ago';
+      const m = Math.floor(secs / 60);
+      if (m < 60) return m + 'm ago';
+      const hrs = Math.floor(m / 60);
+      if (hrs < 24) return hrs + 'h ago';
+      return Math.floor(hrs / 24) + 'd ago';
+    };
 
     const AudioEngine = (() => {
       let ctx = null; let musicGain, sfxGain, musicPlaying = false, musicTimer, step = 0;
@@ -193,7 +243,9 @@
         toggle: () => { if (musicPlaying) { AudioEngine.stopMusic(); } else { AudioEngine.startMusic(); } return musicPlaying; },
         coin: () => { init(); tone(1046, 0.08, "square", sfxGain, 0, 0.15); tone(1318, 0.15, "square", sfxGain, 0.07, 0.15); },
         error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
-        purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); }
+        purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); },
+        jackpot: () => { init(); [523,659,783,1046,1318].forEach((f,i) => tone(f, 0.25, "triangle", sfxGain, i*0.06, 0.25)); },
+        scam: () => { init(); tone(330, 0.15, "sawtooth", sfxGain, 0, 0.3); tone(220, 0.2, "sawtooth", sfxGain, 0.12, 0.3); tone(165, 0.3, "sawtooth", sfxGain, 0.28, 0.3); }
       };
     })();
 
@@ -213,6 +265,10 @@
       const [toast, setToast] = useState(null);
       const [feed, setFeed] = useState(() => Array.from({ length: 8 }, makeFeed));
       const [musicOn, setMusicOn] = useState(false);
+
+      // 🆕 streak + cooldown states
+      const [streak, setStreak] = useState(0);
+      const [lastPurchaseAt, setLastPurchaseAt] = useState(0);
 
       const [paystackKey, setPaystackKey] = useState("");
       const [topUpAmount, setTopUpAmount] = useState(1000);
@@ -237,7 +293,10 @@
               setS(prev => {
                 const dbData = doc.data();
                 const newData = Object.assign({}, prev, dbData, {
-                  transactions: dbData.transactions || []
+                  transactions: dbData.transactions || [],
+                  xp: typeof dbData.xp === 'number' ? dbData.xp : 0,
+                  lastSpinAt: typeof dbData.lastSpinAt === 'number' ? dbData.lastSpinAt : 0,
+                  flexHistory: Array.isArray(dbData.flexHistory) ? dbData.flexHistory : [],
                 });
                 try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
                 return newData;
@@ -248,6 +307,7 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
+                xp: 0, lastSpinAt: 0, flexHistory: [],
                 transactions: []
               };
               userRef.set(defaultData).catch(() => {});
@@ -272,9 +332,18 @@
         return () => clearTimeout(t);
       }, [toast]);
 
+      // 🔥 clear streak after window expires
+      useEffect(() => {
+        if (!lastPurchaseAt) return;
+        const remaining = STREAK_WINDOW_MS - (Date.now() - lastPurchaseAt);
+        if (remaining <= 0) { setStreak(0); return; }
+        const tm = setTimeout(() => setStreak(0), remaining);
+        return () => clearTimeout(tm);
+      }, [lastPurchaseAt]);
+
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      // ⚡ Energy regen ONLY — cash is NOT auto-added here (business.html vault handles income)
+      // ⚡ Energy regen
       useEffect(() => {
         if (!uid) return;
         const iv = setInterval(() => {
@@ -301,19 +370,57 @@
 
       if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
 
+      // 💳 PAY REAL → fake
       const payReal = async (item) => {
         if (s.real < item.price) {
           AudioEngine.error();
           return notify('Insufficient real balance — top up!', 'bad');
         }
 
-        const fakeGain = item.price * item.multiplier;
+        const now = Date.now();
+        const inWindow = (now - lastPurchaseAt) < STREAK_WINDOW_MS;
+        const newStreak = inWindow ? Math.min(MAX_STREAK, streak + 1) : 1;
+        const streakBonus = Math.min(0.5, (newStreak - 1) * STREAK_BONUS_PER);
+
+        const levelIdx = getLevelIdx(s.xp || 0);
+        const levelBonus = LEVELS[levelIdx].bonus;
+
+        // 🎲 Lucky roll
+        const roll = Math.random();
+        let luckMult = 1;
+        let luckMsg = '';
+        if (roll < 0.05) {
+          luckMult = 0.25;
+          luckMsg = '😭 SCAMMED!';
+        } else if (roll < 0.20) {
+          luckMult = 2;
+          luckMsg = '🎉 2X LUCKY!';
+        }
+
+        const baseGain = item.price * item.multiplier;
+        const totalMult = (1 + streakBonus + levelBonus) * luckMult;
+        const fakeGain = Math.floor(baseGain * totalMult);
+
+        const newXp = (s.xp || 0) + item.price;
+        const newHistory = [{
+          id: now,
+          label: item.label,
+          emoji: item.emoji,
+          price: item.price,
+          gain: fakeGain,
+          t: now,
+        }, ...(s.flexHistory || [])].slice(0, 10);
+
+        setStreak(newStreak);
+        setLastPurchaseAt(now);
 
         setS((p) => {
           const next = Object.assign({}, p, {
             real: p.real - item.price,
             cash: p.cash + fakeGain,
             clout: (p.clout || 0) + item.price,
+            xp: newXp,
+            flexHistory: newHistory,
             goldName: item.id === 'gold' ? true : p.goldName,
           });
           try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
@@ -326,21 +433,66 @@
           t: Date.now(),
           me: true,
         }].concat(f).slice(0, 40));
-        
-        AudioEngine.purchase();
-        notify(item.label + ' activated! +' + fmt(fakeGain) + ' fake 🔥');
-        try { if (navigator.vibrate) navigator.vibrate(30); } catch(e) {}
+
+        // Audio/vibration feedback
+        if (luckMult < 1) AudioEngine.scam();
+        else if (luckMult > 1) AudioEngine.jackpot();
+        else AudioEngine.purchase();
+
+        try { if (navigator.vibrate) navigator.vibrate(luckMult > 1 ? [30,50,30] : 30); } catch(e) {}
+
+        let msg = item.emoji + ' ' + item.label + ' +' + fmt(fakeGain);
+        if (newStreak > 1) msg += ' 🔥x' + newStreak;
+        if (luckMsg) msg += ' ' + luckMsg;
+        notify(msg, luckMult < 1 ? 'bad' : 'good');
 
         if (uid) {
           const updates = {
             real: firebase.firestore.FieldValue.increment(-item.price),
             cash: firebase.firestore.FieldValue.increment(fakeGain),
             clout: firebase.firestore.FieldValue.increment(item.price),
+            xp: firebase.firestore.FieldValue.increment(item.price),
+            flexHistory: newHistory,
             lastSeen: Date.now()
           };
           if (item.id === 'gold') updates.goldName = true;
-          
           await db.collection("users").doc(uid).update(updates).catch(() => {});
+        }
+      };
+
+      // 🎰 Daily lucky spin
+      const doSpin = () => {
+        const now = Date.now();
+        const elapsed = now - (s.lastSpinAt || 0);
+        if (elapsed < SPIN_COOLDOWN_MS) {
+          const remaining = SPIN_COOLDOWN_MS - elapsed;
+          const hrs = Math.floor(remaining / 3600000);
+          const mins = Math.floor((remaining % 3600000) / 60000);
+          AudioEngine.error();
+          return notify('⏳ Spin ready in ' + hrs + 'h ' + mins + 'm', 'bad');
+        }
+
+        const reward = Math.floor(SPIN_MIN + Math.random() * (SPIN_MAX - SPIN_MIN));
+
+        setS((p) => {
+          const next = Object.assign({}, p, {
+            cash: p.cash + reward,
+            lastSpinAt: now,
+          });
+          try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+          return next;
+        });
+
+        AudioEngine.jackpot();
+        try { if (navigator.vibrate) navigator.vibrate([40,30,40,30,60]); } catch(e) {}
+        notify('🎰 LUCKY SPIN: +' + fmt(reward) + ' 🎉', 'good');
+
+        if (uid) {
+          db.collection("users").doc(uid).update({
+            cash: firebase.firestore.FieldValue.increment(reward),
+            lastSpinAt: now,
+            lastSeen: Date.now()
+          }).catch(() => {});
         }
       };
 
@@ -355,7 +507,6 @@
           currency: 'NGN',
           ref: 'LGM_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
           callback: function(response) {
-            // 🔥 NEW: Redirect to success page instead of inline verification
             window.location.href = '/payment-success.html?reference=' + response.reference;
           },
           onClose: function() {
@@ -374,15 +525,27 @@
         { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
 
-      let clubRank = "Ajebutter";
-      if ((s.clout || 0) > 1000) clubRank = "Club Rat";
-      if ((s.clout || 0) > 5000) clubRank = "Baller";
-      if ((s.clout || 0) > 10000) clubRank = "Odogwu";
-      if ((s.clout || 0) > 50000) clubRank = "Club Owner";
+      // 🏆 Level info
+      const lvlIdx = getLevelIdx(s.xp || 0);
+      const curLevel = LEVELS[lvlIdx];
+      const nextLevel = LEVELS[lvlIdx + 1];
+      const xpProgress = nextLevel
+        ? Math.max(0, Math.min(1, ((s.xp || 0) - curLevel.xp) / (nextLevel.xp - curLevel.xp)))
+        : 1;
+
+      // 🎰 Spin cooldown
+      const spinElapsed = Date.now() - (s.lastSpinAt || 0);
+      const spinReady = spinElapsed >= SPIN_COOLDOWN_MS;
+      const spinRemainMs = Math.max(0, SPIN_COOLDOWN_MS - spinElapsed);
+      const spinHrs = Math.floor(spinRemainMs / 3600000);
+      const spinMins = Math.floor((spinRemainMs % 3600000) / 60000);
+
+      // 🔥 Streak active?
+      const streakActive = streak > 0 && (Date.now() - lastPurchaseAt) < STREAK_WINDOW_MS;
 
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
-          
+
           h('button', {
             onClick: () => { const on = AudioEngine.toggle(); setMusicOn(on); },
             className: 'music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition backdrop-blur'
@@ -394,7 +557,7 @@
                 h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display' }, 'L'),
                 h('div', { className: 'min-w-0' },
                   h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display' }, 'Club'),
-                  h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + clubRank)
+                  h('div', { className: 'text-[13px] font-black tabular-nums leading-tight truncate font-display mt-0.5' }, (s.name || 'Hustler') + ' · ' + curLevel.emoji + ' ' + curLevel.name)
                 )
               ),
               h('div', { className: 'flex items-center gap-1.5 shrink-0' },
@@ -405,12 +568,36 @@
           ),
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
-            
+
+            // Banner
             h('div', { className: 'mt-3 p-3 rounded-xl bg-gradient-to-r from-green-500/20 to-[#FFD60A]/20 border border-green-500/30 text-center animate-popIn' },
-              h('div', { className: 'text-[12px] font-black text-white' }, '💸 ₦100 REAL = ₦500,000,000 FAKE CASH! 💸'),
-              h('div', { className: 'text-[10px] text-white/70 mt-0.5 font-bold' }, 'Why? Because Na Lagos we dey! 🇳🇬 Top up and blow fake money.')
+              h('div', { className: 'text-[12px] font-black text-white' }, '💸 ₦100 REAL = ₦500 BILLION FAKE! 💸'),
+              h('div', { className: 'text-[10px] text-white/70 mt-0.5 font-bold' }, '₦100→500B · ₦500→500T · ₦1k→1000T · ₦5k→6000T 🇳🇬')
             ),
 
+            // 💎 LEVEL BAR (Feature 3)
+            h(Card, { className: 'p-3 mt-3' },
+              h('div', { className: 'flex items-center justify-between mb-1.5' },
+                h('div', { className: 'flex items-center gap-1.5' },
+                  h('span', { className: 'text-base' }, curLevel.emoji),
+                  h('span', { className: 'text-[11px] font-black font-display text-[#FFD60A]' }, curLevel.name),
+                  curLevel.bonus > 0 && h('span', { className: 'text-[9px] font-black bg-[#FFD60A]/20 text-[#FFD60A] border border-[#FFD60A]/30 rounded px-1.5 py-0.5' }, '+' + Math.round(curLevel.bonus * 100) + '% BONUS')
+                ),
+                nextLevel && h('span', { className: 'text-[9px] font-bold text-white/40 tabular-nums' }, (s.xp || 0) + ' / ' + nextLevel.xp + ' XP')
+              ),
+              h('div', { className: 'h-1.5 rounded-full bg-white/[0.08] overflow-hidden' },
+                h('div', {
+                  className: 'h-full rounded-full bg-gradient-to-r from-[#FFE566] to-[#FFB800] transition-all duration-500',
+                  style: { width: (xpProgress * 100).toFixed(1) + '%' }
+                })
+              ),
+              streakActive && h('div', { className: 'mt-2 flex items-center gap-1.5 animate-streakPulse' },
+                h('span', { className: 'text-[10px] font-black text-orange-400' }, '🔥 x' + streak + ' STREAK'),
+                h('span', { className: 'text-[9px] font-bold text-white/50' }, '+ ' + Math.round(Math.min(0.5, (streak - 1) * STREAK_BONUS_PER) * 100) + '% bonus')
+              )
+            ),
+
+            // Real Balance card
             h(Card, { className: 'relative overflow-hidden p-4 mt-3 hero-grid', gold: true },
               h('div', { className: 'absolute -top-16 -right-12 w-48 h-48 rounded-full bg-[#22C55E]/20 blur-3xl pointer-events-none' }),
               h('div', { className: 'relative' },
@@ -436,6 +623,32 @@
                     h('button', { onClick: topUpReal, className: 'px-4 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[12px] active:scale-95 transition' }, 'Pay Now')
                   )
                 )
+              )
+            ),
+
+            // 🎰 LUCKY SPIN (Feature 2)
+            h(Card, { className: 'p-3 mt-3 relative overflow-hidden', gold: spinReady },
+              h('div', { className: 'absolute -top-6 -right-6 w-24 h-24 rounded-full bg-[#A855F7]/25 blur-2xl pointer-events-none' }),
+              h('div', { className: 'relative flex items-center gap-3' },
+                h('div', {
+                  className: 'w-12 h-12 rounded-full spin-wheel grid place-items-center text-2xl shrink-0 ' + (spinReady ? 'animate-pulse' : 'opacity-50'),
+                  style: { boxShadow: spinReady ? '0 0 20px rgba(255,214,10,0.6)' : 'none' }
+                }, '🎰'),
+                h('div', { className: 'flex-1 min-w-0' },
+                  h('div', { className: 'text-[12px] font-black font-display' }, 'Daily Lucky Spin'),
+                  h('div', { className: 'text-[10px] text-white/50 font-semibold mt-0.5' },
+                    spinReady ? 'Claim free ' + fmt(SPIN_MIN) + ' – ' + fmt(SPIN_MAX) + '!'
+                              : '⏳ Ready in ' + spinHrs + 'h ' + spinMins + 'm'
+                  )
+                ),
+                h('button', {
+                  onClick: doSpin,
+                  disabled: !spinReady,
+                  className: 'px-4 py-2.5 rounded-xl text-[11px] font-black shrink-0 active:scale-95 transition ' +
+                    (spinReady
+                      ? 'bg-gradient-to-b from-[#A855F7] to-[#7C3AED] text-white shadow-[0_4px_14px_-4px_rgba(168,85,247,0.6)]'
+                      : 'bg-white/[0.06] text-white/25 border border-white/[0.08]')
+                }, spinReady ? 'SPIN' : 'WAIT')
               )
             ),
 
@@ -489,6 +702,19 @@
               })
             ),
 
+            // 📜 FLEX HISTORY (Feature 5)
+            (s.flexHistory && s.flexHistory.length > 0) && h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-white/30' }, 'Last 10') }, 'Flex History'),
+            (s.flexHistory && s.flexHistory.length > 0) && h(Card, { className: 'divide-y divide-white/[0.05] max-h-64 overflow-y-auto' },
+              s.flexHistory.map((f) => h('div', { key: f.id, className: 'px-3.5 py-2 flex items-center gap-2.5 text-[11px] animate-slideInRight' },
+                h('span', { className: 'text-lg' }, f.emoji),
+                h('div', { className: 'flex-1 min-w-0' },
+                  h('div', { className: 'font-extrabold truncate' }, f.label),
+                  h('div', { className: 'text-[9.5px] text-white/40' }, '₦' + f.price + ' · ' + timeAgo(f.t))
+                ),
+                h('span', { className: 'text-[#22C55E] font-black tabular-nums shrink-0' }, '+' + fmt(f.gain))
+              ))
+            ),
+
             h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#22C55E] flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse glow-dot' }), 'LIVE') }, 'Club Feed'),
             h(Card, { className: 'divide-y divide-white/[0.05] max-h-96 overflow-y-auto' },
               feed.map((f) => h('div', { key: f.id, className: 'px-3.5 py-2.5 flex items-start gap-2.5 text-[11px] animate-slideInRight' },
@@ -499,11 +725,13 @@
 
             h(Card, { className: 'p-3.5 mt-4' },
               h('div', { className: 'flex items-start gap-2' },
-                h('span', { className: 'text-base' }, '🎉'),
+                h('span', { className: 'text-base' }, '💡'),
                 h('p', { className: 'text-[10.5px] text-white/50 leading-relaxed' },
-                  'Every real payment gives you ',
-                  h('span', { className: 'text-[#FFD60A] font-bold' }, 'massive fake money'),
-                  ' plus clout. Gold Name dey permanent for your profile. This na the fastest way to climb Net Worth. 🔥'
+                  'Buy fast to build a ',
+                  h('span', { className: 'text-orange-400 font-bold' }, 'Combo Streak'),
+                  ' (up to +45%), level up for permanent bonuses, and roll the dice — 15% of purchases trigger a ',
+                  h('span', { className: 'text-[#22C55E] font-bold' }, '2X LUCKY'),
+                  ' but 5% get scammed! 🎲'
                 )
               )
             )
