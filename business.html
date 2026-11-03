@@ -35,7 +35,9 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    /* ✅ SCROLL FIX 1: Split html/body, use contain not none, add iOS momentum */
+    html { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: contain; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; -webkit-overflow-scrolling: touch; }
     body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent); }
     ::-webkit-scrollbar { width: 0; height: 0; }
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
@@ -46,11 +48,14 @@
     .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
     @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
     .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
     .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
-    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    /* ✅ SCROLL FIX 2: Nav backdrop — no more blur */
+    .nav-backdrop { background: #08080B; }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
     @keyframes badgePulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
     .badge-owned { animation: badgePulse 2s ease-in-out infinite; }
@@ -93,12 +98,15 @@
 
     const MAX_E = 100;
     const ENERGY_MS = 5 * 60 * 1000;
-    const MAX_OFFLINE_HOURS = 24;
+    const MAX_OFFLINE_HOURS = 48; // ✅ Was 24, now 48
+    const MAX_UPGRADE_LEVEL = 5;
+    const AUTO_COLLECT_COST = 10_000_000_000_000; // ₦10T one-time
+    const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/DLTh6m6oyUBBIbmk1dS8Um?s=cl&p=i&mlu=4&ilr=4&iam=2';
 
-    const CATEGORIES = ["All", "Street", "Small", "Mid", "High", "Cartel"];
+    const CATEGORIES = ["All", "Street", "Small", "Mid", "High", "Cartel", "Ultra", "Cosmic"];
 
     const BUSINESSES = [
-      // Street
+      // ===== STREET =====
       { id: 'water',  name: 'Pure Water Stand', emoji: '💧', price: 10_000, perHr: 2_000, cat: 'Street', desc: 'Cold pure water for the whole street.' },
       { id: 'mai_shai', name: 'Mai Shai', emoji: '☕', price: 50_000, perHr: 8_000, cat: 'Street', desc: 'Tea and bread for the early morning hustlers.' },
       { id: 'corn',   name: 'Roasted Corn', emoji: '🌽', price: 100_000, perHr: 15_000, cat: 'Street', desc: 'With coconut and pear. Sweet!' },
@@ -113,7 +121,7 @@
       { id: 'alomo', name: 'Alomo Joint', emoji: '🍶', price: 150_000, perHr: 20_000, cat: 'Street', desc: 'Bitters for the elders.' },
       { id: 'newspaper', name: 'Newspaper Vendor', emoji: '📰', price: 10_000, perHr: 2_500, cat: 'Street', desc: 'Guardian, Punch, and Vanguard.' },
 
-      // Small
+      // ===== SMALL =====
       { id: 'phone_acc', name: 'Phone Accessories', emoji: '📱', price: 2_000_000, perHr: 350_000, cat: 'Small', desc: 'Chargers, cases and screen protectors.' },
       { id: 'barber', name: 'Barber Shop', emoji: '💈', price: 1_500_000, perHr: 250_000, cat: 'Small', desc: 'Sharp haircuts for the guys.' },
       { id: 'salon',  name: 'Hair Salon', emoji: '💇🏾‍♀️', price: 3_000_000, perHr: 500_000, cat: 'Small', desc: 'Braids, weaves and styling for the ladies.' },
@@ -130,7 +138,7 @@
       { id: 'keke_mech', name: 'Keke Mechanic', emoji: '⚙️', price: 700_000, perHr: 120_000, cat: 'Small', desc: 'Fixing tricycles.' },
       { id: 'photocopy', name: 'Photocopy Shop', emoji: '📄', price: 400_000, perHr: 60_000, cat: 'Small', desc: 'Jamb forms and ID cards.' },
 
-      // Mid
+      // ===== MID =====
       { id: 'bet9ja', name: 'Bet9ja Shop', emoji: '🎰', price: 50_000_000, perHr: 9_000_000, cat: 'Mid', desc: 'Where people come to lose money.' },
       { id: 'cyber',  name: 'Cyber Cafe', emoji: '💻', price: 15_000_000, perHr: 2_500_000, cat: 'Mid', desc: 'Printing, typing and jamb forms.' },
       { id: 'fastfood', name: 'Fast Food Joint', emoji: '🍔', price: 30_000_000, perHr: 5_000_000, cat: 'Mid', desc: 'Chicken and chips for the workers.' },
@@ -146,7 +154,7 @@
       { id: 'video_rental', name: 'Video Rental', emoji: '📼', price: 5_000_000, perHr: 800_000, cat: 'Mid', desc: 'Old Nollywood movies.' },
       { id: 'e_learning', name: 'E-Learning Center', emoji: '🖥️', price: 30_000_000, perHr: 5_000_000, cat: 'Mid', desc: 'Coding classes for kids.' },
 
-      // High
+      // ===== HIGH =====
       { id: 'lounge', name: 'Lekki Lounge', emoji: '🍾', price: 500_000_000, perHr: 90_000_000, cat: 'High', desc: 'Shisha and champagne for the big boys.' },
       { id: 'club',   name: 'Night Club', emoji: '🎧', price: 1_000_000_000, perHr: 180_000_000, cat: 'High', desc: 'DJ, dancers and plenty dollars.' },
       { id: 'car_deal', name: 'Car Dealership', emoji: '🚘', price: 2_500_000_000, perHr: 450_000_000, cat: 'High', desc: 'Brand new and tokunbo cars.' },
@@ -161,7 +169,7 @@
       { id: 'car_assembly', name: 'Car Assembly', emoji: '🏭', price: 4_000_000_000, perHr: 650_000_000, cat: 'High', desc: 'Building cars locally.' },
       { id: 'microfinance', name: 'Microfinance Bank', emoji: '🏦', price: 1_000_000_000, perHr: 200_000_000, cat: 'High', desc: 'Loans with high interest.' },
 
-      // Cartel
+      // ===== CARTEL =====
       { id: 'oil',    name: 'Oil & Gas Bloc', emoji: '🛢️', price: 50_000_000_000, perHr: 10_000_000_000, cat: 'Cartel', desc: 'Crude oil money. The real deal.' },
       { id: 'jet',    name: 'Private Jet Charter', emoji: '✈️', price: 150_000_000_000, perHr: 30_000_000_000, cat: 'Cartel', desc: 'Fly the politicians around.' },
       { id: 'yacht',  name: 'Yacht Club', emoji: '🛥️', price: 80_000_000_000, perHr: 15_000_000_000, cat: 'Cartel', desc: 'Party on the water.' },
@@ -177,9 +185,24 @@
       { id: 'crypto_ex', name: 'Crypto Exchange', emoji: '🪙', price: 500_000_000_000, perHr: 90_000_000_000, cat: 'Cartel', desc: 'Buying and selling coins.' },
       { id: 'railway', name: 'Railway Line', emoji: '🚆', price: 800_000_000_000, perHr: 120_000_000_000, cat: 'Cartel', desc: 'Connecting the cities.' },
       { id: 'private_island', name: 'Private Island', emoji: '🏝️', price: 2_000_000_000_000, perHr: 350_000_000_000, cat: 'Cartel', desc: 'A whole island to yourself.' },
+
+      // ===== ULTRA (50T - 750T) — NEW! =====
+      { id: 'satellite', name: 'Satellite Network', emoji: '🛰️', price: 50_000_000_000_000, perHr: 10_000_000_000_000, cat: 'Ultra', desc: 'Own the skies. Broadcast to millions.' },
+      { id: 'private_army', name: 'Private Army', emoji: '⚔️', price: 100_000_000_000_000, perHr: 20_000_000_000_000, cat: 'Ultra', desc: 'Protect your empire with force.' },
+      { id: 'airline', name: 'National Airline', emoji: '🛫', price: 200_000_000_000_000, perHr: 40_000_000_000_000, cat: 'Ultra', desc: 'Fly the continent. 100+ planes.' },
+      { id: 'shipping', name: 'Shipping Empire', emoji: '🚢', price: 300_000_000_000_000, perHr: 60_000_000_000_000, cat: 'Ultra', desc: 'Control global trade routes.' },
+      { id: 'football_club', name: 'Football Club', emoji: '⚽', price: 500_000_000_000_000, perHr: 100_000_000_000_000, cat: 'Ultra', desc: 'Buy the best players in the world.' },
+      { id: 'space_tour', name: 'Space Tourism', emoji: '🚀', price: 750_000_000_000_000, perHr: 150_000_000_000_000, cat: 'Ultra', desc: 'Take billionaires to the moon.' },
+
+      // ===== COSMIC (1Q - 20Q) — NEW! =====
+      { id: 'tech_empire', name: 'Tech Empire', emoji: '🖥️', price: 1_000_000_000_000_000, perHr: 200_000_000_000_000, cat: 'Cosmic', desc: 'Like Apple, Google and Meta combined.' },
+      { id: 'central_bank', name: 'Central Bank', emoji: '🏦', price: 2_000_000_000_000_000, perHr: 400_000_000_000_000, cat: 'Cosmic', desc: 'Print the money yourself.' },
+      { id: 'nuclear', name: 'Nuclear Plant', emoji: '☢️', price: 3_000_000_000_000_000, perHr: 600_000_000_000_000, cat: 'Cosmic', desc: 'Power entire nations.' },
+      { id: 'space_station', name: 'Space Station', emoji: '🛸', price: 5_000_000_000_000_000, perHr: 1_000_000_000_000_000, cat: 'Cosmic', desc: 'Orbital manufacturing hub.' },
+      { id: 'moon_base', name: 'Moon Base', emoji: '🌕', price: 10_000_000_000_000_000, perHr: 2_000_000_000_000_000, cat: 'Cosmic', desc: 'Mining helium-3 on the moon.' },
+      { id: 'mars_colony', name: 'Mars Colony', emoji: '🔴', price: 20_000_000_000_000_000, perHr: 4_000_000_000_000_000, cat: 'Cosmic', desc: 'The first permanent settlement on Mars.' },
     ];
 
-    // ✅ Full list from market.html so net worth calculates correctly
     const ASSET_PRICES = { 
       af1: 150_000, shades: 500_000, chain: 5_000_000, iphone: 2_500_000, 
       grillz: 10_000_000, rolex: 50_000_000, honda: 15_000_000, camry: 25_000_000, 
@@ -201,7 +224,11 @@
       "Bet9ja shop just opened, people dey troop in 🎰",
       "Your Night Club is packed tonight, DJ is playing your favorite song 🎧",
       "Your Real Estate agent just closed a ₦1B deal 🏘️",
-      "Your Oil Bloc just shipped 1 million barrels 🛢️"
+      "Your Oil Bloc just shipped 1 million barrels 🛢️",
+      "Your Satellite Network just signed a ₦50T government contract 🛰️",
+      "Your Mars Colony just shipped rare minerals back to Earth 🔴",
+      "Your Central Bank just printed another quadrillion 🏦",
+      "Your Private Army just secured another nation ⚔️"
     ];
 
     const getCachedData = () => {
@@ -209,7 +236,12 @@
         const cached = localStorage.getItem("lagos_user_data");
         if (cached) {
           const parsed = JSON.parse(cached);
-          return Object.assign({}, parsed, { lastCollected: parsed.lastCollected || Date.now() });
+          return Object.assign({}, parsed, {
+            lastCollected: parsed.lastCollected || Date.now(),
+            upgrades: parsed.upgrades || {},
+            autoCollect: parsed.autoCollect === true,
+            whatsappJoined: parsed.whatsappJoined === true
+          });
         }
       } catch (e) {}
       return {
@@ -217,7 +249,8 @@
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-        transactions: [], history: [], lastCollected: Date.now()
+        transactions: [], history: [], lastCollected: Date.now(),
+        upgrades: {}, autoCollect: false, whatsappJoined: false
       };
     };
 
@@ -225,6 +258,7 @@
       n = Math.floor(n || 0);
       const s = n < 0 ? '-' : '';
       n = Math.abs(n);
+      if (n >= 1e15) return s + '₦' + (n / 1e15).toFixed(2) + 'Q';
       if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
       if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
       if (n >= 1e6) return s + '₦' + (n / 1e6).toFixed(2) + 'M';
@@ -283,6 +317,11 @@
         right
       );
 
+    // ✅ Helper: effective income per owned business with upgrade multiplier
+    const getEffectivePerHr = (biz, count, level) => {
+      return count * biz.perHr * Math.pow(3, level || 0);
+    };
+
     function App() {
       const [s, setS] = useState(getCachedData);
       const [uid, setUid] = useState(null);
@@ -294,15 +333,18 @@
       const [feedMsg, setFeedMsg] = useState("Welcome to your business empire! Buy a business to start making passive income.");
       const [isCollecting, setIsCollecting] = useState(false);
 
-      // Drama State
       const [dramaEvent, setDramaEvent] = useState(null);
+      const [manageBiz, setManageBiz] = useState(null); // business being managed
 
-      // ✅ Ticker for vault recalculation
       const [now, setNow] = useState(Date.now());
       useEffect(() => {
         const iv = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(iv);
       }, []);
+
+      // Ref for auto-collect interval to see latest state
+      const stateRef = useRef(s);
+      useEffect(() => { stateRef.current = s; }, [s]);
 
       useEffect(() => {
         const unsubSettings = db.collection("settings").doc("game").onSnapshot((doc) => {
@@ -329,7 +371,10 @@
                   transactions: dbData.transactions || [],
                   history: dbData.history || [],
                   cash: dbData.cash !== undefined ? dbData.cash : prev.cash,
-                  lastCollected: dbData.lastCollected || prev.lastCollected || Date.now()
+                  lastCollected: dbData.lastCollected || prev.lastCollected || Date.now(),
+                  upgrades: dbData.upgrades || prev.upgrades || {},
+                  autoCollect: dbData.autoCollect === true,
+                  whatsappJoined: dbData.whatsappJoined === true
                 });
                 try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
                 return newData;
@@ -340,7 +385,8 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-                transactions: [], history: [], lastCollected: Date.now()
+                transactions: [], history: [], lastCollected: Date.now(),
+                upgrades: {}, autoCollect: false, whatsappJoined: false
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
@@ -371,7 +417,7 @@
         return () => clearInterval(iv);
       }, []);
 
-      // Energy regen only — cash does NOT auto-increase
+      // Energy regen
       useEffect(() => {
         if (!uid) return;
         const iv = setInterval(() => {
@@ -391,7 +437,6 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      // ✅ LOG HISTORY HELPER
       const logHistory = async (title, desc, amount) => {
         if (!uid) return;
         await db.collection("users").doc(uid).update({
@@ -405,12 +450,15 @@
         }).catch(() => {});
       };
 
-      // ✅ VAULT — derived, recalculates every tick
+      // ✅ VAULT calc with upgrades
       const vault = useMemo(() => {
         const safeBiz = s.businesses || {};
+        const upgrades = s.upgrades || {};
         const perHr = Object.entries(safeBiz).reduce((a, kv) => {
           const biz = BUSINESSES.find((b) => b.id === kv[0]);
-          return a + kv[1] * (biz ? biz.perHr : 0);
+          if (!biz) return a;
+          const level = upgrades[kv[0]] || 0;
+          return a + getEffectivePerHr(biz, kv[1], level);
         }, 0);
         if (perHr <= 0) return 0;
         const lastCollected = s.lastCollected || now;
@@ -418,7 +466,52 @@
         const maxMs = MAX_OFFLINE_HOURS * 60 * 60 * 1000;
         const effectiveMs = Math.min(elapsedMs, maxMs);
         return Math.floor((effectiveMs / 3600000) * perHr);
-      }, [s.businesses, s.lastCollected, now]);
+      }, [s.businesses, s.upgrades, s.lastCollected, now]);
+
+      // ✅ perHr total (with upgrades) - used for display and calculations
+      const totalPerHr = useMemo(() => {
+        const safeBiz = s.businesses || {};
+        const upgrades = s.upgrades || {};
+        return Object.entries(safeBiz).reduce((a, kv) => {
+          const biz = BUSINESSES.find((b) => b.id === kv[0]);
+          if (!biz) return a;
+          const level = upgrades[kv[0]] || 0;
+          return a + getEffectivePerHr(biz, kv[1], level);
+        }, 0);
+      }, [s.businesses, s.upgrades]);
+
+      // ✅ AUTO-COLLECT bot
+      useEffect(() => {
+        if (!s.autoCollect || !uid) return;
+        const iv = setInterval(async () => {
+          const cur = stateRef.current;
+          if (!cur.autoCollect) return;
+          const safeBizCur = cur.businesses || {};
+          const upgradesCur = cur.upgrades || {};
+          const perHrCur = Object.entries(safeBizCur).reduce((a, kv) => {
+            const biz = BUSINESSES.find(b => b.id === kv[0]);
+            if (!biz) return a;
+            const level = upgradesCur[kv[0]] || 0;
+            return a + getEffectivePerHr(biz, kv[1], level);
+          }, 0);
+          if (perHrCur <= 0) return;
+          const elapsed = Math.min(Date.now() - (cur.lastCollected || Date.now()), MAX_OFFLINE_HOURS * 3600000);
+          const amount = Math.floor((elapsed / 3600000) * perHrCur);
+          if (amount < 1) return;
+          const collectNow = Date.now();
+          setS(prev => Object.assign({}, prev, {
+            cash: (prev.cash || 0) + amount,
+            lastCollected: collectNow
+          }));
+          await db.collection("users").doc(uid).update({
+            cash: firebase.firestore.FieldValue.increment(amount),
+            lastCollected: collectNow
+          }).catch(() => {});
+          AudioEngine.coin();
+          notify('🤖 Bot collected ' + fmt(amount), 'good');
+        }, 60000);
+        return () => clearInterval(iv);
+      }, [s.autoCollect, uid]);
 
       const collectVault = async () => {
         const amount = vault;
@@ -445,25 +538,18 @@
             lastCollected: collectNow,
             lastSeen: Date.now()
           }).catch(() => {});
-          
           logHistory('Collected Vault', 'Collected ' + fmt(amount) + ' from businesses', amount);
         }
-
         setTimeout(() => setIsCollecting(false), 800);
       };
 
-      // ✅ BUSINESS DRAMA CHECK
       const checkBusinessDrama = () => {
         const safeBiz = s.businesses || {};
         const ownedIds = Object.keys(safeBiz).filter(id => safeBiz[id] > 0);
-        
-        if (ownedIds.length === 0) {
-          return notify('You need to buy a business first!', 'bad');
-        }
+        if (ownedIds.length === 0) return notify('You need to buy a business first!', 'bad');
 
         const randomId = ownedIds[Math.floor(Math.random() * ownedIds.length)];
         const biz = BUSINESSES.find(b => b.id === randomId);
-        
         const roll = Math.random();
         let event = { type: 'good', title: '', msg: '', cash: 0, biz: null };
 
@@ -482,20 +568,17 @@
           const val = Math.floor(biz.price * 0.5);
           event = { type: 'good', title: '🎉 MIRACLE!', msg: 'A viral video featured your ' + biz.name + '! You made ' + fmt(val) + '.', cash: val, biz: null };
         }
-
         setDramaEvent(event);
       };
 
       const resolveDrama = async () => {
         if (!dramaEvent) return;
         const { cash, biz } = dramaEvent;
-        
         let newBiz = Object.assign({}, s.businesses);
         if (biz) {
            newBiz[biz] -= 1;
            if (newBiz[biz] <= 0) delete newBiz[biz];
         }
-
         setS(prev => {
           const next = Object.assign({}, prev, {
             cash: Math.max(0, (prev.cash || 0) + cash),
@@ -504,22 +587,13 @@
           try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
           return next;
         });
-
         if (cash > 0) AudioEngine.coin(); else AudioEngine.error();
-
         if (uid) {
-          const updates = {
-            cash: firebase.firestore.FieldValue.increment(cash),
-            lastSeen: Date.now()
-          };
-          if (biz) {
-            updates['businesses.' + biz] = firebase.firestore.FieldValue.increment(-1);
-          }
+          const updates = { cash: firebase.firestore.FieldValue.increment(cash), lastSeen: Date.now() };
+          if (biz) updates['businesses.' + biz] = firebase.firestore.FieldValue.increment(-1);
           await db.collection("users").doc(uid).update(updates).catch(() => {});
-          
           logHistory(dramaEvent.title, dramaEvent.msg, cash);
         }
-
         setDramaEvent(null);
       };
 
@@ -538,22 +612,22 @@
       }
 
       const safeBiz = s.businesses || {};
+      const upgrades = s.upgrades || {};
       const bizValue = Object.entries(safeBiz).reduce((a, kv) => {
         const biz = BUSINESSES.find((b) => b.id === kv[0]);
         return a + kv[1] * (biz ? biz.price : 0);
       }, 0);
-      const perHr = Object.entries(safeBiz).reduce((a, kv) => {
-        const biz = BUSINESSES.find((b) => b.id === kv[0]);
-        return a + kv[1] * (biz ? biz.perHr : 0);
-      }, 0);
       const assetValue = Object.entries(s.assets || {}).reduce((a, kv) => a + kv[1] * (ASSET_PRICES[kv[0]] || 0), 0);
       const netWorth = Math.floor((s.cash || 0) + bizValue + assetValue);
       const ownedCount = Object.values(safeBiz).reduce((a, c) => a + c, 0);
+      const perSec = totalPerHr / 3600;
 
       let bizRank = "Street Hustler";
       if (ownedCount > 5) bizRank = "Small Business Owner";
       if (ownedCount > 15) bizRank = "Business Mogul";
       if (ownedCount > 30) bizRank = "Dangote of Lagos";
+      if (ownedCount > 60) bizRank = "Global Titan 🌍";
+      if (ownedCount > 100) bizRank = "Cosmic Emperor 🌌";
 
       const buyBusiness = async (b) => {
         const currentVault = vault;
@@ -561,9 +635,7 @@
           AudioEngine.error();
           return notify('Not enough Lagos Cash 💸', 'bad');
         }
-
         const buyNow = Date.now();
-
         setS(prev => {
           const newBiz = Object.assign({}, prev.businesses || {});
           newBiz[b.id] = (newBiz[b.id] || 0) + 1;
@@ -575,11 +647,9 @@
           try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
           return next;
         });
-
         AudioEngine.purchase();
         notify(b.emoji + ' ' + b.name + ' bought! +' + fmt(b.perHr) + '/hr');
         try { if (navigator.vibrate) navigator.vibrate(25); } catch(e) {}
-
         if (uid) {
           const updates = {
             cash: firebase.firestore.FieldValue.increment(currentVault - b.price),
@@ -588,9 +658,129 @@
           };
           updates['businesses.' + b.id] = firebase.firestore.FieldValue.increment(1);
           await db.collection("users").doc(uid).update(updates).catch(() => {});
-          
           logHistory('Bought Business', 'Bought ' + b.name, -b.price);
         }
+      };
+
+      // ✅ UPGRADE business
+      const upgradeBiz = async (b) => {
+        const currentLevel = upgrades[b.id] || 0;
+        if (currentLevel >= MAX_UPGRADE_LEVEL) return notify('Already MAX level! 🏆', 'bad');
+        const cost = b.price * Math.pow(2, currentLevel);
+        if ((s.cash + vault) < cost) { AudioEngine.error(); return notify('Not enough cash 💸', 'bad'); }
+        
+        const buyNow = Date.now();
+        setS(prev => {
+          const newUpgrades = Object.assign({}, prev.upgrades || {});
+          newUpgrades[b.id] = currentLevel + 1;
+          const next = Object.assign({}, prev, {
+            cash: (prev.cash || 0) + vault - cost,
+            upgrades: newUpgrades,
+            lastCollected: buyNow
+          });
+          try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+          return next;
+        });
+        AudioEngine.purchase();
+        try { if (navigator.vibrate) navigator.vibrate([20, 30, 20]); } catch(e) {}
+        notify('⚡ ' + b.name + ' upgraded to Lv.' + (currentLevel + 1) + '! ×3 income');
+        if (uid) {
+          const updates = {
+            cash: firebase.firestore.FieldValue.increment(vault - cost),
+            lastCollected: buyNow,
+            lastSeen: Date.now()
+          };
+          updates['upgrades.' + b.id] = currentLevel + 1;
+          await db.collection("users").doc(uid).update(updates).catch(() => {});
+          logHistory('Upgraded Business', b.name + ' → Lv.' + (currentLevel + 1), -cost);
+        }
+        setManageBiz(null);
+      };
+
+      // ✅ SELL business
+      const sellBiz = async (b) => {
+        const owned = safeBiz[b.id] || 0;
+        if (owned < 1) return notify('You no own this one', 'bad');
+        const sellPrice = Math.floor(b.price * 0.5);
+        
+        setS(prev => {
+          const newBiz = Object.assign({}, prev.businesses || {});
+          newBiz[b.id] = (newBiz[b.id] || 0) - 1;
+          if (newBiz[b.id] <= 0) delete newBiz[b.id];
+          const next = Object.assign({}, prev, {
+            cash: (prev.cash || 0) + sellPrice,
+            businesses: newBiz
+          });
+          try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+          return next;
+        });
+        AudioEngine.coin();
+        notify('💸 Sold ' + b.name + ' for ' + fmt(sellPrice));
+        if (uid) {
+          const updates = {
+            cash: firebase.firestore.FieldValue.increment(sellPrice),
+            lastSeen: Date.now()
+          };
+          updates['businesses.' + b.id] = firebase.firestore.FieldValue.increment(-1);
+          await db.collection("users").doc(uid).update(updates).catch(() => {});
+          logHistory('Sold Business', 'Sold 1 ' + b.name, sellPrice);
+        }
+        setManageBiz(null);
+      };
+
+      // ✅ BUY auto-collect bot
+      const buyAutoCollect = async () => {
+        if (s.autoCollect) return notify('Already active! 🤖', 'bad');
+        if ((s.cash + vault) < AUTO_COLLECT_COST) { AudioEngine.error(); return notify('Need ' + fmt(AUTO_COLLECT_COST), 'bad'); }
+        const buyNow = Date.now();
+        setS(prev => {
+          const next = Object.assign({}, prev, {
+            cash: (prev.cash || 0) + vault - AUTO_COLLECT_COST,
+            autoCollect: true,
+            lastCollected: buyNow
+          });
+          try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+          return next;
+        });
+        AudioEngine.purchase();
+        notify('🤖 Auto-Collect Bot activated!');
+        if (uid) {
+          await db.collection("users").doc(uid).update({
+            cash: firebase.firestore.FieldValue.increment(vault - AUTO_COLLECT_COST),
+            autoCollect: true,
+            lastCollected: buyNow,
+            lastSeen: Date.now()
+          }).catch(() => {});
+          logHistory('Bought Auto-Collect Bot', 'Active forever', -AUTO_COLLECT_COST);
+        }
+      };
+
+      // ✅ JOIN WhatsApp
+      const joinWhatsApp = async () => {
+        if (s.whatsappJoined) return notify('Already joined! 💬', 'bad');
+        try { window.open(WHATSAPP_GROUP_URL, '_blank', 'noopener,noreferrer'); } catch(e) {}
+        notify('Verifying join...', 'good');
+        setTimeout(async () => {
+          const bonus = 1_000_000_000_000; // ₦1T
+          setS(prev => {
+            const next = Object.assign({}, prev, {
+              cash: (prev.cash || 0) + bonus,
+              whatsappJoined: true
+            });
+            try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+            return next;
+          });
+          AudioEngine.collect();
+          notify('💬 Welcome! +' + fmt(bonus));
+          if (uid) {
+            await db.collection("users").doc(uid).update({
+              cash: firebase.firestore.FieldValue.increment(bonus),
+              whatsappJoined: true,
+              lastSeen: Date.now()
+            }).catch(() => {});
+            logHistory('Joined WhatsApp', 'Community bonus', bonus);
+          }
+        }, 2000);
       };
 
       const filteredBusinesses = activeTab === "All"
@@ -614,7 +804,8 @@
             className: 'music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition'
           }, h('span', { className: 'text-base' }, musicOn ? '🔊' : '🔇')),
 
-          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+          /* ✅ SCROLL FIX 3: solid header, no backdrop-blur */
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B] border-b border-white/[0.06]' },
             h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
               h('div', { className: 'flex items-center gap-2 min-w-0' },
                 h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display' }, 'L'),
@@ -632,22 +823,22 @@
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
 
+            // VAULT CARD
             h(Card, { className: 'p-5 mt-3 relative overflow-hidden', gold: true },
               h('div', { className: 'absolute -top-10 -right-10 w-32 h-32 rounded-full bg-[#FFD60A]/20 blur-2xl pointer-events-none' }),
               h('div', { className: 'text-center relative z-10' },
                 h('div', { className: 'text-[10px] uppercase tracking-widest text-[#FFD60A]/70 font-bold mb-1' }, 'Business Vault'),
-                h('div', { className: 'text-4xl font-black text-gradient-gold tabular-nums font-display drop-shadow-md mb-2' }, fmt(vault)),
-                h('div', { className: 'text-[10px] text-white/50 mb-4' }, 'Your businesses make money 24/7. Collect am!'),
+                h('div', { className: 'text-4xl font-black text-gradient-gold tabular-nums font-display drop-shadow-md mb-1' }, fmt(vault)),
+                // ✅ Live per-sec ticker
+                perSec > 0 && h('div', { className: 'text-[10px] text-[#22C55E] font-bold mb-3 tabular-nums' }, '+ ' + fmt(perSec) + ' / second'),
+                h('div', { className: 'text-[10px] text-white/50 mb-4' }, s.autoCollect ? '🤖 Bot auto-collects every 60s' : 'Collect before 48hrs so Sapa no catch you'),
 
                 h('button', {
                   onClick: collectVault,
                   disabled: isCollecting || vault < 1,
-                  className: 'w-full py-4 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black font-black text-[15px] shadow-[0_8px_24px_-8px_rgba(34,197,94,0.7)] active:scale-95 transition disabled:opacity-50 disabled:shadow-none ' + (vault >= 1 ? 'collect-btn' : '')
-                },
-                  isCollecting ? 'Collecting...' : 'COLLECT ' + fmt(vault)
-                ),
+                  className: 'w-full py-4 rounded-xl bg-gradient-to-b from-[#34D976] to-[#22C55E] text-black font-black text-[15px] shadow-[0_8px_24px_-8px_rgba(34,197,94,0.7)] active:scale-95 transition disabled:opacity-50 disabled:shadow-none ' + (vault >= 1 && !s.autoCollect ? 'collect-btn' : '')
+                }, isCollecting ? 'Collecting...' : 'COLLECT ' + fmt(vault)),
 
-                // ✅ New Reality Check Button
                 h('button', {
                   onClick: checkBusinessDrama,
                   disabled: ownedCount === 0,
@@ -656,10 +847,11 @@
               )
             ),
 
+            // STATS
             h('div', { className: 'grid grid-cols-3 gap-2 mt-3' },
               h(Card, { className: 'p-2.5 text-center' },
                 h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Per Hour'),
-                h('div', { className: 'text-[12px] font-black text-[#22C55E] tabular-nums mt-0.5' }, '+' + fmt(perHr))
+                h('div', { className: 'text-[12px] font-black text-[#22C55E] tabular-nums mt-0.5' }, '+' + fmt(totalPerHr))
               ),
               h(Card, { className: 'p-2.5 text-center' },
                 h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Owned'),
@@ -671,6 +863,7 @@
               )
             ),
 
+            // MARQUEE FEED
             h('div', { className: 'mt-4 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05] flex items-center gap-2 overflow-hidden' },
               h('span', { className: 'text-sm shrink-0 animate-pulse' }, '📡'),
               h('div', { className: 'flex-1 overflow-hidden relative h-5' },
@@ -678,6 +871,41 @@
               )
             ),
 
+            // ✅ WHATSAPP COMMUNITY BONUS
+            h(Card, { className: 'p-3 mt-4 relative overflow-hidden' },
+              h('div', { className: 'flex items-center gap-3' },
+                h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-[#25D366] to-[#128C7E] grid place-items-center text-2xl shrink-0 shadow-lg' }, '💬'),
+                h('div', { className: 'flex-1 min-w-0' },
+                  h('div', { className: 'text-[12px] font-black font-display' }, 'Join WhatsApp Community'),
+                  h('div', { className: 'text-[10px] text-[#22C55E] font-bold tabular-nums' }, s.whatsappJoined ? '✅ Already joined' : '🎁 +' + fmt(1_000_000_000_000) + ' bonus')
+                ),
+                h('button', {
+                  onClick: joinWhatsApp,
+                  disabled: s.whatsappJoined,
+                  className: 'px-3 py-2 rounded-lg text-[11px] font-black active:scale-95 transition ' +
+                    (s.whatsappJoined ? 'bg-white/[0.06] text-white/40 border border-white/[0.08]' : 'bg-gradient-to-b from-[#25D366] to-[#128C7E] text-white shadow-[0_4px_12px_-4px_rgba(37,211,102,0.7)]')
+                }, s.whatsappJoined ? '✅' : 'JOIN')
+              )
+            ),
+
+            // ✅ AUTO-COLLECT BOT
+            h(Card, { className: 'p-3 mt-2 relative overflow-hidden' },
+              h('div', { className: 'flex items-center gap-3' },
+                h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-[#A855F7] to-[#7C3AED] grid place-items-center text-2xl shrink-0 shadow-lg' }, '🤖'),
+                h('div', { className: 'flex-1 min-w-0' },
+                  h('div', { className: 'text-[12px] font-black font-display' }, 'Auto-Collect Bot'),
+                  h('div', { className: 'text-[10px] text-[#A855F7] font-bold tabular-nums' }, s.autoCollect ? '✅ Active — collects every 60s' : 'One-time ' + fmt(AUTO_COLLECT_COST))
+                ),
+                h('button', {
+                  onClick: buyAutoCollect,
+                  disabled: s.autoCollect,
+                  className: 'px-3 py-2 rounded-lg text-[11px] font-black active:scale-95 transition ' +
+                    (s.autoCollect ? 'bg-white/[0.06] text-white/40 border border-white/[0.08]' : 'bg-gradient-to-b from-[#A855F7] to-[#7C3AED] text-white shadow-[0_4px_12px_-4px_rgba(168,85,247,0.7)]')
+                }, s.autoCollect ? '✅' : 'BUY')
+              )
+            ),
+
+            // CATEGORIES
             h('div', { className: 'mt-4 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar' },
               CATEGORIES.map(cat =>
                 h('button', {
@@ -691,23 +919,33 @@
               )
             ),
 
+            // EMPIRE — tap to manage
             ownedCount > 0 && activeTab === 'All' && h(React.Fragment, null,
               h(SectionTitle, {
-                right: h('span', { className: 'text-[10px] font-bold text-[#22C55E] flex items-center gap-1.5' },
-                  h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse glow-dot' }),
-                  'LIVE INCOME'
+                right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A] flex items-center gap-1.5' },
+                  h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#FFD60A] animate-pulse glow-dot' }),
+                  'TAP TO MANAGE'
                 )
               }, 'Your Empire'),
               h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden' },
                 BUSINESSES.filter((b) => (safeBiz[b.id] || 0) > 0).map((b) => {
                   const owned = safeBiz[b.id];
-                  return h('div', { key: b.id, className: 'px-3.5 py-2.5 flex items-center gap-3' },
-                    h('div', { className: 'w-8 h-8 rounded-lg bg-white/[0.06] grid place-items-center text-base shrink-0' }, b.emoji),
+                  const lvl = upgrades[b.id] || 0;
+                  const effPerHr = getEffectivePerHr(b, owned, lvl);
+                  return h('button', {
+                    key: b.id,
+                    onClick: () => setManageBiz(b),
+                    className: 'w-full px-3.5 py-2.5 flex items-center gap-3 active:bg-white/[0.03] transition text-left'
+                  },
+                    h('div', { className: 'w-8 h-8 rounded-lg bg-white/[0.06] grid place-items-center text-base shrink-0 relative' },
+                      b.emoji,
+                      lvl > 0 && h('span', { className: 'absolute -top-1 -right-1 bg-[#FFD60A] text-black text-[8px] font-black rounded px-1' }, 'L' + lvl)
+                    ),
                     h('div', { className: 'flex-1 min-w-0' },
                       h('div', { className: 'text-[12px] font-extrabold truncate font-display' }, b.name),
-                      h('div', { className: 'text-[10px] text-white/40 font-bold tabular-nums' }, '×' + owned + ' · ' + fmt(b.perHr * owned) + '/hr')
+                      h('div', { className: 'text-[10px] text-white/40 font-bold tabular-nums' }, '×' + owned + ' · ' + fmt(effPerHr) + '/hr')
                     ),
-                    h('div', { className: 'text-[11px] font-black text-[#FFD60A] tabular-nums shrink-0' }, fmt(b.price * owned))
+                    h('span', { className: 'text-white/30 text-lg shrink-0' }, '›')
                   );
                 })
               )
@@ -720,18 +958,26 @@
             h('div', { className: 'space-y-2' },
               filteredBusinesses.map((b) => {
                 const owned = safeBiz[b.id] || 0;
+                const lvl = upgrades[b.id] || 0;
                 const canAfford = (s.cash + vault) >= b.price;
                 const roiHours = (b.price / b.perHr).toFixed(1);
+                const isExpensive = b.price >= 50_000_000_000_000;
                 return h(Card, {
                   key: b.id,
-                  className: 'p-3 flex items-center gap-3 transition-all ' + (owned > 0 ? 'border-[#FFD60A]/40 shadow-[0_0_15px_-5px_rgba(255,214,10,0.2)]' : '')
+                  className: 'p-3 flex items-center gap-3 transition-all ' + 
+                    (owned > 0 ? 'border-[#FFD60A]/40 shadow-[0_0_15px_-5px_rgba(255,214,10,0.2)]' : '') +
+                    (isExpensive ? ' border-[#A855F7]/30' : '')
                 },
                   h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-white/[0.08] to-white/[0.02] border border-white/[0.06] grid place-items-center text-2xl shrink-0 relative' },
                     b.emoji,
-                    owned > 0 && h('span', { className: 'badge-owned absolute -top-1.5 -right-1.5 bg-gradient-to-br from-[#FFE566] to-[#FFB800] text-black text-[9px] font-black rounded-full w-5 h-5 grid place-items-center shadow-lg' }, String(owned))
+                    owned > 0 && h('span', { className: 'badge-owned absolute -top-1.5 -right-1.5 bg-gradient-to-br from-[#FFE566] to-[#FFB800] text-black text-[9px] font-black rounded-full w-5 h-5 grid place-items-center shadow-lg' }, String(owned)),
+                    lvl > 0 && h('span', { className: 'absolute -bottom-1 -right-1 bg-[#A855F7] text-white text-[7.5px] font-black rounded px-1' }, 'L' + lvl)
                   ),
                   h('div', { className: 'flex-1 min-w-0' },
-                    h('div', { className: 'text-[13px] font-extrabold truncate font-display' }, b.name),
+                    h('div', { className: 'flex items-center gap-1.5' },
+                      h('div', { className: 'text-[13px] font-extrabold truncate font-display' }, b.name),
+                      isExpensive && h('span', { className: 'text-[8px] font-black bg-gradient-to-r from-[#A855F7] to-[#7C3AED] text-white rounded px-1.5 py-0.5 shrink-0' }, 'PRO')
+                    ),
                     h('div', { className: 'text-[9px] text-white/40 truncate mb-1' }, b.desc),
                     h('div', { className: 'flex items-center gap-2' },
                       h('span', { className: 'text-[10px] font-black text-[#22C55E] tabular-nums' }, '+' + fmt(b.perHr) + '/hr'),
@@ -754,7 +1000,11 @@
               h('div', { className: 'flex items-start gap-2' },
                 h('span', { className: 'text-base' }, '💡'),
                 h('p', { className: 'text-[10.5px] text-white/50 leading-relaxed' },
-                  'Your businesses no dey sleep. Money dey enter your vault 24/7, even when you close the app! (Max: 24 hours). Collect am often so Sapa no go catch you.'
+                  'Your businesses no dey sleep. Money dey enter your vault 24/7 (max 48 hours). Tap any business in "Your Empire" to ',
+                  h('span', { className: 'text-[#A855F7] font-bold' }, 'UPGRADE'),
+                  ' (×3 income per level) or ',
+                  h('span', { className: 'text-[#FFD60A] font-bold' }, 'SELL'),
+                  ' for cash. 🚀'
                 )
               )
             )
@@ -774,6 +1024,68 @@
               })
             )
           ),
+
+          // ✅ MANAGE BUSINESS MODAL
+          manageBiz && (() => {
+            const owned = safeBiz[manageBiz.id] || 0;
+            const lvl = upgrades[manageBiz.id] || 0;
+            const effPerHr = getEffectivePerHr(manageBiz, owned, lvl);
+            const upgradeCost = manageBiz.price * Math.pow(2, lvl);
+            const nextIncomeMult = Math.pow(3, lvl + 1);
+            const canUpgrade = lvl < MAX_UPGRADE_LEVEL && (s.cash + vault) >= upgradeCost;
+            const sellPrice = Math.floor(manageBiz.price * 0.5);
+            
+            return h('div', { className: 'fixed inset-0 z-[70] grid place-items-center p-6' },
+              h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setManageBiz(null) }),
+              h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/30 rounded-3xl p-5 shadow-2xl animate-popIn' },
+                h('div', { className: 'text-center' },
+                  h('div', { className: 'text-5xl mb-2' }, manageBiz.emoji),
+                  h('div', { className: 'text-[15px] font-black font-display' }, manageBiz.name),
+                  h('div', { className: 'text-[11px] text-white/50 mt-1' }, 'Owned: ' + owned + ' · Level ' + lvl + '/' + MAX_UPGRADE_LEVEL),
+                  h('div', { className: 'mt-3 px-3 py-2 rounded-xl bg-[#22C55E]/15 border border-[#22C55E]/30' },
+                    h('div', { className: 'text-[9px] uppercase tracking-widest text-white/50 font-bold' }, 'Income'),
+                    h('div', { className: 'text-[16px] font-black text-[#22C55E] tabular-nums font-display' }, '+' + fmt(effPerHr) + ' /hr')
+                  )
+                ),
+                h('div', { className: 'mt-4 space-y-2' },
+                  // UPGRADE
+                  lvl < MAX_UPGRADE_LEVEL ? h('button', {
+                    onClick: () => upgradeBiz(manageBiz),
+                    disabled: !canUpgrade,
+                    className: 'w-full rounded-xl p-3 text-left active:scale-95 transition ' +
+                      (canUpgrade ? 'bg-gradient-to-b from-[#A855F7] to-[#7C3AED] text-white shadow-[0_4px_14px_-4px_rgba(168,85,247,0.7)]' : 'bg-white/[0.06] border border-white/10 opacity-50')
+                  },
+                    h('div', { className: 'flex items-center justify-between' },
+                      h('div', null,
+                        h('div', { className: 'text-[11px] font-black uppercase tracking-widest' }, '⚡ Upgrade'),
+                        h('div', { className: 'text-[10px] opacity-70 mt-0.5' }, 'Lv.' + lvl + ' → Lv.' + (lvl + 1) + ' (income ×' + nextIncomeMult + ')')
+                      ),
+                      h('div', { className: 'text-[13px] font-black tabular-nums' }, fmt(upgradeCost))
+                    )
+                  ) : h('div', { className: 'w-full rounded-xl p-3 bg-[#FFD60A]/15 border border-[#FFD60A]/30 text-center' },
+                    h('div', { className: 'text-[12px] font-black text-[#FFD60A]' }, '🏆 MAX LEVEL')
+                  ),
+                  // SELL
+                  h('button', {
+                    onClick: () => sellBiz(manageBiz),
+                    className: 'w-full rounded-xl p-3 text-left active:scale-95 transition bg-white/[0.06] border border-white/10'
+                  },
+                    h('div', { className: 'flex items-center justify-between' },
+                      h('div', null,
+                        h('div', { className: 'text-[11px] font-black uppercase tracking-widest text-white/80' }, '💸 Sell 1'),
+                        h('div', { className: 'text-[10px] text-white/50 mt-0.5' }, '50% refund · upgrades stay')
+                      ),
+                      h('div', { className: 'text-[13px] font-black text-[#FFD60A] tabular-nums' }, fmt(sellPrice))
+                    )
+                  )
+                ),
+                h('button', {
+                  onClick: () => setManageBiz(null),
+                  className: 'mt-3 w-full rounded-xl bg-white/[0.04] border border-white/10 py-2.5 text-[11px] font-extrabold text-white/60'
+                }, 'Close')
+              )
+            );
+          })(),
 
           // ✅ DRAMA MODAL
           dramaEvent && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
