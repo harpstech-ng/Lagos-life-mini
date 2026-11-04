@@ -92,6 +92,8 @@
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    // ✅ Offline persistence — cache-first loads, offline play, free
+    db.enablePersistence().catch((e) => console.warn('Persistence:', e.code));
     const auth = firebase.auth();
 
     const MAX_E = 100;
@@ -101,6 +103,10 @@
     const AUTO_COLLECT_COST = 10_000_000_000_000;
     const SETTINGS_REFRESH_MS = 5 * 60 * 1000;
     const ENERGY_SYNC_MS = 60000;
+    const SAFETY_FLUSH_MS = 5 * 60 * 1000;         // ✅ bot delta flushed every 5 min
+    const DRAMA_COOLDOWN_MS = 30 * 1000;           // ✅ drama button cooldown
+    const SETTINGS_CACHE_KEY = 'lagos_settings_v1';
+    const SETTINGS_CACHE_TTL = 10 * 60 * 1000;
     const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/DLTh6m6oyUBBIbmk1dS8Um?s=cl&p=i&mlu=4&ilr=4&iam=2';
 
     const CATEGORIES = ["All", "Street", "Small", "Mid", "High", "Cartel", "Ultra", "Cosmic"];
@@ -308,6 +314,15 @@
       return count * biz.perHr * Math.pow(3, level || 0);
     };
 
+    // ✅ Local-only history storage
+    const logHistory = (title, desc, amount) => {
+      try {
+        const hist = JSON.parse(localStorage.getItem("lagos_history") || "[]");
+        hist.unshift({ title, desc, amount, date: Date.now(), category: 'activity' });
+        localStorage.setItem("lagos_history", JSON.stringify(hist.slice(0, 50)));
+      } catch (e) {}
+    };
+
     function App() {
       const [s, setS] = useState(getCachedData);
       const [uid, setUid] = useState(null);
@@ -321,70 +336,102 @@
 
       const [dramaEvent, setDramaEvent] = useState(null);
       const [manageBiz, setManageBiz] = useState(null);
+      const [dramaCooldown, setDramaCooldown] = useState(0);
 
       const [now, setNow] = useState(Date.now());
 
       // Refs
       const stateRef = useRef(s);
-      // Track last synced energy so we only write when it actually changes
       const lastSyncedEnergyRef = useRef({ energy: -1, lastEnergy: 0 });
+      // ✅ Bot earnings accumulated locally, folded into next Firestore write
+      const unflushedCashRef = useRef(0);
 
-      // Keep stateRef in sync
       useEffect(() => { stateRef.current = s; }, [s]);
 
-      // Local ticker (no Firebase reads)
+      // ✅ Flush bot delta + energy to Firestore via increment() — never SET cash
+      const flushToServer = async () => {
+        const cur = stateRef.current;
+        if (!cur || !uid) return;
+        const delta = unflushedCashRef.current;
+        const energyChanged = cur.energy !== lastSyncedEnergyRef.current.energy ||
+                              cur.lastEnergy !== lastSyncedEnergyRef.current.lastEnergy;
+        if (delta === 0 && !energyChanged) return;
+
+        const snapshotDelta = delta;
+        unflushedCashRef.current = 0;
+        lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
+
+        try {
+          await db.collection("users").doc(uid).update({
+            cash: firebase.firestore.FieldValue.increment(snapshotDelta),
+            lastCollected: cur.lastCollected,
+            energy: cur.energy,
+            lastEnergy: cur.lastEnergy,
+            lastSeen: Date.now()
+          });
+        } catch (e) {
+          unflushedCashRef.current += snapshotDelta;
+          lastSyncedEnergyRef.current = { energy: -1, lastEnergy: 0 };
+        }
+      };
+
+      // Local ticker
       useEffect(() => {
         const iv = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(iv);
       }, []);
 
-      // ✅ TASK 2: Settings — get() once + 5min interval (NOT onSnapshot)
+      // ✅ Settings — cached 10 min, then get() once per refresh
       useEffect(() => {
         let cancelled = false;
         const checkMaintenance = async () => {
           try {
+            const cached = JSON.parse(localStorage.getItem(SETTINGS_CACHE_KEY) || 'null');
+            if (cached && Date.now() - cached.ts < SETTINGS_CACHE_TTL) {
+              if (!cancelled) setIsMaintenance(cached.maintenance === true);
+              return;
+            }
+          } catch (e) {}
+          try {
             const doc = await db.collection("settings").doc("game").get();
             if (cancelled) return;
-            if (doc.exists && doc.data().maintenance === true) setIsMaintenance(true);
-            else setIsMaintenance(false);
-          } catch (e) {
-            // silently ignore
-          }
+            const maintenance = doc.exists && doc.data().maintenance === true;
+            try { localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify({ maintenance, ts: Date.now() })); } catch (e) {}
+            setIsMaintenance(maintenance);
+          } catch (e) {}
         };
         checkMaintenance();
         const iv = setInterval(checkMaintenance, SETTINGS_REFRESH_MS);
         return () => { cancelled = true; clearInterval(iv); };
       }, []);
 
-      // ✅ TASK 1: Auth + ONLY ONE onSnapshot (own user) with cleanup
+      // ✅ Auth — get() once, no onSnapshot. Server wins; vault absorbs unflushed delta.
       useEffect(() => {
-        let userUnsub = null;
-        const authUnsub = auth.onAuthStateChanged((user) => {
-          if (!user) { window.location.href = '/login.html'; return; }
-          if (userUnsub) userUnsub();
-
-          const userId = user.uid;
-          setUid(userId);
-          const userRef = db.collection("users").doc(userId);
-
-          userUnsub = userRef.onSnapshot((doc) => {
-            if (doc.exists) {
-              const dbData = doc.data();
-              setS(prev => {
-                const newData = Object.assign({}, prev, dbData, {
-                  businesses: dbData.businesses || prev.businesses || {},
-                  assets: dbData.assets || prev.assets || {},
-                  transactions: dbData.transactions || [],
-                  history: dbData.history || [],
-                  cash: dbData.cash !== undefined ? dbData.cash : prev.cash,
-                  lastCollected: dbData.lastCollected || prev.lastCollected || Date.now(),
-                  upgrades: dbData.upgrades || prev.upgrades || {},
-                  autoCollect: dbData.autoCollect === true,
-                  whatsappJoined: dbData.whatsappJoined === true
-                });
-                try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
-                return newData;
+        let cancelled = false;
+        const unsub = auth.onAuthStateChanged(async (user) => {
+          if (cancelled) return;
+          if (!user) { window.location.href = './login.html'; return; }
+          setUid(user.uid);
+          const userRef = db.collection("users").doc(user.uid);
+          try {
+            const snap = await userRef.get();
+            if (cancelled) return;
+            if (snap.exists) {
+              const d = snap.data();
+              const merged = Object.assign({}, getCachedData(), d, {
+                businesses: d.businesses || {},
+                assets: d.assets || {},
+                upgrades: d.upgrades || {},
+                history: (d.history || []).slice(-30),
+                transactions: (d.transactions || []).slice(-30),
+                cash: d.cash !== undefined ? d.cash : 25000,
+                lastCollected: d.lastCollected || Date.now(),
+                autoCollect: d.autoCollect === true,
+                whatsappJoined: d.whatsappJoined === true
               });
+              setS(merged);
+              stateRef.current = merged;
+              try { localStorage.setItem("lagos_user_data", JSON.stringify(merged)); } catch (e) {}
             } else {
               const defaultData = {
                 name: user.displayName || localStorage.getItem("lagos_user_name") || 'Hustler',
@@ -394,17 +441,20 @@
                 transactions: [], history: [], lastCollected: Date.now(),
                 upgrades: {}, autoCollect: false, whatsappJoined: false
               };
-              userRef.set(defaultData).catch(() => {});
+              await userRef.set(defaultData);
+              if (cancelled) return;
               setS(defaultData);
-              try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
+              stateRef.current = defaultData;
+              try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch (e) {}
             }
-          }, (error) => console.error("Snapshot error:", error));
+          } catch (e) {
+            console.error("Auth load error:", e);
+          }
         });
-
-        return () => { authUnsub(); if (userUnsub) userUnsub(); };
+        return () => { cancelled = true; unsub(); };
       }, []);
 
-      // 🎵 Music unlock
+      // Music unlock
       useEffect(() => {
         const unlock = () => { if (!musicOn) { AudioEngine.startMusic(); setMusicOn(true); } };
         window.addEventListener("pointerdown", unlock, { once: true });
@@ -426,7 +476,7 @@
         return () => clearInterval(iv);
       }, []);
 
-      // ✅ ENERGY REGEN — local only, NO Firestore write
+      // ✅ Energy regen — local only
       useEffect(() => {
         if (!uid) return;
         const iv = setInterval(() => {
@@ -437,75 +487,97 @@
             if (gained <= 0) return prev;
             const energy = Math.min(MAX_E, prev.energy + gained);
             const lastEnergy = energy >= MAX_E ? tickNow : prev.lastEnergy + gained * ENERGY_MS;
-            const next = Object.assign({}, prev, { energy, lastEnergy });
-            stateRef.current = next;
-            return next;
+            return Object.assign({}, prev, { energy, lastEnergy });
           });
         }, 1000);
         return () => clearInterval(iv);
       }, [uid]);
 
-      // ✅ ENERGY SYNC — every 60s, ONLY if energy changed. No more per-second writes.
+      // ✅ Bot — LOCAL ONLY. Zero Firestore writes. Accumulates into unflushedCashRef.
+      useEffect(() => {
+        if (!s.autoCollect || !uid) return;
+        const iv = setInterval(() => {
+          setS(prev => {
+            if (!prev.autoCollect) return prev;
+            const biz = prev.businesses || {};
+            const ups = prev.upgrades || {};
+            const perHr = Object.entries(biz).reduce((a, kv) => {
+              const b = BUSINESSES.find(x => x.id === kv[0]);
+              return b ? a + getEffectivePerHr(b, kv[1], ups[kv[0]] || 0) : a;
+            }, 0);
+            if (perHr <= 0) return prev;
+            const elapsed = Math.min(Date.now() - (prev.lastCollected || Date.now()), MAX_OFFLINE_HOURS * 3600000);
+            const amount = Math.floor((elapsed / 3600000) * perHr);
+            if (amount < 1) return prev;
+            unflushedCashRef.current += amount;
+            AudioEngine.coin();
+            return Object.assign({}, prev, {
+              cash: (prev.cash || 0) + amount,
+              lastCollected: Date.now()
+            });
+          });
+        }, 60000);
+        return () => clearInterval(iv);
+      }, [s.autoCollect, uid]);
+
+      // ✅ Safety flush — every 5 min, only if delta > 0
       useEffect(() => {
         if (!uid) return;
-        const syncEnergy = async () => {
-          const cur = stateRef.current;
-          if (!cur) return;
-          const last = lastSyncedEnergyRef.current;
-          if (cur.energy === last.energy && cur.lastEnergy === last.lastEnergy) return;
-          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
-          try {
-            await db.collection("users").doc(uid).update({
-              energy: cur.energy,
-              lastEnergy: cur.lastEnergy,
-              lastSeen: Date.now()
-            });
-          } catch (e) { console.error("Energy sync error:", e); }
-        };
-        const iv = setInterval(syncEnergy, ENERGY_SYNC_MS);
+        const iv = setInterval(() => {
+          if (unflushedCashRef.current > 0 && document.visibilityState === 'visible') {
+            flushToServer();
+          }
+        }, SAFETY_FLUSH_MS);
         return () => clearInterval(iv);
       }, [uid]);
 
-      // ✅ Flush energy on tab hidden / unload
+      // ✅ Flush on tab-hide / pagehide / beforeunload
       useEffect(() => {
         if (!uid) return;
-        const flush = () => {
-          const cur = stateRef.current;
-          if (!cur) return;
-          const last = lastSyncedEnergyRef.current;
-          if (cur.energy === last.energy && cur.lastEnergy === last.lastEnergy) return;
-          // fire-and-forget
-          db.collection("users").doc(uid).update({
-            energy: cur.energy,
-            lastEnergy: cur.lastEnergy,
-            lastSeen: Date.now()
-          }).catch(() => {});
+        const handleHidden = () => {
+          if (document.visibilityState === 'hidden') flushToServer();
         };
-        const handleVisibility = () => { if (document.visibilityState === 'hidden') flush(); };
-        document.addEventListener('visibilitychange', handleVisibility);
-        window.addEventListener('beforeunload', flush);
+        const handlePageHide = () => { flushToServer(); };
+        const handleBeforeUnload = () => { flushToServer(); };
+        document.addEventListener('visibilitychange', handleHidden);
+        window.addEventListener('pagehide', handlePageHide);
+        window.addEventListener('beforeunload', handleBeforeUnload);
         return () => {
-          document.removeEventListener('visibilitychange', handleVisibility);
-          window.removeEventListener('beforeunload', flush);
+          document.removeEventListener('visibilitychange', handleHidden);
+          window.removeEventListener('pagehide', handlePageHide);
+          window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+      }, [uid]);
+
+      // ✅ Refresh on tab-focus — picks up real-money purchases, cross-device changes
+      useEffect(() => {
+        if (!uid) return;
+        let initialized = false;
+        const timer = setTimeout(() => { initialized = true; }, 1000);
+        const refresh = async () => {
+          if (!initialized) return;
+          if (document.visibilityState !== 'visible') return;
+          await flushToServer();
+          try {
+            const snap = await db.collection("users").doc(uid).get();
+            if (!snap.exists) return;
+            const d = snap.data();
+            setS(prev => Object.assign({}, prev, {
+              cash: d.cash !== undefined ? d.cash : prev.cash,
+              real: d.real !== undefined ? d.real : prev.real
+            }));
+          } catch (e) {}
+        };
+        document.addEventListener('visibilitychange', refresh);
+        return () => {
+          clearTimeout(timer);
+          document.removeEventListener('visibilitychange', refresh);
         };
       }, [uid]);
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      const logHistory = async (title, desc, amount) => {
-        if (!uid) return;
-        await db.collection("users").doc(uid).update({
-          history: firebase.firestore.FieldValue.arrayUnion({
-            title: title,
-            desc: desc,
-            amount: amount,
-            date: Date.now(),
-            category: 'activity'
-          })
-        }).catch(() => {});
-      };
-
-      // ✅ Vault calculation (client-side only, no writes)
+      // ✅ Vault calculation (client-side only)
       const vault = useMemo(() => {
         const safeBiz = s.businesses || {};
         const upgrades = s.upgrades || {};
@@ -534,49 +606,6 @@
         }, 0);
       }, [s.businesses, s.upgrades]);
 
-      // ✅ AUTO-COLLECT bot — 1 write per 60s, includes energy (combined)
-      useEffect(() => {
-        if (!s.autoCollect || !uid) return;
-        const iv = setInterval(async () => {
-          const cur = stateRef.current;
-          if (!cur.autoCollect) return;
-          const safeBizCur = cur.businesses || {};
-          const upgradesCur = cur.upgrades || {};
-          const perHrCur = Object.entries(safeBizCur).reduce((a, kv) => {
-            const biz = BUSINESSES.find(b => b.id === kv[0]);
-            if (!biz) return a;
-            const level = upgradesCur[kv[0]] || 0;
-            return a + getEffectivePerHr(biz, kv[1], level);
-          }, 0);
-          if (perHrCur <= 0) return;
-          const elapsed = Math.min(Date.now() - (cur.lastCollected || Date.now()), MAX_OFFLINE_HOURS * 3600000);
-          const amount = Math.floor((elapsed / 3600000) * perHrCur);
-          if (amount < 1) return;
-          const collectNow = Date.now();
-
-          setS(prev => {
-            const next = Object.assign({}, prev, {
-              cash: (prev.cash || 0) + amount,
-              lastCollected: collectNow
-            });
-            stateRef.current = next;
-            return next;
-          });
-
-          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
-
-          await db.collection("users").doc(uid).update({
-            cash: firebase.firestore.FieldValue.increment(amount),
-            lastCollected: collectNow,
-            energy: cur.energy,
-            lastEnergy: cur.lastEnergy
-          }).catch(() => {});
-          AudioEngine.coin();
-          notify('🤖 Bot collected ' + fmt(amount), 'good');
-        }, 60000);
-        return () => clearInterval(iv);
-      }, [s.autoCollect, uid]);
-
       const collectVault = async () => {
         const amount = vault;
         if (amount < 1) { AudioEngine.error(); return notify('Vault is empty. Wait small! ⏳', 'bad'); }
@@ -586,35 +615,39 @@
         try { if (navigator.vibrate) navigator.vibrate(30); } catch(e) {}
 
         const collectNow = Date.now();
-        setS(prev => {
-          const next = Object.assign({}, prev, {
-            cash: (prev.cash || 0) + amount,
-            lastCollected: collectNow
-          });
-          stateRef.current = next;
-          return next;
-        });
+        setS(prev => Object.assign({}, prev, {
+          cash: (prev.cash || 0) + amount,
+          lastCollected: collectNow
+        }));
         notify('Collected ' + fmt(amount) + ' from your businesses! 💰');
 
         if (uid) {
-          const cur = stateRef.current;
-          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
-          await db.collection("users").doc(uid).update({
-            cash: firebase.firestore.FieldValue.increment(amount),
-            lastCollected: collectNow,
-            energy: cur.energy,
-            lastEnergy: cur.lastEnergy,
-            lastSeen: Date.now()
-          }).catch(() => {});
+          const delta = unflushedCashRef.current;
+          unflushedCashRef.current = 0;
+          try {
+            await db.collection("users").doc(uid).update({
+              cash: firebase.firestore.FieldValue.increment(delta + amount),
+              lastCollected: collectNow,
+              lastSeen: Date.now()
+            });
+          } catch (e) {
+            unflushedCashRef.current += delta;
+          }
           logHistory('Collected Vault', 'Collected ' + fmt(amount) + ' from businesses', amount);
         }
         setTimeout(() => setIsCollecting(false), 800);
       };
 
       const checkBusinessDrama = () => {
+        if (now < dramaCooldown) {
+          AudioEngine.error();
+          return notify('⏳ Try again in ' + Math.ceil((dramaCooldown - now) / 1000) + 's', 'bad');
+        }
         const safeBiz = s.businesses || {};
         const ownedIds = Object.keys(safeBiz).filter(id => safeBiz[id] > 0);
         if (ownedIds.length === 0) return notify('You need to buy a business first!', 'bad');
+
+        setDramaCooldown(Date.now() + DRAMA_COOLDOWN_MS);
 
         const randomId = ownedIds[Math.floor(Math.random() * ownedIds.length)];
         const biz = BUSINESSES.find(b => b.id === randomId);
@@ -647,26 +680,24 @@
            newBiz[biz] -= 1;
            if (newBiz[biz] <= 0) delete newBiz[biz];
         }
-        setS(prev => {
-          const next = Object.assign({}, prev, {
-            cash: Math.max(0, (prev.cash || 0) + cash),
-            businesses: newBiz
-          });
-          stateRef.current = next;
-          return next;
-        });
+        setS(prev => Object.assign({}, prev, {
+          cash: Math.max(0, (prev.cash || 0) + cash),
+          businesses: newBiz
+        }));
         if (cash > 0) AudioEngine.coin(); else AudioEngine.error();
         if (uid) {
-          const cur = stateRef.current;
-          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
+          const delta = unflushedCashRef.current;
+          unflushedCashRef.current = 0;
           const updates = {
-            cash: firebase.firestore.FieldValue.increment(cash),
-            energy: cur.energy,
-            lastEnergy: cur.lastEnergy,
+            cash: firebase.firestore.FieldValue.increment(delta + cash),
             lastSeen: Date.now()
           };
           if (biz) updates['businesses.' + biz] = firebase.firestore.FieldValue.increment(-1);
-          await db.collection("users").doc(uid).update(updates).catch(() => {});
+          try {
+            await db.collection("users").doc(uid).update(updates);
+          } catch (e) {
+            unflushedCashRef.current += delta;
+          }
           logHistory(dramaEvent.title, dramaEvent.msg, cash);
         }
         setDramaEvent(null);
@@ -714,29 +745,29 @@
         setS(prev => {
           const newBiz = Object.assign({}, prev.businesses || {});
           newBiz[b.id] = (newBiz[b.id] || 0) + 1;
-          const next = Object.assign({}, prev, {
+          return Object.assign({}, prev, {
             cash: (prev.cash || 0) + currentVault - b.price,
             businesses: newBiz,
             lastCollected: buyNow
           });
-          stateRef.current = next;
-          return next;
         });
         AudioEngine.purchase();
         notify(b.emoji + ' ' + b.name + ' bought! +' + fmt(b.perHr) + '/hr');
         try { if (navigator.vibrate) navigator.vibrate(25); } catch(e) {}
         if (uid) {
-          const cur = stateRef.current;
-          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
+          const delta = unflushedCashRef.current;
+          unflushedCashRef.current = 0;
           const updates = {
-            cash: firebase.firestore.FieldValue.increment(currentVault - b.price),
+            cash: firebase.firestore.FieldValue.increment(delta + currentVault - b.price),
             lastCollected: buyNow,
-            energy: cur.energy,
-            lastEnergy: cur.lastEnergy,
             lastSeen: Date.now()
           };
           updates['businesses.' + b.id] = firebase.firestore.FieldValue.increment(1);
-          await db.collection("users").doc(uid).update(updates).catch(() => {});
+          try {
+            await db.collection("users").doc(uid).update(updates);
+          } catch (e) {
+            unflushedCashRef.current += delta;
+          }
           logHistory('Bought Business', 'Bought ' + b.name, -b.price);
         }
       };
@@ -751,29 +782,29 @@
         setS(prev => {
           const newUpgrades = Object.assign({}, prev.upgrades || {});
           newUpgrades[b.id] = currentLevel + 1;
-          const next = Object.assign({}, prev, {
+          return Object.assign({}, prev, {
             cash: (prev.cash || 0) + vault - cost,
             upgrades: newUpgrades,
             lastCollected: buyNow
           });
-          stateRef.current = next;
-          return next;
         });
         AudioEngine.purchase();
         try { if (navigator.vibrate) navigator.vibrate([20, 30, 20]); } catch(e) {}
         notify('⚡ ' + b.name + ' upgraded to Lv.' + (currentLevel + 1) + '! ×3 income');
         if (uid) {
-          const cur = stateRef.current;
-          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
+          const delta = unflushedCashRef.current;
+          unflushedCashRef.current = 0;
           const updates = {
-            cash: firebase.firestore.FieldValue.increment(vault - cost),
+            cash: firebase.firestore.FieldValue.increment(delta + vault - cost),
             lastCollected: buyNow,
-            energy: cur.energy,
-            lastEnergy: cur.lastEnergy,
             lastSeen: Date.now()
           };
           updates['upgrades.' + b.id] = currentLevel + 1;
-          await db.collection("users").doc(uid).update(updates).catch(() => {});
+          try {
+            await db.collection("users").doc(uid).update(updates);
+          } catch (e) {
+            unflushedCashRef.current += delta;
+          }
           logHistory('Upgraded Business', b.name + ' → Lv.' + (currentLevel + 1), -cost);
         }
         setManageBiz(null);
@@ -788,26 +819,26 @@
           const newBiz = Object.assign({}, prev.businesses || {});
           newBiz[b.id] = (newBiz[b.id] || 0) - 1;
           if (newBiz[b.id] <= 0) delete newBiz[b.id];
-          const next = Object.assign({}, prev, {
+          return Object.assign({}, prev, {
             cash: (prev.cash || 0) + sellPrice,
             businesses: newBiz
           });
-          stateRef.current = next;
-          return next;
         });
         AudioEngine.coin();
         notify('💸 Sold ' + b.name + ' for ' + fmt(sellPrice));
         if (uid) {
-          const cur = stateRef.current;
-          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
+          const delta = unflushedCashRef.current;
+          unflushedCashRef.current = 0;
           const updates = {
-            cash: firebase.firestore.FieldValue.increment(sellPrice),
-            energy: cur.energy,
-            lastEnergy: cur.lastEnergy,
+            cash: firebase.firestore.FieldValue.increment(delta + sellPrice),
             lastSeen: Date.now()
           };
           updates['businesses.' + b.id] = firebase.firestore.FieldValue.increment(-1);
-          await db.collection("users").doc(uid).update(updates).catch(() => {});
+          try {
+            await db.collection("users").doc(uid).update(updates);
+          } catch (e) {
+            unflushedCashRef.current += delta;
+          }
           logHistory('Sold Business', 'Sold 1 ' + b.name, sellPrice);
         }
         setManageBiz(null);
@@ -817,28 +848,26 @@
         if (s.autoCollect) return notify('Already active! 🤖', 'bad');
         if ((s.cash + vault) < AUTO_COLLECT_COST) { AudioEngine.error(); return notify('Need ' + fmt(AUTO_COLLECT_COST), 'bad'); }
         const buyNow = Date.now();
-        setS(prev => {
-          const next = Object.assign({}, prev, {
-            cash: (prev.cash || 0) + vault - AUTO_COLLECT_COST,
-            autoCollect: true,
-            lastCollected: buyNow
-          });
-          stateRef.current = next;
-          return next;
-        });
+        setS(prev => Object.assign({}, prev, {
+          cash: (prev.cash || 0) + vault - AUTO_COLLECT_COST,
+          autoCollect: true,
+          lastCollected: buyNow
+        }));
         AudioEngine.purchase();
         notify('🤖 Auto-Collect Bot activated!');
         if (uid) {
-          const cur = stateRef.current;
-          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
-          await db.collection("users").doc(uid).update({
-            cash: firebase.firestore.FieldValue.increment(vault - AUTO_COLLECT_COST),
-            autoCollect: true,
-            lastCollected: buyNow,
-            energy: cur.energy,
-            lastEnergy: cur.lastEnergy,
-            lastSeen: Date.now()
-          }).catch(() => {});
+          const delta = unflushedCashRef.current;
+          unflushedCashRef.current = 0;
+          try {
+            await db.collection("users").doc(uid).update({
+              cash: firebase.firestore.FieldValue.increment(delta + vault - AUTO_COLLECT_COST),
+              autoCollect: true,
+              lastCollected: buyNow,
+              lastSeen: Date.now()
+            });
+          } catch (e) {
+            unflushedCashRef.current += delta;
+          }
           logHistory('Bought Auto-Collect Bot', 'Active forever', -AUTO_COLLECT_COST);
         }
       };
@@ -849,26 +878,24 @@
         notify('Verifying join...', 'good');
         setTimeout(async () => {
           const bonus = 1_000_000_000_000;
-          setS(prev => {
-            const next = Object.assign({}, prev, {
-              cash: (prev.cash || 0) + bonus,
-              whatsappJoined: true
-            });
-            stateRef.current = next;
-            return next;
-          });
+          setS(prev => Object.assign({}, prev, {
+            cash: (prev.cash || 0) + bonus,
+            whatsappJoined: true
+          }));
           AudioEngine.collect();
           notify('💬 Welcome! +' + fmt(bonus));
           if (uid) {
-            const cur = stateRef.current;
-            lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
-            await db.collection("users").doc(uid).update({
-              cash: firebase.firestore.FieldValue.increment(bonus),
-              whatsappJoined: true,
-              energy: cur.energy,
-              lastEnergy: cur.lastEnergy,
-              lastSeen: Date.now()
-            }).catch(() => {});
+            const delta = unflushedCashRef.current;
+            unflushedCashRef.current = 0;
+            try {
+              await db.collection("users").doc(uid).update({
+                cash: firebase.firestore.FieldValue.increment(delta + bonus),
+                whatsappJoined: true,
+                lastSeen: Date.now()
+              });
+            } catch (e) {
+              unflushedCashRef.current += delta;
+            }
             logHistory('Joined WhatsApp', 'Community bonus', bonus);
           }
         }, 2000);
@@ -886,6 +913,10 @@
         { id: 'club', label: 'Club', icon: '🎉', href: 'club.html' },
         { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
+
+      const dramaButtonLabel = now < dramaCooldown
+        ? '⏳ ' + Math.ceil((dramaCooldown - now) / 1000) + 's'
+        : '🎲 Check Business Reality';
 
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
@@ -919,7 +950,7 @@
                 h('div', { className: 'text-[10px] uppercase tracking-widest text-[#FFD60A]/70 font-bold mb-1' }, 'Business Vault'),
                 h('div', { className: 'text-4xl font-black text-gradient-gold tabular-nums font-display drop-shadow-md mb-1' }, fmt(vault)),
                 perSec > 0 && h('div', { className: 'text-[10px] text-[#22C55E] font-bold mb-3 tabular-nums' }, '+ ' + fmt(perSec) + ' / second'),
-                h('div', { className: 'text-[10px] text-white/50 mb-4' }, s.autoCollect ? '🤖 Bot auto-collects every 60s' : 'Collect before 48hrs so Sapa no catch you'),
+                h('div', { className: 'text-[10px] text-white/50 mb-4' }, s.autoCollect ? '🤖 Bot auto-collects for you' : 'Collect before 48hrs so Sapa no catch you'),
 
                 h('button', {
                   onClick: collectVault,
@@ -929,9 +960,9 @@
 
                 h('button', {
                   onClick: checkBusinessDrama,
-                  disabled: ownedCount === 0,
+                  disabled: ownedCount === 0 || now < dramaCooldown,
                   className: 'w-full mt-2 py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/80 font-bold text-[12px] active:scale-95 transition disabled:opacity-40'
-                }, '🎲 Check Business Reality')
+                }, dramaButtonLabel)
               )
             ),
 
@@ -978,7 +1009,7 @@
                 h('div', { className: 'w-12 h-12 rounded-xl bg-gradient-to-br from-[#A855F7] to-[#7C3AED] grid place-items-center text-2xl shrink-0 shadow-lg' }, '🤖'),
                 h('div', { className: 'flex-1 min-w-0' },
                   h('div', { className: 'text-[12px] font-black font-display' }, 'Auto-Collect Bot'),
-                  h('div', { className: 'text-[10px] text-[#A855F7] font-bold tabular-nums' }, s.autoCollect ? '✅ Active — collects every 60s' : 'One-time ' + fmt(AUTO_COLLECT_COST))
+                  h('div', { className: 'text-[10px] text-[#A855F7] font-bold tabular-nums' }, s.autoCollect ? '✅ Active — collecting silently' : 'One-time ' + fmt(AUTO_COLLECT_COST))
                 ),
                 h('button', {
                   onClick: buyAutoCollect,
