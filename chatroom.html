@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Lagos Life Mini — Chat</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js'"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+      }},
+    };
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: contain; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; -webkit-overflow-scrolling: touch; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent); }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-popIn { animation: popIn 0.28s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
+    .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    input { -webkit-user-select: text; user-select: text; }
+    input:focus { outline: none; }
+    .chat-bubble-me { background: linear-gradient(135deg, #FFD60A 0%, #FFB800 100%); color: #000; }
+    .chat-bubble-them { background: #1a1a22; color: #fff; border: 1px solid rgba(255,255,255,0.08); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { console.error('Unhandled rejection:', e.reason); });
+  </script>
+
+  <script>
+    const { useState, useEffect, useRef } = React;
+    const h = React.createElement;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    const AVATAR_COLORS = ['#EF4444', '#3B82F6', '#22C55E', '#A855F7', '#EC4899', '#F59E0B', '#06B6D4', '#6366F1'];
+
+    const getColor = (name) => {
+      let hash = 0;
+      for (let i = 0; i < (name || 'x').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+    };
+
+    const getInitial = (name) => {
+      if (!name) return '?';
+      return name.trim().charAt(0).toUpperCase();
+    };
+
+    const timeAgo = (t) => {
+      if (!t) return '';
+      const secs = Math.floor((Date.now() - t) / 1000);
+      if (secs < 60) return 'now';
+      const m = Math.floor(secs / 60);
+      if (m < 60) return m + 'm';
+      const hrs = Math.floor(m / 60);
+      if (hrs < 24) return hrs + 'h';
+      const d = Math.floor(hrs / 24);
+      if (d < 7) return d + 'd';
+      return new Date(t).toLocaleDateString();
+    };
+
+    const timeShort = (t) => {
+      if (!t) return '';
+      const d = new Date(t);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    function App() {
+      const [uid, setUid] = useState(null);
+      const [myName, setMyName] = useState('');
+      const [view, setView] = useState('list'); // 'list' | 'chat'
+      const [chats, setChats] = useState([]);
+      const [loadingChats, setLoadingChats] = useState(true);
+      const [searchQuery, setSearchQuery] = useState('');
+      const [searchResults, setSearchResults] = useState([]);
+      const [searching, setSearching] = useState(false);
+      const [activeChat, setActiveChat] = useState(null);
+      const [messages, setMessages] = useState([]);
+      const [newMsg, setNewMsg] = useState('');
+      const [sending, setSending] = useState(false);
+      const [toast, setToast] = useState(null);
+
+      const messagesEndRef = useRef(null);
+      const messagesContainerRef = useRef(null);
+      const searchDebounceRef = useRef(null);
+
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2400);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      // Auth
+      useEffect(() => {
+        const unsub = auth.onAuthStateChanged(async (user) => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          setUid(user.uid);
+          try {
+            const doc = await db.collection('users').doc(user.uid).get();
+            if (doc.exists) {
+              setMyName(doc.data().name || 'Hustler');
+            }
+          } catch (e) {}
+        });
+        return () => unsub();
+      }, []);
+
+      // Load chats (once on mount)
+      const loadChats = async () => {
+        if (!uid) return;
+        setLoadingChats(true);
+        try {
+          const snap = await db.collection("chats")
+            .where("participants", "array-contains", uid)
+            .get();
+          const arr = [];
+          snap.forEach(doc => {
+            const data = doc.data();
+            const otherId = (data.participants || []).find(p => p !== uid);
+            if (!otherId) return;
+            arr.push({
+              id: doc.id,
+              otherId,
+              otherName: (data.participantNames && data.participantNames[otherId]) || 'Unknown',
+              lastMessage: data.lastMessage || '',
+              lastMessageAt: data.lastMessageAt || 0,
+              lastSenderId: data.lastSenderId || null
+            });
+          });
+          arr.sort((a, b) => b.lastMessageAt - a.lastMessageAt);
+          setChats(arr);
+        } catch (e) {
+          console.error("Load chats error:", e);
+        } finally {
+          setLoadingChats(false);
+        }
+      };
+
+      useEffect(() => {
+        if (uid) loadChats();
+      }, [uid]);
+
+      // Search users (debounced)
+      useEffect(() => {
+        if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+        const q = searchQuery.trim();
+        if (!q || q.length < 2) {
+          setSearchResults([]);
+          return;
+        }
+        searchDebounceRef.current = setTimeout(async () => {
+          setSearching(true);
+          try {
+            const snap = await db.collection("users")
+              .where("name", ">=", q)
+              .where("name", "<=", q + '\uf8ff')
+              .limit(15)
+              .get();
+            const arr = [];
+            snap.forEach(doc => {
+              if (doc.id !== uid) {
+                arr.push({ id: doc.id, ...doc.data() });
+              }
+            });
+            setSearchResults(arr);
+          } catch (e) {
+            console.error("Search error:", e);
+          } finally {
+            setSearching(false);
+          }
+        }, 400);
+        return () => {
+          if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+        };
+      }, [searchQuery, uid]);
+
+      // Listen to active chat messages
+      useEffect(() => {
+        if (!activeChat || !uid) {
+          setMessages([]);
+          return;
+        }
+        const unsub = db.collection("chats").doc(activeChat.id)
+          .collection("messages")
+          .orderBy("createdAt", "desc")
+          .limit(50)
+          .onSnapshot(snap => {
+            const arr = [];
+            snap.forEach(doc => arr.push({ id: doc.id, ...doc.data() }));
+            arr.reverse(); // oldest first
+            setMessages(arr);
+          }, err => console.error("Messages error:", err));
+        return () => unsub();
+      }, [activeChat?.id, uid]);
+
+      // Auto-scroll on new messages
+      useEffect(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+      }, [messages.length]);
+
+      // Start new chat
+      const startChat = async (otherUser) => {
+        if (!uid || !otherUser) return;
+        const chatId = [uid, otherUser.id].sort().join('_');
+        try {
+          const chatRef = db.collection("chats").doc(chatId);
+          const doc = await chatRef.get();
+          if (!doc.exists) {
+            await chatRef.set({
+              participants: [uid, otherUser.id],
+              participantNames: { [uid]: myName, [otherUser.id]: otherUser.name },
+              lastMessage: '',
+              lastMessageAt: Date.now(),
+              lastSenderId: null,
+              createdAt: Date.now()
+            });
+          }
+          setActiveChat({ id: chatId, otherId: otherUser.id, otherName: otherUser.name });
+          setView('chat');
+          setSearchQuery('');
+          setSearchResults([]);
+          loadChats();
+        } catch (e) {
+          console.error("Start chat error:", e);
+          notify('Could not open chat', 'bad');
+        }
+      };
+
+      const openExistingChat = (chat) => {
+        setActiveChat({ id: chat.id, otherId: chat.otherId, otherName: chat.otherName });
+        setView('chat');
+      };
+
+      // Send message
+      const sendMessage = async () => {
+        const text = newMsg.trim();
+        if (!text || !activeChat || !uid || sending) return;
+        setSending(true);
+        setNewMsg('');
+        try {
+          const now = Date.now();
+          const batch = db.batch();
+          const msgRef = db.collection("chats").doc(activeChat.id).collection("messages").doc();
+          batch.set(msgRef, {
+            from: uid,
+            text: text.slice(0, 500),
+            createdAt: now
+          });
+          batch.update(db.collection("chats").doc(activeChat.id), {
+            lastMessage: text.slice(0, 80),
+            lastMessageAt: now,
+            lastSenderId: uid
+          });
+          await batch.commit();
+        } catch (e) {
+          console.error("Send error:", e);
+          setNewMsg(text);
+          notify('Message failed to send', 'bad');
+        } finally {
+          setSending(false);
+        }
+      };
+
+      const backToList = () => {
+        setView('list');
+        setActiveChat(null);
+        setMessages([]);
+        loadChats();
+      };
+
+      const renderAvatar = (name, size = 'w-10 h-10', textSize = 'text-sm') => {
+        const color = getColor(name);
+        return h('div', {
+          className: size + ' rounded-full grid place-items-center font-black text-white shrink-0 ' + textSize,
+          style: { background: color }
+        }, getInitial(name));
+      };
+
+      // ============ CHAT VIEW ============
+      if (view === 'chat' && activeChat) {
+        return h('div', { className: 'min-h-screen bg-[#08080B] text-white flex flex-col max-w-md mx-auto' },
+          // Header
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B] border-b border-white/[0.06] px-3 py-2.5 flex items-center gap-2' },
+            h('button', {
+              onClick: backToList,
+              className: 'w-9 h-9 rounded-full bg-white/[0.06] border border-white/10 grid place-items-center active:scale-90 transition shrink-0'
+            }, h('span', { className: 'text-lg' }, '←')),
+            renderAvatar(activeChat.otherName, 'w-9 h-9', 'text-xs'),
+            h('div', { className: 'flex-1 min-w-0' },
+              h('div', { className: 'text-[13px] font-black font-display truncate' }, activeChat.otherName),
+              h('div', { className: 'text-[9px] text-[#22C55E] font-bold flex items-center gap-1' },
+                h('span', { className: 'w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse' }),
+                'Tap to chat'
+              )
+            )
+          ),
+
+          // Messages
+          h('div', { ref: messagesContainerRef, className: 'flex-1 overflow-y-auto px-3 py-4 space-y-2' },
+            messages.length === 0 ?
+              h('div', { className: 'text-center text-white/40 text-[11px] py-10' },
+                h('div', { className: 'text-4xl mb-2' }, '👋'),
+                h('div', null, 'No messages yet.'),
+                h('div', { className: 'mt-1 text-[10px] text-white/30' }, 'Say hello!')
+              ) :
+              messages.map((m) => {
+                const isMe = m.from === uid;
+                return h('div', { key: m.id, className: 'flex items-end gap-1.5 ' + (isMe ? 'justify-end' : 'justify-start') },
+                  !isMe && renderAvatar(activeChat.otherName, 'w-6 h-6', 'text-[9px]'),
+                  h('div', { className: 'max-w-[78%]' },
+                    h('div', {
+                      className: 'px-3 py-2 rounded-2xl text-[12.5px] font-semibold leading-relaxed break-words ' +
+                        (isMe ? 'chat-bubble-me rounded-br-md' : 'chat-bubble-them rounded-bl-md')
+                    }, m.text),
+                    h('div', { className: 'text-[8.5px] text-white/30 mt-0.5 tabular-nums ' + (isMe ? 'text-right' : 'text-left') },
+                      timeShort(m.createdAt))
+                  )
+                );
+              }),
+            h('div', { ref: messagesEndRef })
+          ),
+
+          // Input
+          h('div', { className: 'sticky bottom-0 bg-[#08080B] border-t border-white/[0.06] px-3 py-2 safe-bottom' },
+            h('div', { className: 'flex items-end gap-2' },
+              h('div', { className: 'flex-1 bg-white/[0.05] border border-white/10 rounded-2xl px-3 py-2' },
+                h('input', {
+                  type: 'text',
+                  value: newMsg,
+                  onChange: (e) => setNewMsg(e.target.value),
+                  onKeyDown: (e) => { if (e.key === 'Enter') sendMessage(); },
+                  placeholder: 'Type message...',
+                  disabled: sending,
+                  maxLength: 500,
+                  className: 'w-full bg-transparent text-[13px] font-bold text-white placeholder-white/30 focus:outline-none'
+                })
+              ),
+              h('button', {
+                onClick: sendMessage,
+                disabled: !newMsg.trim() || sending,
+                className: 'w-11 h-11 rounded-full bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black grid place-items-center active:scale-90 transition disabled:opacity-40 shrink-0'
+              }, h('span', { className: 'text-lg font-black' }, '➤'))
+            )
+          ),
+
+          toast && h('div', {
+            className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
+              (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')
+          }, toast.msg)
+        );
+      }
+
+      // ============ LIST VIEW ============
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white max-w-md mx-auto pb-6' },
+        // Header
+        h('header', { className: 'sticky top-0 z-30 bg-[#08080B] border-b border-white/[0.06] px-4 py-2.5 flex items-center gap-2' },
+          h('button', {
+            onClick: () => window.location.href = 'more.html',
+            className: 'w-9 h-9 rounded-full bg-white/[0.06] border border-white/10 grid place-items-center active:scale-90 transition shrink-0'
+          }, h('span', { className: 'text-lg' }, '←')),
+          h('div', { className: 'flex-1 min-w-0' },
+            h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-[#FFD60A]/80 leading-none font-display' }, 'Chatroom'),
+            h('div', { className: 'text-[14px] font-black font-display mt-0.5' }, '💬 Hustlers Chat')
+          )
+        ),
+
+        h('main', { className: 'px-4' },
+          // Search
+          h('div', { className: 'mt-4' },
+            h('div', { className: 'flex items-center bg-white/[0.05] border border-white/10 rounded-xl px-3' },
+              h('span', { className: 'text-[14px] text-white/40' }, '🔍'),
+              h('input', {
+                type: 'text',
+                value: searchQuery,
+                onChange: (e) => setSearchQuery(e.target.value),
+                placeholder: 'Search hustler by name...',
+                className: 'w-full bg-transparent py-3 text-[13px] font-bold text-white placeholder-white/30 focus:outline-none ml-2'
+              }),
+              searchQuery && h('button', {
+                onClick: () => { setSearchQuery(''); setSearchResults([]); },
+                className: 'text-white/40 text-lg leading-none'
+              }, '×')
+            )
+          ),
+
+          // Search results
+          searchQuery.trim().length >= 2 && h('div', { className: 'mt-3' },
+            searching ?
+              h('div', { className: 'text-center text-white/40 text-[11px] py-6 animate-pulse' }, 'Searching...') :
+              searchResults.length === 0 ?
+                h('div', { className: 'text-center text-white/40 text-[11px] py-6' }, 'No hustler found with that name') :
+                h('div', { className: 'space-y-1.5' },
+                  searchResults.map(user =>
+                    h('button', {
+                      key: user.id,
+                      onClick: () => startChat(user),
+                      className: 'w-full card-gradient rounded-xl p-2.5 flex items-center gap-2.5 active:scale-[0.98] transition text-left'
+                    },
+                      renderAvatar(user.name, 'w-10 h-10', 'text-sm'),
+                      h('div', { className: 'flex-1 min-w-0' },
+                        h('div', { className: 'text-[12px] font-extrabold font-display truncate' }, user.name || 'Hustler'),
+                        h('div', { className: 'text-[9px] text-white/40' }, (user.motto && user.motto.replace(/_/g, ' ')) || 'Hustler')
+                      ),
+                      h('span', { className: 'text-[#FFD60A] text-lg' }, '›')
+                    )
+                  )
+                )
+          ),
+
+          // Chats list
+          !searchQuery.trim() && h('div', { className: 'mt-6' },
+            h('div', { className: 'flex items-center justify-between mb-2' },
+              h('div', { className: 'text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display' }, 'Recent Chats'),
+              h('button', {
+                onClick: loadChats,
+                disabled: loadingChats,
+                className: 'text-[10px] font-black text-[#FFD60A] bg-white/[0.05] border border-white/10 px-2 py-1 rounded-md active:scale-95 disabled:opacity-40'
+              }, loadingChats ? '⏳' : '🔄')
+            ),
+            loadingChats ?
+              h('div', { className: 'text-center text-white/40 text-[11px] py-8 animate-pulse' }, 'Loading chats...') :
+              chats.length === 0 ?
+                h('div', { className: 'text-center py-12' },
+                  h('div', { className: 'text-5xl mb-3' }, '💬'),
+                  h('div', { className: 'text-[12px] text-white/50 font-bold' }, 'No chats yet'),
+                  h('div', { className: 'text-[10px] text-white/30 mt-1' }, 'Search someone above to start chatting')
+                ) :
+                h('div', { className: 'space-y-1.5' },
+                  chats.map(chat =>
+                    h('button', {
+                      key: chat.id,
+                      onClick: () => openExistingChat(chat),
+                      className: 'w-full card-gradient rounded-xl p-2.5 flex items-center gap-2.5 active:scale-[0.98] transition text-left'
+                    },
+                      renderAvatar(chat.otherName, 'w-11 h-11', 'text-sm'),
+                      h('div', { className: 'flex-1 min-w-0' },
+                        h('div', { className: 'flex items-center justify-between gap-2' },
+                          h('div', { className: 'text-[12.5px] font-extrabold font-display truncate' }, chat.otherName),
+                          h('div', { className: 'text-[9px] text-white/40 tabular-nums shrink-0' }, timeAgo(chat.lastMessageAt))
+                        ),
+                        h('div', { className: 'text-[10.5px] text-white/50 truncate mt-0.5' },
+                          chat.lastSenderId === uid ? 'You: ' : '',
+                          chat.lastMessage || 'Start a conversation'
+                        )
+                      )
+                    )
+                  )
+                )
+          )
+        ),
+
+        toast && h('div', {
+          className: 'fixed top-16 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl whitespace-nowrap max-w-[90vw] truncate animate-slideDown font-display ' +
+            (toast.kind === 'bad' ? 'bg-gradient-to-b from-[#F87171] to-[#EF4444] text-white' : 'bg-gradient-to-b from-[#FFE566] to-[#FFD60A] text-black')
+        }, toast.msg)
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+  </script>
+</body>
+</html>
