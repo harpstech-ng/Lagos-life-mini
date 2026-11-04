@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#08080B" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Lagos Life Mini — Politics</title>
+  <title>Lagos Life Mini — Politics & BBN</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
@@ -33,8 +33,9 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59,130,246,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,214,10,0.05), transparent); }
+    html { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: contain; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; -webkit-overflow-scrolling: touch; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59,130,246,0.1), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,214,10,0.06), transparent); }
     ::-webkit-scrollbar { width: 0; height: 0; }
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
     .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
@@ -43,23 +44,26 @@
     .card-gold { background: linear-gradient(135deg, rgba(255,214,10,0.12) 0%, rgba(255,184,0,0.04) 100%); border: 1px solid rgba(255,214,10,0.25); box-shadow: 0 8px 30px -10px rgba(255,214,10,0.3); }
     .card-blue { background: linear-gradient(135deg, rgba(59,130,246,0.12) 0%, rgba(29,78,216,0.04) 100%); border: 1px solid rgba(59,130,246,0.25); box-shadow: 0 8px 30px -10px rgba(59,130,246,0.3); }
     .glow-dot { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
-    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
-    .animate-slideUp { animation: slideUp 0.28s cubic-bezier(0.22,1,0.36,1); }
+    @keyframes presidentGlow { 0%,100% { box-shadow: 0 0 20px rgba(255,214,10,0.4); } 50% { box-shadow: 0 0 40px rgba(255,214,10,0.8); } }
+    @keyframes livePulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
     .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .animate-president { animation: presidentGlow 2s ease-in-out infinite; }
+    .animate-live { animation: livePulse 1.5s ease-in-out infinite; }
     .nav-active-pill { background: linear-gradient(180deg, rgba(59,130,246,0.2) 0%, rgba(59,130,246,0.05) 100%); border: 1px solid rgba(59,130,246,0.35); box-shadow: 0 0 25px rgba(59,130,246,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
-    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    .nav-backdrop { background: #08080B; }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
     input { -webkit-user-select: text; user-select: text; }
     input:focus { outline: none; }
-    .bbn-glow { box-shadow: 0 0 30px rgba(59,130,246,0.4); }
-    .president-glow { box-shadow: 0 0 30px rgba(255,214,10,0.4); }
-    
     .marquee { animation: marquee 20s linear infinite; white-space: nowrap; }
     @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+    .presidential-crown { filter: drop-shadow(0 0 10px rgba(255,214,10,0.8)); }
+    .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .position-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 5px; font-size: 8px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; }
   </style>
 </head>
 <body>
@@ -71,7 +75,7 @@
   </script>
 
   <script>
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef, useMemo } = React;
     const h = React.createElement;
 
     const firebaseConfig = {
@@ -88,12 +92,21 @@
     const auth = firebase.auth();
 
     const MAX_E = 100;
-    const ELECTION_COST = 500_000_000; // ₦500M
-    const VOTE_COST = 10_000; // ₦10k
-    const REAL_RIG_COST = 100; // ₦100 Real
-    const POLL_CREATE_COST = 100; // ₦100 Real
+    const CYCLE_MS = 24 * 60 * 60 * 1000;
 
-    const FAKE_NAMES = ['Aje Butler', 'Tunde Cash', 'Bisi Gold', 'Emeka Billions', 'Ngozi Oil', 'Femi G-Wagon', 'Yemi Dubai', 'Ada Mansion'];
+    // Election costs
+    const CANDIDACY_COST_FAKE = 1_000_000_000;
+    const CANDIDACY_COST_REAL = 500;
+    const VOTE_COST_FAKE = 10_000;
+    const RIG_COST_REAL = 100;
+    const POLL_CREATE_COST = 100;
+
+    const BBN_VOTE_COST = 10_000;
+    const BBN_RIG_COST = 100;
+
+    // ✅ Quota-safe config
+    const POLLS_REFRESH_MS = 60000;       // polls auto-refresh every 60s
+    const BROADCASTS_REFRESH_MS = 60000;  // broadcasts auto-refresh every 60s
 
     const NEWS_TICKER = [
       "🚨 EFCC arrests politician for stealing yam from local market",
@@ -101,20 +114,58 @@
       "🎤 President's daughter caught twerking at a rally",
       "💰 Lawmaker sprays ₦500M at his own impeachment party",
       "🚔 Police arrest ballot box snatcher, turns out to be a goat",
-      "🍲 Politician promises to build a jollof rice factory if elected"
+      "🍲 Politician promises to build a jollof rice factory if elected",
+      "🏛️ Lagos State Assembly passes bill to make Agbero a certified profession",
+      "📺 BBN: Housemates fight over last piece of chicken"
     ];
+
+    const BBN_HOUSEMATES_BASE = [
+      { id: 'white', name: 'Whitemoney', emoji: '👨🏾‍🍳' },
+      { id: 'liquor', name: 'Liquorose', emoji: '💃🏾' },
+      { id: 'pere', name: 'Pere', emoji: '🚶🏾‍♂️' },
+      { id: 'angel', name: 'Angel', emoji: '😇' },
+      { id: 'saga', name: 'Saga', emoji: '🏊🏾‍♂️' },
+    ];
+
+    const POSITIONS = [
+      { rank: 1, title: 'President', emoji: '👑', color: '#FFD60A', passive: '₦10M/hr' },
+      { rank: 2, title: 'Vice President', emoji: '🎖️', color: '#C0C0C0', passive: '₦5M/hr' },
+      { rank: 3, title: 'Governor', emoji: '🏛️', color: '#CD7F32', passive: '₦3M/hr' },
+      { rank: 4, title: 'Senator', emoji: '⚖️', color: '#A855F7', passive: '₦1M/hr' },
+    ];
+
+    const getPosition = (rank) => {
+      if (rank === 1) return POSITIONS[0];
+      if (rank === 2) return POSITIONS[1];
+      if (rank === 3) return POSITIONS[2];
+      if (rank <= 10) return POSITIONS[3];
+      return null;
+    };
+
+    const getCycleId = () => Math.floor(Date.now() / CYCLE_MS);
+    const getCycleEnd = () => (getCycleId() + 1) * CYCLE_MS;
+    const formatTimeLeft = (ms) => {
+      if (ms <= 0) return 'ENDED';
+      const hrs = Math.floor(ms / 3600000);
+      const mins = Math.floor((ms % 3600000) / 60000);
+      const secs = Math.floor((ms % 60000) / 1000);
+      return `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+    };
 
     const getCachedData = () => {
       try {
         const cached = localStorage.getItem("lagos_user_data");
-        if (cached) return JSON.parse(cached);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          return Object.assign({}, parsed, { bbnVotes: parsed.bbnVotes || 0, electionCycle: parsed.electionCycle || 0, politicalRank: parsed.politicalRank || '' });
+        }
       } catch (e) {}
       return {
         name: localStorage.getItem("lagos_user_name") || 'Hustler',
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
         taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
-        transactions: [], isPresident: false, bbnVotes: 0
+        transactions: [], bbnVotes: 0, electionCycle: 0, politicalRank: ''
       };
     };
 
@@ -162,35 +213,56 @@
       const [uid, setUid] = useState(null);
       const [authError, setAuthError] = useState(null);
       const [toast, setToast] = useState(null);
-      const [activeTab, setActiveTab] = useState("bbn"); // bbn, election, polls
-      
-      // BBN State
-      const [housemates, setHousemates] = useState([
-        { id: 1, name: 'Whitemoney', votes: 1200, emoji: '👨🏾‍🍳' },
-        { id: 2, name: 'Liquorose', votes: 950, emoji: '💃🏾' },
-        { id: 3, name: 'Pere', votes: 850, emoji: '🚶🏾‍♂️' },
-        { id: 4, name: 'Angel', votes: 700, emoji: '😇' },
-        { id: 5, name: 'Saga', votes: 500, emoji: '🏊🏾‍♂️' }
-      ]);
+      const [activeTab, setActiveTab] = useState("election");
+      const [nowTick, setNowTick] = useState(Date.now());
 
-      // Election State
-      const [president, setPresident] = useState({ name: 'Aje Butler', isMe: false, taxRate: 500 });
-      const [broadcastMsg, setBroadcastMsg] = useState('');
-      
-      // Polls State
+      // ✅ NEW: Page visibility — pauses snapshots when hidden
+      const [isPageVisible, setIsPageVisible] = useState(!document.hidden);
+      useEffect(() => {
+        const handler = () => setIsPageVisible(!document.hidden);
+        document.addEventListener('visibilitychange', handler);
+        return () => document.removeEventListener('visibilitychange', handler);
+      }, []);
+
+      // Election state
+      const [candidates, setCandidates] = useState([]);
+      const [candidacyOpen, setCandidacyOpen] = useState(false);
+      const [partyName, setPartyName] = useState('');
+      const [motto, setMotto] = useState('');
+      const [voteModalCand, setVoteModalCand] = useState(null);
+
+      // Broadcasts — get() based, not onSnapshot
+      const [broadcasts, setBroadcasts] = useState([]);
+      const [broadcastText, setBroadcastText] = useState('');
+      const [broadcastsLoading, setBroadcastsLoading] = useState(false);
+
+      // BBN
+      const [bbnHousemates, setBbnHousemates] = useState(BBN_HOUSEMATES_BASE.map(h => ({ ...h, votes: 0 })));
+
+      // Polls — get() based, not onSnapshot
       const [polls, setPolls] = useState([]);
+      const [pollsLoading, setPollsLoading] = useState(false);
       const [pollModalOpen, setPollModalOpen] = useState(false);
       const [pollTitle, setPollTitle] = useState('');
       const [pollOptA, setPollOptA] = useState('');
       const [pollOptB, setPollOptB] = useState('');
 
-      // Feed
-      const [feed, setFeed] = useState([
-        "📢 BBNaija: Whitemoney dey lead the house with 1,200 votes!",
-        "🗳️ Election season don start. Who go be the next President?"
-      ]);
+      const [feed, setFeed] = useState([]);
       const [tickerMsg, setTickerMsg] = useState(NEWS_TICKER[0]);
 
+      const stateRef = useRef(s);
+      useEffect(() => { stateRef.current = s; }, [s]);
+
+      const cycleId = getCycleId();
+      const cycleEnd = getCycleEnd();
+
+      // Tick
+      useEffect(() => {
+        const iv = setInterval(() => setNowTick(Date.now()), 1000);
+        return () => clearInterval(iv);
+      }, []);
+
+      // Auth
       useEffect(() => {
         let userUnsub = null;
         const authUnsub = auth.onAuthStateChanged((user) => {
@@ -207,9 +279,11 @@
                 const dbData = doc.data();
                 const newData = Object.assign({}, prev, dbData, {
                   transactions: dbData.transactions || [],
-                  isPresident: dbData.isPresident || false,
-                  bbnVotes: dbData.bbnVotes || 0
+                  bbnVotes: dbData.bbnVotes || 0,
+                  electionCycle: dbData.electionCycle || 0,
+                  politicalRank: dbData.politicalRank || ''
                 });
+                stateRef.current = newData;
                 try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
                 return newData;
               });
@@ -219,10 +293,11 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, isVip: false, lastSeen: Date.now(),
-                transactions: [], isPresident: false, bbnVotes: 0
+                transactions: [], bbnVotes: 0, electionCycle: 0, politicalRank: ''
               };
               userRef.set(defaultData).catch(() => {});
               setS(defaultData);
+              stateRef.current = defaultData;
               try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
           }, (error) => console.error("Snapshot error:", error));
@@ -231,15 +306,118 @@
         return () => { authUnsub(); if (userUnsub) userUnsub(); };
       }, []);
 
+      // ✅ ELECTION onSnapshot — only when: page visible + election tab active
       useEffect(() => {
-        const unsub = db.collection("polls").orderBy("createdAt", "desc").limit(10).onSnapshot((snap) => {
-          const p = [];
-          snap.forEach(doc => {
-            p.push(Object.assign({ id: doc.id }, doc.data()));
+        if (!uid) return;
+        if (!isPageVisible) return;
+        if (activeTab !== 'election') return;
+
+        const unsub = db.collection("election_candidates")
+          .where("cycleId", "==", cycleId)
+          .orderBy("votes", "desc")
+          .limit(20)
+          .onSnapshot((snap) => {
+            const cands = [];
+            snap.forEach(doc => cands.push({ id: doc.id, ...doc.data() }));
+            setCandidates(cands);
+          }, (err) => {
+            console.error("Election error:", err);
+            // Fallback: query without orderBy
+            db.collection("election_candidates").where("cycleId", "==", cycleId).limit(20).get().then((fallbackSnap) => {
+              const cands = [];
+              fallbackSnap.forEach(doc => cands.push({ id: doc.id, ...doc.data() }));
+              cands.sort((a, b) => (b.votes || 0) - (a.votes || 0));
+              setCandidates(cands);
+            }).catch(() => {});
           });
-          setPolls(p);
-        }, (e) => console.error("Polls fetch error:", e));
         return () => unsub();
+      }, [uid, cycleId, isPageVisible, activeTab]);
+
+      // ✅ BBN onSnapshot — only when: page visible + bbn tab active
+      useEffect(() => {
+        if (!uid) return;
+        if (!isPageVisible) return;
+        if (activeTab !== 'bbn') return;
+
+        const unsub = db.collection("bbn_housemates")
+          .onSnapshot((snap) => {
+            const arr = BBN_HOUSEMATES_BASE.map(h => ({ ...h, votes: 0 }));
+            snap.forEach(doc => {
+              const d = doc.data();
+              if (d.cycleId === cycleId) {
+                const match = arr.find(a => a.id === doc.id);
+                if (match) match.votes = d.votes || 0;
+              }
+            });
+            setBbnHousemates(arr);
+          }, () => {});
+        return () => unsub();
+      }, [uid, cycleId, isPageVisible, activeTab]);
+
+      // ✅ BROADCASTS — get() based with 60s auto-poll
+      const fetchBroadcasts = async () => {
+        if (!uid) return;
+        setBroadcastsLoading(true);
+        try {
+          const snap = await db.collection("presidential_broadcasts")
+            .orderBy("createdAt", "desc")
+            .limit(10)
+            .get();
+          const arr = [];
+          snap.forEach(doc => arr.push({ id: doc.id, ...doc.data() }));
+          setBroadcasts(arr);
+        } catch (e) {
+          console.error("Broadcasts fetch:", e);
+        } finally {
+          setBroadcastsLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        if (!uid) return;
+        if (!isPageVisible) return;
+        if (activeTab !== 'election') return;
+
+        fetchBroadcasts();
+        const iv = setInterval(fetchBroadcasts, BROADCASTS_REFRESH_MS);
+        return () => clearInterval(iv);
+      }, [uid, isPageVisible, activeTab]);
+
+      // ✅ POLLS — get() based with 60s auto-poll
+      const fetchPolls = async () => {
+        if (!uid) return;
+        setPollsLoading(true);
+        try {
+          const snap = await db.collection("polls")
+            .orderBy("createdAt", "desc")
+            .limit(10)
+            .get();
+          const p = [];
+          snap.forEach(doc => p.push({ id: doc.id, ...doc.data() }));
+          setPolls(p);
+        } catch (e) {
+          console.error("Polls fetch:", e);
+        } finally {
+          setPollsLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        if (!uid) return;
+        if (!isPageVisible) return;
+        if (activeTab !== 'polls') return;
+
+        fetchPolls();
+        const iv = setInterval(fetchPolls, POLLS_REFRESH_MS);
+        return () => clearInterval(iv);
+      }, [uid, isPageVisible, activeTab]);
+
+      // Feed ticker
+      useEffect(() => {
+        const iv = setInterval(() => {
+          setTickerMsg(NEWS_TICKER[Math.floor(Math.random() * NEWS_TICKER.length)]);
+        }, 6000);
+        return () => clearInterval(iv);
       }, []);
 
       useEffect(() => {
@@ -248,145 +426,307 @@
         return () => clearTimeout(t);
       }, [toast]);
 
-      useEffect(() => {
-        const iv = setInterval(() => {
-          setTickerMsg(NEWS_TICKER[Math.floor(Math.random() * NEWS_TICKER.length)]);
-        }, 6000);
-        return () => clearInterval(iv);
-      }, []);
-
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
-      const addFeed = (msg) => setFeed(prev => [msg, ...prev].slice(0, 20));
+      const addFeed = (msg) => setFeed(prev => [{ id: Date.now(), msg }, ...prev].slice(0, 15));
 
-      const updateUser = async (data) => {
-        setS(prev => Object.assign({}, prev, data));
-        if (uid) {
-          await db.collection("users").doc(uid).update(Object.assign({}, data, { lastSeen: Date.now() })).catch(() => {});
+      // Safe cash helpers
+      const addCash = async (delta, extra = {}) => {
+        const cur = stateRef.current;
+        const next = Object.assign({}, cur, { cash: Math.max(0, (cur.cash || 0) + delta), ...extra });
+        stateRef.current = next;
+        setS(next);
+
+        if (!uid) return;
+
+        const updates = { cash: firebase.firestore.FieldValue.increment(delta), lastSeen: Date.now() };
+        Object.keys(extra).forEach(k => {
+          if (k === 'bbnVotes' && extra[k] > 0) {
+            updates[k] = firebase.firestore.FieldValue.increment(extra[k]);
+          } else {
+            updates[k] = extra[k];
+          }
+        });
+        await db.collection("users").doc(uid).update(updates).catch(() => {});
+      };
+
+      const addReal = async (delta, extra = {}) => {
+        const cur = stateRef.current;
+        const next = Object.assign({}, cur, { real: Math.max(0, (cur.real || 0) + delta), ...extra });
+        stateRef.current = next;
+        setS(next);
+
+        if (!uid) return;
+
+        const updates = { real: firebase.firestore.FieldValue.increment(delta), lastSeen: Date.now() };
+        Object.keys(extra).forEach(k => {
+          if (k === 'bbnVotes') updates[k] = firebase.firestore.FieldValue.increment(extra[k]);
+          else updates[k] = extra[k];
+        });
+        await db.collection("users").doc(uid).update(updates).catch(() => {});
+      };
+
+      // ══════════ ELECTION ACTIONS ══════════
+
+      const declareCandidacy = async () => {
+        if (!partyName.trim() || !motto.trim()) return notify('Enter party name and motto', 'bad');
+        
+        const cur = stateRef.current;
+        const isCandidate = candidates.some(c => c.userId === uid);
+        if (isCandidate) return notify('You already declared candidacy this cycle!', 'bad');
+
+        const useReal = (cur.real || 0) >= CANDIDACY_COST_REAL;
+        const useFake = (cur.cash || 0) >= CANDIDACY_COST_FAKE;
+
+        if (!useReal && !useFake) {
+          AudioEngine.error();
+          return notify('Need ₦1B fake OR ₦500 real to run', 'bad');
+        }
+
+        try {
+          if (useReal) {
+            await addReal(-CANDIDACY_COST_REAL);
+          } else {
+            await addCash(-CANDIDACY_COST_FAKE);
+          }
+
+          await db.collection("election_candidates").doc(uid + "_" + cycleId).set({
+            cycleId,
+            userId: uid,
+            name: cur.name || 'Hustler',
+            party: partyName.trim(),
+            motto: motto.trim(),
+            votes: 0,
+            createdAt: Date.now()
+          });
+
+          AudioEngine.election();
+          notify('🗳️ Candidacy declared! Start campaigning!');
+          addFeed('🗳️ ' + (cur.name || 'A hustler') + ' just declared candidacy for ' + partyName + '!');
+          setCandidacyOpen(false);
+          setPartyName('');
+          setMotto('');
+        } catch (e) {
+          console.error(e);
+          AudioEngine.error();
+          notify('Failed to declare candidacy', 'bad');
         }
       };
 
-      const voteBBN = (housemate) => {
-        if (s.cash < VOTE_COST) { AudioEngine.error(); return notify('You need ₦10k to vote 💸', 'bad'); }
-        
-        updateUser({ cash: s.cash - VOTE_COST, bbnVotes: (s.bbnVotes || 0) + 1 });
-        AudioEngine.coin();
-        notify('You voted for ' + housemate.name + '! 🗳️');
-        
-        setHousemates(prev => {
-          const updated = prev.map(hm => 
-            hm.id === housemate.id ? Object.assign({}, hm, { votes: hm.votes + 1 }) : hm
-          );
-          return updated.sort((a, b) => b.votes - a.votes);
-        });
+      const voteCandidate = async (cand, votes = 1) => {
+        const cur = stateRef.current;
+        const cost = VOTE_COST_FAKE * votes;
+        if ((cur.cash || 0) < cost) { AudioEngine.error(); return notify('Need ' + fmt(cost), 'bad'); }
 
-        addFeed('🗳️ ' + (s.name || 'You') + ' just voted for ' + housemate.name + ' in the BBN house!');
+        try {
+          await db.runTransaction(async (t) => {
+            const myRef = db.collection("users").doc(uid);
+            const candRef = db.collection("election_candidates").doc(cand.id);
+
+            const [myDoc] = await Promise.all([t.get(myRef)]);
+            if (!myDoc.exists) throw new Error("User not found");
+            if ((myDoc.data().cash || 0) < cost) throw new Error("Not enough cash");
+
+            t.update(myRef, { cash: firebase.firestore.FieldValue.increment(-cost) });
+            t.update(candRef, { votes: firebase.firestore.FieldValue.increment(votes) });
+          });
+
+          setCandidates(prev => prev.map(c => c.id === cand.id ? { ...c, votes: (c.votes || 0) + votes } : c).sort((a, b) => b.votes - a.votes));
+          setS(prev => Object.assign({}, prev, { cash: (prev.cash || 0) - cost }));
+          stateRef.current = { ...stateRef.current, cash: (stateRef.current.cash || 0) - cost };
+
+          AudioEngine.coin();
+          notify('🗳️ Voted for ' + cand.name);
+          addFeed('🗳️ ' + (cur.name || 'You') + ' voted for ' + cand.name + '!');
+        } catch (e) {
+          console.error(e);
+          AudioEngine.error();
+          notify(e.message || 'Vote failed', 'bad');
+        }
       };
 
-      const rigBBN = (housemate) => {
-        if ((s.real || 0) < REAL_RIG_COST) { AudioEngine.error(); return notify('Need ₦100 Real to rig 💸', 'bad'); }
-        
-        updateUser({ real: s.real - REAL_RIG_COST, bbnVotes: (s.bbnVotes || 0) + 10000 });
-        AudioEngine.election();
-        notify('RIGGED! +10,000 votes for ' + housemate.name + ' 🚨');
-        
-        setHousemates(prev => {
-          const updated = prev.map(hm => 
-            hm.id === housemate.id ? Object.assign({}, hm, { votes: hm.votes + 10000 }) : hm
-          );
-          return updated.sort((a, b) => b.votes - a.votes);
-        });
+      const rigCandidate = async (cand) => {
+        const cur = stateRef.current;
+        if ((cur.real || 0) < RIG_COST_REAL) { AudioEngine.error(); return notify('Need ₦' + RIG_COST_REAL + ' real', 'bad'); }
 
-        addFeed('🚨 ELECTION RIGGED: ' + (s.name || 'You') + ' just bought 10,000 votes for ' + housemate.name + '!');
+        try {
+          await db.runTransaction(async (t) => {
+            const myRef = db.collection("users").doc(uid);
+            const candRef = db.collection("election_candidates").doc(cand.id);
+
+            const [myDoc] = await Promise.all([t.get(myRef)]);
+            if ((myDoc.data().real || 0) < RIG_COST_REAL) throw new Error("Not enough real cash");
+
+            t.update(myRef, { real: firebase.firestore.FieldValue.increment(-RIG_COST_REAL) });
+            t.update(candRef, { votes: firebase.firestore.FieldValue.increment(1000) });
+          });
+
+          setCandidates(prev => prev.map(c => c.id === cand.id ? { ...c, votes: (c.votes || 0) + 1000 } : c).sort((a, b) => b.votes - a.votes));
+          setS(prev => Object.assign({}, prev, { real: (prev.real || 0) - RIG_COST_REAL }));
+          stateRef.current = { ...stateRef.current, real: (stateRef.current.real || 0) - RIG_COST_REAL };
+          
+          AudioEngine.election();
+          notify('🚨 RIGGED! +1,000 votes for ' + cand.name);
+          addFeed('🚨 RIGGED: ' + (cur.name || 'You') + ' bought 1,000 votes for ' + cand.name + '!');
+        } catch (e) {
+          console.error(e);
+          AudioEngine.error();
+          notify(e.message || 'Rigging failed', 'bad');
+        }
       };
 
-      const contestElection = () => {
-        if (s.cash < ELECTION_COST) { AudioEngine.error(); return notify('You need ₦500M to contest 🚫', 'bad'); }
-        
-        updateUser({ cash: s.cash - ELECTION_COST, isPresident: true });
-        setPresident({ name: s.name || 'You', isMe: true, taxRate: 500 });
-        
-        AudioEngine.election();
-        notify('👑 YOU ARE NOW THE PRESIDENT!');
-        addFeed('🚨 BREAKING: ' + (s.name || 'You') + ' just won the Presidential Election!');
-        try { if (navigator.vibrate) navigator.vibrate(50); } catch(e) {}
+      const sendBroadcast = async () => {
+        if (!broadcastText.trim()) return notify('Type a message', 'bad');
+        const cur = stateRef.current;
+        const myCandidate = candidates.find(c => c.userId === uid);
+        if (!myCandidate) return notify('Only candidates can broadcast', 'bad');
+        const myRank = candidates.findIndex(c => c.userId === uid) + 1;
+        if (myRank !== 1) return notify('Only the President can broadcast!', 'bad');
+
+        try {
+          await db.collection("presidential_broadcasts").add({
+            userId: uid,
+            name: cur.name || 'President',
+            msg: broadcastText.trim().slice(0, 200),
+            createdAt: Date.now()
+          });
+          notify('📢 Broadcast sent!');
+          addFeed('📢 PRESIDENT: "' + broadcastText.slice(0, 100) + '"');
+          setBroadcastText('');
+          AudioEngine.election();
+          fetchBroadcasts();
+        } catch (e) {
+          notify('Broadcast failed', 'bad');
+        }
       };
 
-      const rigElection = () => {
-        if ((s.real || 0) < 1000) { AudioEngine.error(); return notify('Need ₦1,000 Real to rig election 🚫', 'bad'); }
-        
-        updateUser({ real: s.real - 1000, isPresident: true });
-        setPresident({ name: s.name || 'You', isMe: true, taxRate: 500 });
-        
-        AudioEngine.election();
-        notify('👑 YOU RIGGED THE ELECTION AND WON!');
-        addFeed('🚨 BREAKING: ' + (s.name || 'You') + ' just rigged the election with real money and is now President!');
+      // ══════════ BBN ACTIONS ══════════
+
+      const voteBBN = async (housemate) => {
+        const cur = stateRef.current;
+        if ((cur.cash || 0) < BBN_VOTE_COST) { AudioEngine.error(); return notify('Need ₦10k to vote', 'bad'); }
+
+        try {
+          await db.runTransaction(async (t) => {
+            const myRef = db.collection("users").doc(uid);
+            const hRef = db.collection("bbn_housemates").doc(housemate.id);
+            const hDoc = await t.get(hRef);
+            
+            if (!hDoc.exists) {
+              t.set(hRef, { cycleId, name: housemate.name, emoji: housemate.emoji, votes: 1 });
+            } else if (hDoc.data().cycleId !== cycleId) {
+              t.set(hRef, { cycleId, name: housemate.name, emoji: housemate.emoji, votes: 1 });
+            } else {
+              t.update(hRef, { votes: firebase.firestore.FieldValue.increment(1) });
+            }
+            t.update(myRef, { cash: firebase.firestore.FieldValue.increment(-BBN_VOTE_COST) });
+          });
+
+          setS(prev => Object.assign({}, prev, { cash: (prev.cash || 0) - BBN_VOTE_COST }));
+          stateRef.current = { ...stateRef.current, cash: (stateRef.current.cash || 0) - BBN_VOTE_COST };
+
+          AudioEngine.coin();
+          notify('🗳️ Voted for ' + housemate.name);
+          addFeed('🗳️ ' + (cur.name || 'You') + ' voted for ' + housemate.name + ' in BBN!');
+        } catch (e) {
+          console.error(e);
+          notify('Vote failed', 'bad');
+        }
       };
 
-      const sendBroadcast = () => {
-        if (!s.isPresident) return;
-        if (!broadcastMsg.trim()) return notify('Type a message first', 'bad');
-        
-        addFeed('📢 PRESIDENTIAL BROADCAST: "' + broadcastMsg + '" — ' + (s.name || 'President'));
-        notify('Broadcast sent to all hustlers! 📢');
-        setBroadcastMsg('');
-        AudioEngine.coin();
+      const rigBBN = async (housemate) => {
+        const cur = stateRef.current;
+        if ((cur.real || 0) < BBN_RIG_COST) { AudioEngine.error(); return notify('Need ₦' + BBN_RIG_COST + ' real', 'bad'); }
+
+        try {
+          await db.runTransaction(async (t) => {
+            const myRef = db.collection("users").doc(uid);
+            const hRef = db.collection("bbn_housemates").doc(housemate.id);
+            const hDoc = await t.get(hRef);
+
+            if (!hDoc.exists) {
+              t.set(hRef, { cycleId, name: housemate.name, emoji: housemate.emoji, votes: 1000 });
+            } else if (hDoc.data().cycleId !== cycleId) {
+              t.set(hRef, { cycleId, name: housemate.name, emoji: housemate.emoji, votes: 1000 });
+            } else {
+              t.update(hRef, { votes: firebase.firestore.FieldValue.increment(1000) });
+            }
+            t.update(myRef, { real: firebase.firestore.FieldValue.increment(-BBN_RIG_COST) });
+          });
+
+          setS(prev => Object.assign({}, prev, { real: (prev.real || 0) - BBN_RIG_COST }));
+          stateRef.current = { ...stateRef.current, real: (stateRef.current.real || 0) - BBN_RIG_COST };
+
+          AudioEngine.election();
+          notify('🚨 RIGGED! +1,000 votes for ' + housemate.name);
+          addFeed('🚨 ' + (cur.name || 'You') + ' rigged BBN for ' + housemate.name + '!');
+        } catch (e) {
+          notify('Rigging failed', 'bad');
+        }
       };
 
-      const increaseTax = () => {
-        if (!s.isPresident) return;
-        const newRate = president.taxRate + 100;
-        setPresident(Object.assign({}, president, { taxRate: newRate }));
-        addFeed('🚨 PRESIDENTIAL DECREE: Agbero Tax don increase to ₦' + newRate + '! Everyone must pay!');
-        notify('Agbero Tax increased to ₦' + newRate + ' 📈');
-        AudioEngine.tap();
-      };
+      // ══════════ POLL ACTIONS ══════════
 
       const createPoll = async () => {
         if (!pollTitle.trim() || !pollOptA.trim() || !pollOptB.trim()) return notify('Fill all fields', 'bad');
-        if ((s.real || 0) < POLL_CREATE_COST) { AudioEngine.error(); return notify('Need ₦100 Real to create poll', 'bad'); }
-        
-        updateUser({ real: s.real - POLL_CREATE_COST });
-        
-        await db.collection("polls").add({
-          title: pollTitle,
-          optA: pollOptA,
-          votesA: 0,
-          optB: pollOptB,
-          votesB: 0,
-          creator: s.name || 'Hustler',
-          createdAt: Date.now()
-        });
+        const cur = stateRef.current;
+        if ((cur.real || 0) < POLL_CREATE_COST) { AudioEngine.error(); return notify('Need ₦' + POLL_CREATE_COST + ' real', 'bad'); }
 
-        setPollModalOpen(false);
-        setPollTitle(''); setPollOptA(''); setPollOptB('');
-        AudioEngine.election();
-        notify('Poll created successfully! 🗳️');
+        try {
+          await addReal(-POLL_CREATE_COST);
+          await db.collection("polls").add({
+            title: pollTitle.trim().slice(0, 100),
+            optA: pollOptA.trim().slice(0, 50),
+            votesA: 0,
+            optB: pollOptB.trim().slice(0, 50),
+            votesB: 0,
+            creator: cur.name || 'Hustler',
+            createdAt: Date.now()
+          });
+
+          setPollModalOpen(false);
+          setPollTitle(''); setPollOptA(''); setPollOptB('');
+          AudioEngine.election();
+          notify('🗳️ Poll created!');
+          fetchPolls();
+        } catch (e) {
+          notify('Poll creation failed', 'bad');
+        }
       };
 
-      const votePoll = async (pollId, option) => {
-        if (s.cash < VOTE_COST) { AudioEngine.error(); return notify('Need ₦10K fake', 'bad'); }
-        updateUser({ cash: s.cash - VOTE_COST });
-        
-        const updateObj = {};
-        if (option === 'A') updateObj.votesA = firebase.firestore.FieldValue.increment(1);
-        else updateObj.votesB = firebase.firestore.FieldValue.increment(1);
-        
-        await db.collection("polls").doc(pollId).update(updateObj).catch(() => {});
-        AudioEngine.coin();
-        notify('Vote cast! 🗳️');
+      const votePoll = async (poll, option) => {
+        const cur = stateRef.current;
+        if ((cur.cash || 0) < VOTE_COST_FAKE) { AudioEngine.error(); return notify('Need ₦10k', 'bad'); }
+
+        try {
+          await addCash(-VOTE_COST_FAKE);
+          const updates = option === 'A'
+            ? { votesA: firebase.firestore.FieldValue.increment(1) }
+            : { votesB: firebase.firestore.FieldValue.increment(1) };
+          await db.collection("polls").doc(poll.id).update(updates);
+          setPolls(prev => prev.map(p => p.id === poll.id ? { ...p, [option === 'A' ? 'votesA' : 'votesB']: (p[option === 'A' ? 'votesA' : 'votesB'] || 0) + 1 } : p));
+          AudioEngine.coin();
+          notify('🗳️ Vote cast!');
+        } catch (e) {
+          notify('Vote failed', 'bad');
+        }
       };
 
-      const rigPoll = async (pollId, option) => {
-        if ((s.real || 0) < REAL_RIG_COST) { AudioEngine.error(); return notify('Need ₦100 Real to rig', 'bad'); }
-        updateUser({ real: s.real - REAL_RIG_COST });
-        
-        const updateObj = {};
-        if (option === 'A') updateObj.votesA = firebase.firestore.FieldValue.increment(1000);
-        else updateObj.votesB = firebase.firestore.FieldValue.increment(1000);
-        
-        await db.collection("polls").doc(pollId).update(updateObj).catch(() => {});
-        AudioEngine.election();
-        notify('Rigged! +1,000 votes 🚨');
+      const rigPoll = async (poll, option) => {
+        const cur = stateRef.current;
+        if ((cur.real || 0) < RIG_COST_REAL) { AudioEngine.error(); return notify('Need ₦100 real', 'bad'); }
+
+        try {
+          await addReal(-RIG_COST_REAL);
+          const updates = option === 'A'
+            ? { votesA: firebase.firestore.FieldValue.increment(1000) }
+            : { votesB: firebase.firestore.FieldValue.increment(1000) };
+          await db.collection("polls").doc(poll.id).update(updates);
+          setPolls(prev => prev.map(p => p.id === poll.id ? { ...p, [option === 'A' ? 'votesA' : 'votesB']: (p[option === 'A' ? 'votesA' : 'votesB'] || 0) + 1000 } : p));
+          AudioEngine.election();
+          notify('🚨 RIGGED! +1,000 votes');
+        } catch (e) {
+          notify('Rig failed', 'bad');
+        }
       };
 
       if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
@@ -400,10 +740,17 @@
         { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
 
+      const president = candidates[0];
+      const myCandidate = candidates.find(c => c.userId === uid);
+      const myRank = myCandidate ? candidates.findIndex(c => c.userId === uid) + 1 : null;
+      const myPosition = myRank ? getPosition(myRank) : null;
+      const timeLeft = cycleEnd - nowTick;
+      const timeLeftStr = formatTimeLeft(timeLeft);
+
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-blue-500 selection:text-black' },
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
           
-          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B] border-b border-white/[0.06]' },
             h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
               h('div', { className: 'flex items-center gap-2 min-w-0' },
                 h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 grid place-items-center text-white font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(59,130,246,0.7)] font-display' }, 'L'),
@@ -413,7 +760,8 @@
                 )
               ),
               h('div', { className: 'flex items-center gap-1.5 shrink-0' },
-                h('div', { className: 'px-2 py-1 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 text-[10px] font-extrabold tabular-nums' }, '🗳️ ' + (s.bbnVotes || 0))
+                myPosition && h('div', { className: 'px-2 py-1 rounded-lg text-[9px] font-black', style: { background: myPosition.color + '30', color: myPosition.color } }, myPosition.emoji + ' ' + myPosition.title),
+                h('div', { className: 'px-2 py-1 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 text-[#22C55E] text-[10px] font-extrabold tabular-nums' }, '₦' + (s.real || 0).toLocaleString())
               )
             )
           ),
@@ -427,106 +775,233 @@
               )
             ),
 
+            // Tabs
             h('div', { className: 'mt-3 flex gap-1 bg-white/[0.04] p-1 rounded-xl border border-white/[0.06]' },
-              ['bbn', 'election', 'polls'].map(tab => 
+              [
+                { id: 'election', label: '🎩 Election' },
+                { id: 'bbn', label: '📺 BBN' },
+                { id: 'polls', label: '🗳️ Polls' }
+              ].map(tab => 
                 h('button', {
-                  key: tab,
-                  onClick: () => { setActiveTab(tab); AudioEngine.tap(); },
-                  className: 'flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ' + 
-                    (activeTab === tab ? 'bg-gradient-to-b from-blue-400 to-blue-600 text-white shadow-md' : 'text-white/50')
-                }, tab === 'bbn' ? '📺 BBN' : tab === 'election' ? '🎩 Election' : '🗳️ Polls')
+                  key: tab.id,
+                  onClick: () => { setActiveTab(tab.id); AudioEngine.tap(); },
+                  className: 'flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ' + 
+                    (activeTab === tab.id ? 'bg-gradient-to-b from-blue-400 to-blue-600 text-white shadow-md' : 'text-white/50')
+                }, tab.label)
               )
             ),
 
+            // ══════════ ELECTION TAB ══════════
+            activeTab === 'election' && h('div', { className: 'mt-4' },
+              
+              h(Card, { className: 'p-3', blue: true },
+                h('div', { className: 'flex items-center justify-between' },
+                  h('div', { className: 'flex items-center gap-2' },
+                    h('span', { className: 'text-lg animate-live' }, '🔴'),
+                    h('div', { className: 'text-[10px] uppercase tracking-widest text-blue-300 font-black' }, 'LIVE ELECTION')
+                  ),
+                  h('div', { className: 'text-[12px] font-black text-white tabular-nums font-display' }, timeLeftStr)
+                ),
+                h('div', { className: 'text-[9px] text-white/50 mt-1' }, 'Cycle ends midnight. Vote, campaign, win!')
+              ),
+
+              president ? h('div', { className: 'mt-3 relative overflow-hidden rounded-2xl p-4 animate-president', style: { background: 'linear-gradient(135deg, rgba(255,214,10,0.2), rgba(255,184,0,0.05))', border: '1px solid rgba(255,214,10,0.4)' } },
+                h('div', { className: 'text-center relative z-10' },
+                  h('div', { className: 'text-5xl mb-1 presidential-crown' }, '👑'),
+                  h('div', { className: 'text-[9px] uppercase tracking-widest text-[#FFD60A]/80 font-black' }, 'PRESIDENT OF LAGOS LIFE'),
+                  h('div', { className: 'text-2xl font-black text-gradient-gold font-display mt-1' }, president.name),
+                  h('div', { className: 'text-[10px] text-white/60 mt-0.5' }, '"' + (president.motto || 'No motto yet') + '"'),
+                  h('div', { className: 'text-[11px] font-black text-[#FFD60A] tabular-nums mt-1' }, (president.votes || 0).toLocaleString() + ' votes')
+                )
+              ) : h(Card, { className: 'p-4 mt-3 text-center' },
+                h('div', { className: 'text-4xl mb-1' }, '🏛️'),
+                h('div', { className: 'text-[13px] font-black text-white' }, 'No candidates yet!'),
+                h('div', { className: 'text-[10px] text-white/50 mt-1' }, 'Be the first to declare candidacy!')
+              ),
+
+              myCandidate ? h(Card, { className: 'p-3 mt-3 border border-blue-500/30' },
+                h('div', { className: 'flex items-center justify-between' },
+                  h('div', null,
+                    h('div', { className: 'text-[9px] uppercase tracking-widest text-blue-300 font-black' }, 'YOUR CANDIDACY'),
+                    h('div', { className: 'text-[13px] font-black text-white mt-0.5' }, '#' + myRank + ' · ' + (myPosition ? myPosition.title : 'Candidate')),
+                    h('div', { className: 'text-[10px] text-white/50' }, (myCandidate.party || 'Independent'))
+                  ),
+                  h('div', { className: 'text-right' },
+                    h('div', { className: 'text-[9px] text-white/40 font-bold' }, 'Votes'),
+                    h('div', { className: 'text-[15px] font-black text-[#FFD60A] tabular-nums' }, (myCandidate.votes || 0).toLocaleString())
+                  )
+                )
+              ) : h('button', {
+                onClick: () => setCandidacyOpen(true),
+                className: 'w-full mt-3 py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[13px] active:scale-95 shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)]'
+              }, '🎩 DECLARE CANDIDACY'),
+
+              myRank === 1 && h(Card, { className: 'p-3 mt-3 border border-[#FFD60A]/40' },
+                h('div', { className: 'text-[10px] uppercase tracking-widest text-[#FFD60A] font-black mb-2' }, '📢 PRESIDENTIAL BROADCAST'),
+                h('div', { className: 'flex gap-2' },
+                  h('input', {
+                    value: broadcastText,
+                    onChange: (e) => setBroadcastText(e.target.value),
+                    placeholder: 'Message to all Lagos...',
+                    maxLength: 200,
+                    className: 'flex-1 rounded-lg bg-white/[0.05] border border-white/10 px-2.5 py-2 text-[11px] font-bold text-white placeholder-white/30'
+                  }),
+                  h('button', {
+                    onClick: sendBroadcast,
+                    className: 'px-3 rounded-lg bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[10px] active:scale-95'
+                  }, 'SEND')
+                )
+              ),
+
+              // Live Leaderboard
+              h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-blue-400 flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse glow-dot' }), 'LIVE') }, '🏆 Live Leaderboard'),
+              h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden' },
+                candidates.length === 0 ?
+                  h('div', { className: 'text-center py-8' },
+                    h('div', { className: 'text-4xl mb-2' }, '🏛️'),
+                    h('div', { className: 'text-[11px] text-white/50 font-bold' }, 'No candidates yet'),
+                    h('div', { className: 'text-[9px] text-white/30 mt-1' }, 'Be the first to declare!')
+                  ) :
+                  candidates.map((c, i) => {
+                    const pos = getPosition(i + 1);
+                    const isMe = c.userId === uid;
+                    return h('div', { key: c.id, className: 'px-3 py-2.5 ' + (isMe ? 'bg-blue-500/10' : '') },
+                      h('div', { className: 'flex items-center gap-2' },
+                        h('div', { className: 'w-6 text-center text-[11px] font-black tabular-nums shrink-0 ' + (i === 0 ? 'text-[#FFD60A] text-[13px]' : i === 1 ? 'text-white/80' : i === 2 ? 'text-[#CD7F32]' : 'text-white/30') },
+                          i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1)
+                        ),
+                        h('div', { className: 'flex-1 min-w-0' },
+                          h('div', { className: 'flex items-center gap-1.5 flex-wrap' },
+                            h('div', { className: 'text-[12px] font-extrabold truncate font-display ' + (isMe ? 'text-[#FFD60A]' : '') },
+                              c.name + (isMe ? ' (You)' : '')
+                            ),
+                            pos && h('span', { className: 'position-badge', style: { background: pos.color + '25', color: pos.color } }, pos.emoji + ' ' + pos.title)
+                          ),
+                          h('div', { className: 'text-[9px] text-white/40 truncate' }, (c.party || 'Independent') + ' · ' + (c.votes || 0).toLocaleString() + ' votes')
+                        ),
+                        h('button', {
+                          onClick: () => setVoteModalCand(c),
+                          className: 'shrink-0 px-2.5 py-1 rounded-md text-[9px] font-black active:scale-95 bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                        }, 'VOTE')
+                      )
+                    );
+                  })
+              ),
+
+              // Broadcasts
+              broadcasts.length > 0 && h(SectionTitle, {
+                right: h('div', { className: 'flex items-center gap-1.5' },
+                  h('span', { className: 'text-[10px] font-bold text-white/30' }, broadcasts.length + ' msgs'),
+                  h('button', {
+                    onClick: fetchBroadcasts,
+                    disabled: broadcastsLoading,
+                    className: 'text-[9px] font-black text-[#FFD60A] bg-white/[0.05] border border-white/10 px-1.5 py-1 rounded-md active:scale-95 disabled:opacity-40'
+                  }, broadcastsLoading ? '⏳' : '🔄')
+                )
+              }, '📢 Presidential Broadcasts'),
+              broadcasts.length > 0 && h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden max-h-64 overflow-y-auto' },
+                broadcasts.map(b =>
+                  h('div', { key: b.id, className: 'px-3 py-2' },
+                    h('div', { className: 'flex items-center gap-1.5 mb-0.5' },
+                      h('span', { className: 'text-[10px]' }, '👑'),
+                      h('span', { className: 'text-[10px] font-black text-[#FFD60A]' }, b.name),
+                      h('span', { className: 'text-[8px] text-white/30' }, '· ' + new Date(b.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
+                    ),
+                    h('div', { className: 'text-[11px] text-white/70 italic' }, '"' + b.msg + '"')
+                  )
+                )
+              )
+            ),
+
+            // ══════════ BBN TAB ══════════
             activeTab === 'bbn' && h('div', { className: 'mt-4' },
               h(Card, { className: 'p-4 text-center', blue: true },
                 h('div', { className: 'text-4xl mb-1' }, '📺'),
-                h('div', { className: 'text-[15px] font-black text-white font-display' }, 'BIG BROTHER LAGOS HOUSE'),
-                h('div', { className: 'text-[10px] text-white/50 mt-1' }, 'Top 5 Housemates. Vote or Rig the election!')
+                h('div', { className: 'text-[15px] font-black text-white font-display' }, 'BIG BROTHER LAGOS'),
+                h('div', { className: 'text-[10px] text-white/50 mt-1' }, 'Top 5 Housemates. Vote or Rig! Cycle: 24h')
               ),
-
               h(SectionTitle, null, 'Housemates'),
               h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden' },
-                housemates.map((hm, i) => 
-                  h('div', { key: hm.id, className: 'px-3 py-2 flex flex-col gap-1.5' },
+                [...bbnHousemates].sort((a, b) => b.votes - a.votes).map((hm, i) =>
+                  h('div', { key: hm.id, className: 'px-3 py-2.5' },
                     h('div', { className: 'flex items-center gap-2' },
-                      h('div', { className: 'w-6 text-center text-[11px] font-black tabular-nums shrink-0 font-display ' +
-                        (i === 0 ? 'text-[#FFD60A]' : 'text-white/30') }, i + 1),
-                      h('div', { className: 'w-8 h-8 rounded-full bg-white/[0.06] grid place-items-center text-sm shrink-0' }, hm.emoji),
+                      h('div', { className: 'w-6 text-center text-[11px] font-black tabular-nums shrink-0 ' + (i === 0 ? 'text-[#FFD60A]' : 'text-white/30') }, i + 1),
+                      h('div', { className: 'w-9 h-9 rounded-full bg-white/[0.06] grid place-items-center text-base shrink-0' }, hm.emoji),
                       h('div', { className: 'flex-1 min-w-0' },
                         h('div', { className: 'text-[12px] font-extrabold truncate font-display' }, hm.name),
-                        h('div', { className: 'text-[9px] text-white/40 tabular-nums' }, hm.votes.toLocaleString() + ' votes')
+                        h('div', { className: 'text-[9px] text-white/40 tabular-nums' }, (hm.votes || 0).toLocaleString() + ' votes')
                       )
                     ),
-                    h('div', { className: 'grid grid-cols-2 gap-1.5 ml-8' },
-                      h('button', { onClick: () => voteBBN(hm), className: 'py-1 rounded-lg bg-blue-500/20 text-blue-400 text-[9px] font-black active:scale-95 transition' }, 'Vote (₦10K)'),
-                      h('button', { onClick: () => rigBBN(hm), className: 'py-1 rounded-lg bg-red-500/20 text-red-400 text-[9px] font-black active:scale-95 transition' }, 'Rig (₦100)')
+                    h('div', { className: 'grid grid-cols-2 gap-1.5 mt-2 ml-8' },
+                      h('button', { onClick: () => voteBBN(hm), className: 'py-1.5 rounded-lg bg-blue-500/20 text-blue-400 text-[9px] font-black active:scale-95 border border-blue-500/30' }, 'VOTE ₦10K'),
+                      h('button', { onClick: () => rigBBN(hm), className: 'py-1.5 rounded-lg bg-red-500/20 text-red-400 text-[9px] font-black active:scale-95 border border-red-500/30' }, 'RIG ₦100')
                     )
                   )
                 )
               )
             ),
 
-            activeTab === 'election' && h('div', { className: 'mt-4' },
-              h(Card, { className: 'p-5 text-center', gold: true },
-                h('div', { className: 'text-5xl mb-2' }, '🎩'),
-                h('div', { className: 'text-[10px] uppercase tracking-widest text-[#FFD60A]/70 font-bold' }, 'Current President'),
-                h('div', { className: 'text-2xl font-black text-gradient-gold font-display mt-1' }, president.name),
-                h('div', { className: 'text-[10px] text-white/50 mt-1' }, 'Agbero Tax Rate: ₦' + president.taxRate)
-              ),
-
-              !s.isPresident && h('div', { className: 'mt-4 space-y-2' },
-                h(Card, { className: 'p-4' },
-                  h('button', { onClick: contestElection, className: 'w-full py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black font-black text-[13px] active:scale-95 transition' }, 'Contest Election (₦500M Fake)'),
-                  h('button', { onClick: rigElection, className: 'w-full mt-2 py-3 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 font-black text-[13px] active:scale-95 transition' }, 'Rig Election (₦1,000 Real)')
-                )
-              ),
-
-              s.isPresident && h('div', { className: 'mt-4' },
-                h(Card, { className: 'p-4 border border-[#FFD60A]/40' },
-                  h('div', { className: 'text-[12px] font-black text-[#FFD60A] mb-2' }, '👑 Presidential Powers'),
-                  h('div', { className: 'flex gap-2 mb-2' },
-                    h('input', { value: broadcastMsg, onChange: (e) => setBroadcastMsg(e.target.value), placeholder: 'Broadcast...', className: 'flex-1 rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2 text-[11px]' }),
-                    h('button', { onClick: sendBroadcast, className: 'px-3 rounded-xl bg-[#FFD60A] text-black font-black text-[10px]' }, 'Send')
-                  ),
-                  h('button', { onClick: increaseTax, className: 'w-full py-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 text-[10px] font-bold' }, 'Increase Tax')
-                )
-              )
-            ),
-
+            // ══════════ POLLS TAB ══════════
             activeTab === 'polls' && h('div', { className: 'mt-4' },
-              h('button', { onClick: () => setPollModalOpen(true), className: 'w-full py-3 rounded-xl bg-gradient-to-b from-blue-400 to-blue-600 text-white font-black text-[13px] shadow-[0_8px_24px_-8px_rgba(59,130,246,0.7)] active:scale-95 transition mb-4' }, '➕ Create Custom Poll (₦100 Real)'),
-              
-              polls.length === 0 ? h('div', { className: 'text-center text-white/40 text-[11px] py-6' }, 'No polls yet. Be the first to create one!') :
-              h('div', { className: 'space-y-3' },
-                polls.map(p => 
-                  h(Card, { key: p.id, className: 'p-4' },
-                    h('div', { className: 'text-[12px] font-black text-white mb-1' }, p.title),
-                    h('div', { className: 'text-[9px] text-white/40 mb-3' }, 'By ' + p.creator),
-                    h('div', { className: 'space-y-2' },
-                      h('div', { className: 'flex items-center justify-between bg-white/[0.03] p-2 rounded-lg' },
-                        h('div', { className: 'text-[11px] font-bold' }, p.optA + ' (' + p.votesA + ')'),
-                        h('div', { className: 'flex gap-1' },
-                          h('button', { onClick: () => votePoll(p.id, 'A'), className: 'px-2 py-1 rounded bg-blue-500/20 text-blue-400 text-[9px] font-bold' }, 'Vote'),
-                          h('button', { onClick: () => rigPoll(p.id, 'A'), className: 'px-2 py-1 rounded bg-red-500/20 text-red-400 text-[9px] font-bold' }, 'Rig')
-                        )
-                      ),
-                      h('div', { className: 'flex items-center justify-between bg-white/[0.03] p-2 rounded-lg' },
-                        h('div', { className: 'text-[11px] font-bold' }, p.optB + ' (' + p.votesB + ')'),
-                        h('div', { className: 'flex gap-1' },
-                          h('button', { onClick: () => votePoll(p.id, 'B'), className: 'px-2 py-1 rounded bg-blue-500/20 text-blue-400 text-[9px] font-bold' }, 'Vote'),
-                          h('button', { onClick: () => rigPoll(p.id, 'B'), className: 'px-2 py-1 rounded bg-red-500/20 text-red-400 text-[9px] font-bold' }, 'Rig')
+              h('button', { onClick: () => setPollModalOpen(true), className: 'w-full py-3 rounded-xl bg-gradient-to-b from-blue-400 to-blue-600 text-white font-black text-[13px] shadow-[0_8px_24px_-8px_rgba(59,130,246,0.7)] active:scale-95 mb-4' }, '➕ CREATE POLL (₦100 Real)'),
+              h('div', { className: 'flex items-center justify-between mb-2' },
+                h('div', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Live Polls'),
+                h('button', {
+                  onClick: fetchPolls,
+                  disabled: pollsLoading,
+                  className: 'text-[10px] font-black text-[#FFD60A] bg-white/[0.05] border border-white/10 px-2 py-1 rounded-md active:scale-95 disabled:opacity-40'
+                }, pollsLoading ? '⏳' : '🔄 Refresh')
+              ),
+              polls.length === 0 ?
+                h('div', { className: 'text-center py-10' },
+                  h('div', { className: 'text-4xl mb-2' }, '🗳️'),
+                  h('div', { className: 'text-[11px] text-white/50 font-bold' }, 'No polls yet'),
+                  h('div', { className: 'text-[9px] text-white/30 mt-1' }, 'Be the first to create one!')
+                ) :
+                h('div', { className: 'space-y-3' },
+                  polls.map(p => {
+                    const total = (p.votesA || 0) + (p.votesB || 0);
+                    const pctA = total > 0 ? Math.round(((p.votesA || 0) / total) * 100) : 50;
+                    const pctB = 100 - pctA;
+                    return h(Card, { key: p.id, className: 'p-3' },
+                      h('div', { className: 'text-[12px] font-black text-white mb-0.5' }, p.title),
+                      h('div', { className: 'text-[9px] text-white/40 mb-2' }, 'By ' + p.creator),
+                      h('div', { className: 'space-y-2' },
+                        h('div', null,
+                          h('div', { className: 'flex items-center justify-between mb-1' },
+                            h('div', { className: 'text-[11px] font-bold' }, p.optA + ' (' + pctA + '%)'),
+                            h('div', { className: 'text-[9px] text-white/40 tabular-nums' }, (p.votesA || 0).toLocaleString())
+                          ),
+                          h('div', { className: 'h-1.5 rounded-full bg-white/10 overflow-hidden mb-1' },
+                            h('div', { className: 'h-full bg-blue-500 rounded-full', style: { width: pctA + '%' } })
+                          ),
+                          h('div', { className: 'flex gap-1' },
+                            h('button', { onClick: () => votePoll(p, 'A'), className: 'flex-1 py-1 rounded bg-blue-500/20 text-blue-400 text-[9px] font-black' }, 'VOTE ₦10K'),
+                            h('button', { onClick: () => rigPoll(p, 'A'), className: 'flex-1 py-1 rounded bg-red-500/20 text-red-400 text-[9px] font-black' }, 'RIG ₦100')
+                          )
+                        ),
+                        h('div', null,
+                          h('div', { className: 'flex items-center justify-between mb-1' },
+                            h('div', { className: 'text-[11px] font-bold' }, p.optB + ' (' + pctB + '%)'),
+                            h('div', { className: 'text-[9px] text-white/40 tabular-nums' }, (p.votesB || 0).toLocaleString())
+                          ),
+                          h('div', { className: 'h-1.5 rounded-full bg-white/10 overflow-hidden mb-1' },
+                            h('div', { className: 'h-full bg-red-500 rounded-full', style: { width: pctB + '%' } })
+                          ),
+                          h('div', { className: 'flex gap-1' },
+                            h('button', { onClick: () => votePoll(p, 'B'), className: 'flex-1 py-1 rounded bg-blue-500/20 text-blue-400 text-[9px] font-black' }, 'VOTE ₦10K'),
+                            h('button', { onClick: () => rigPoll(p, 'B'), className: 'flex-1 py-1 rounded bg-red-500/20 text-red-400 text-[9px] font-black' }, 'RIG ₦100')
+                          )
                         )
                       )
-                    )
-                  )
+                    );
+                  })
                 )
-              )
             ),
 
-            h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-blue-400 flex items-center gap-1.5' }, h('span', { className: 'w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse glow-dot' }), 'LIVE') }, 'Political Feed'),
-            h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden min-h-[150px]' },
-              feed.map((f, i) => h('div', { key: i, className: 'px-4 py-3 text-[11px] text-white/70 animate-slideDown' }, f))
+            feed.length > 0 && h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-blue-400' }, 'LIVE') }, 'Political Feed'),
+            feed.length > 0 && h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden max-h-72 overflow-y-auto' },
+              feed.map(f => h('div', { key: f.id, className: 'px-3 py-2.5 text-[11px] text-white/70 animate-slideDown' }, f.msg))
             )
           ),
 
@@ -545,13 +1020,87 @@
             )
           ),
 
+          candidacyOpen && h('div', { className: 'fixed inset-0 z-[110] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setCandidacyOpen(false) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-blue-500/40 rounded-3xl p-5 animate-popIn' },
+              h('div', { className: 'text-center mb-3' },
+                h('div', { className: 'text-5xl mb-1' }, '🎩'),
+                h('div', { className: 'text-[15px] font-black text-blue-400 font-display' }, 'DECLARE CANDIDACY'),
+                h('div', { className: 'text-[10px] text-white/50 mt-1' }, 'Run for President of Lagos Life')
+              ),
+              h('div', { className: 'space-y-2.5' },
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Party Name'),
+                  h('input', {
+                    value: partyName,
+                    onChange: (e) => setPartyName(e.target.value),
+                    placeholder: 'e.g. Aje Party of Nigeria',
+                    maxLength: 30,
+                    className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[12px] font-bold text-white placeholder-white/30'
+                  })
+                ),
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Campaign Motto'),
+                  h('input', {
+                    value: motto,
+                    onChange: (e) => setMotto(e.target.value),
+                    placeholder: 'e.g. Money for everybody!',
+                    maxLength: 80,
+                    className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[12px] font-bold text-white placeholder-white/30'
+                  })
+                ),
+                h('div', { className: 'px-3 py-2 rounded-xl bg-blue-500/10 border border-blue-500/30' },
+                  h('div', { className: 'text-[10px] text-white/60' }, 'Cost'),
+                  h('div', { className: 'flex gap-2 mt-1' },
+                    h('div', { className: 'text-[11px] font-black text-[#FFD60A]' }, fmt(CANDIDACY_COST_FAKE) + ' fake'),
+                    h('span', { className: 'text-white/30' }, 'or'),
+                    h('div', { className: 'text-[11px] font-black text-[#22C55E]' }, '₦' + CANDIDACY_COST_REAL + ' real')
+                  )
+                )
+              ),
+              h('div', { className: 'mt-4 space-y-2' },
+                h('button', {
+                  onClick: declareCandidacy,
+                  disabled: !partyName.trim() || !motto.trim(),
+                  className: 'w-full py-3 rounded-xl bg-gradient-to-b from-blue-400 to-blue-600 text-white font-black text-[12px] active:scale-95 disabled:opacity-40'
+                }, '🚀 DECLARE & RUN'),
+                h('button', { onClick: () => setCandidacyOpen(false), className: 'w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 text-[11px] font-bold' }, 'Cancel')
+              )
+            )
+          ),
+
+          voteModalCand && h('div', { className: 'fixed inset-0 z-[110] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setVoteModalCand(null) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-blue-500/40 rounded-3xl p-5 animate-popIn text-center' },
+              h('div', { className: 'text-5xl mb-1' }, '🗳️'),
+              h('div', { className: 'text-[15px] font-black text-white font-display' }, voteModalCand.name),
+              h('div', { className: 'text-[10px] text-white/50 mt-0.5' }, voteModalCand.party || 'Independent'),
+              h('div', { className: 'text-[11px] text-[#FFD60A] font-black mt-1' }, (voteModalCand.votes || 0).toLocaleString() + ' votes'),
+              h('div', { className: 'mt-4 space-y-2' },
+                h('button', {
+                  onClick: async () => { await voteCandidate(voteModalCand, 1); setVoteModalCand(null); },
+                  className: 'w-full py-3 rounded-xl bg-gradient-to-b from-blue-400 to-blue-600 text-white font-black text-[12px] active:scale-95'
+                }, '🗳️ VOTE (₦10K)'),
+                h('button', {
+                  onClick: async () => { await voteCandidate(voteModalCand, 10); setVoteModalCand(null); },
+                  className: 'w-full py-3 rounded-xl bg-gradient-to-b from-[#A855F7] to-[#7C3AED] text-white font-black text-[12px] active:scale-95'
+                }, '🔥 SUPER VOTE ×10 (₦100K)'),
+                h('button', {
+                  onClick: async () => { await rigCandidate(voteModalCand); setVoteModalCand(null); },
+                  className: 'w-full py-3 rounded-xl bg-gradient-to-b from-red-500 to-red-700 text-white font-black text-[12px] active:scale-95'
+                }, '🚨 RIG +1,000 (₦100 Real)'),
+                h('button', { onClick: () => setVoteModalCand(null), className: 'w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 text-[11px] font-bold' }, 'Cancel')
+              )
+            )
+          ),
+
           pollModalOpen && h('div', { className: 'fixed inset-0 z-50 grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/80 backdrop-blur-sm', onClick: () => setPollModalOpen(false) }),
             h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-blue-500/30 rounded-3xl p-5 animate-popIn' },
-              h('div', { className: 'text-[14px] font-black text-blue-400 mb-4 text-center' }, 'CREATE POLL'),
-              h('input', { value: pollTitle, onChange: (e) => setPollTitle(e.target.value), placeholder: 'Question (e.g. Who is the richest?)', className: 'w-full mb-2 rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[12px]' }),
-              h('input', { value: pollOptA, onChange: (e) => setPollOptA(e.target.value), placeholder: 'Option A', className: 'w-full mb-2 rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[12px]' }),
-              h('input', { value: pollOptB, onChange: (e) => setPollOptB(e.target.value), placeholder: 'Option B', className: 'w-full mb-4 rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[12px]' }),
+              h('div', { className: 'text-[14px] font-black text-blue-400 mb-3 text-center' }, 'CREATE POLL'),
+              h('input', { value: pollTitle, onChange: (e) => setPollTitle(e.target.value), placeholder: 'Question', maxLength: 100, className: 'w-full mb-2 rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[12px]' }),
+              h('input', { value: pollOptA, onChange: (e) => setPollOptA(e.target.value), placeholder: 'Option A', maxLength: 50, className: 'w-full mb-2 rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[12px]' }),
+              h('input', { value: pollOptB, onChange: (e) => setPollOptB(e.target.value), placeholder: 'Option B', maxLength: 50, className: 'w-full mb-4 rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[12px]' }),
               h('div', { className: 'flex gap-2' },
                 h('button', { onClick: () => setPollModalOpen(false), className: 'flex-1 py-2.5 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 text-[11px] font-bold' }, 'Cancel'),
                 h('button', { onClick: createPoll, className: 'flex-1 py-2.5 rounded-xl bg-gradient-to-b from-blue-400 to-blue-600 text-white text-[11px] font-black' }, 'Create (₦100)')
