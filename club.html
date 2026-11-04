@@ -35,7 +35,8 @@
 
   <style>
     * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
-    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: none; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    html { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; overscroll-behavior-y: contain; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; -webkit-overflow-scrolling: touch; }
     body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,214,10,0.08), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(255,184,0,0.05), transparent); }
     ::-webkit-scrollbar { width: 0; height: 0; }
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
@@ -56,12 +57,14 @@
     .animate-streakPulse { animation: streakPulse 0.8s ease-in-out infinite; }
     .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
-    .nav-backdrop { background: linear-gradient(to top, #08080B 70%, rgba(8,8,11,0.85) 90%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    .nav-backdrop { background: #08080B; }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
     .hero-grid { background-image: linear-gradient(rgba(255,214,10,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,214,10,0.04) 1px, transparent 1px); background-size: 22px 22px; -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); mask-image: radial-gradient(ellipse 90% 80% at 50% 50%, #000 40%, transparent 100%); }
     .neon-text { text-shadow: 0 0 5px #FFD60A, 0 0 10px #FFD60A, 0 0 20px #FFD60A; }
     .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
     .spin-wheel { background: conic-gradient(from 0deg, #FFD60A, #FFB800, #F87171, #A855F7, #3B82F6, #22C55E, #FFD60A); }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
 <body>
@@ -91,8 +94,11 @@
 
     const MAX_E = 100;
     const ENERGY_MS = 5 * 60 * 1000;
+    const SETTINGS_REFRESH_MS = 5 * 60 * 1000;
+    const ENERGY_SYNC_MS = 60000;
+    const LEADERBOARD_CACHE_MS = 5 * 60 * 1000;
+    const SONGS_CACHE_MS = 60000;
 
-    // 🎯 NEW PRICING — Real ₦ → Fake cash
     const REGULAR_ACTIONS = [
       { id: 'bail',    label: 'Bail a Hustler', price: 100, emoji: '⛓️', desc: 'Free your guy from cell. He go owe you.', multiplier: 5_000_000_000, color: 'from-slate-400/25 to-slate-700/10' },
       { id: 'bouncer', label: 'Bribe Bouncer',  price: 150, emoji: '🦍', desc: 'Enter VIP without queue. No wahala.', multiplier: 1_000_000_000_000, color: 'from-red-400/25 to-red-700/10' },
@@ -109,7 +115,6 @@
       { id: 'shutdown', label: 'Shutdown Club',    price: 5000, emoji: '🚨', desc: 'The ultimate flex. Game over.', multiplier: 1_200_000_000_000, color: 'from-red-500/30 to-orange-700/20' },
     ];
 
-    // 💎 BALLER LEVEL SYSTEM
     const LEVELS = [
       { name: 'Ajebutter',    xp: 0,     bonus: 0,    emoji: '🥱' },
       { name: 'Club Rat',     xp: 500,   bonus: 0.05, emoji: '🐀' },
@@ -125,15 +130,16 @@
       return idx;
     };
 
-    // 🔥 COMBO STREAK
     const STREAK_WINDOW_MS = 8000;
     const MAX_STREAK = 10;
     const STREAK_BONUS_PER = 0.05;
 
-    // 🎰 SPIN
     const SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-    const SPIN_MIN = 1e12;   // ₦1T
-    const SPIN_MAX = 100e12; // ₦100T
+    const SPIN_MIN = 1e12;
+    const SPIN_MAX = 100e12;
+
+    const SONG_PRICE = 200;
+    const GIFT_MIN = 100;
 
     const NAMES = ['Tunde', 'Chidi', 'Bisi', 'Emeka', 'Ngozi', 'Femi', 'Yemi', 'Ada', 'Kelechi', 'Seyi', 'Ifeanyi', 'Amaka', 'Bola', 'Dapo', 'Funke', 'Uche', 'Tope', 'Zainab', 'Musa', 'Chioma', 'Segun', 'Kemi', 'Olamide', 'Davido', 'Wizkid', 'Burna'];
 
@@ -179,7 +185,7 @@
         cash: 25000, real: 0, energy: MAX_E,
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-        xp: 0, lastSpinAt: 0, flexHistory: [],
+        xp: 0, lastSpinAt: 0, flexHistory: [], clubSpent: 0,
         transactions: []
       };
     };
@@ -245,7 +251,8 @@
         error: () => { init(); tone(220, 0.15, "sawtooth", sfxGain, 0, 0.25); tone(165, 0.25, "sawtooth", sfxGain, 0.1, 0.25); },
         purchase: () => { init(); tone(523, 0.1, "triangle", sfxGain, 0, 0.2); tone(659, 0.1, "triangle", sfxGain, 0.07, 0.2); tone(783, 0.2, "triangle", sfxGain, 0.14, 0.2); },
         jackpot: () => { init(); [523,659,783,1046,1318].forEach((f,i) => tone(f, 0.25, "triangle", sfxGain, i*0.06, 0.25)); },
-        scam: () => { init(); tone(330, 0.15, "sawtooth", sfxGain, 0, 0.3); tone(220, 0.2, "sawtooth", sfxGain, 0.12, 0.3); tone(165, 0.3, "sawtooth", sfxGain, 0.28, 0.3); }
+        scam: () => { init(); tone(330, 0.15, "sawtooth", sfxGain, 0, 0.3); tone(220, 0.2, "sawtooth", sfxGain, 0.12, 0.3); tone(165, 0.3, "sawtooth", sfxGain, 0.28, 0.3); },
+        song: () => { init(); tone(659, 0.12, "sine", sfxGain, 0, 0.2); tone(783, 0.12, "sine", sfxGain, 0.1, 0.2); tone(1046, 0.2, "sine", sfxGain, 0.2, 0.2); }
       };
     })();
 
@@ -266,19 +273,67 @@
       const [feed, setFeed] = useState(() => Array.from({ length: 8 }, makeFeed));
       const [musicOn, setMusicOn] = useState(false);
 
-      // 🆕 streak + cooldown states
       const [streak, setStreak] = useState(0);
       const [lastPurchaseAt, setLastPurchaseAt] = useState(0);
 
       const [paystackKey, setPaystackKey] = useState("");
       const [topUpAmount, setTopUpAmount] = useState(1000);
 
+      // 🆕 Password reminder
+      const [showPasswordReminder, setShowPasswordReminder] = useState(false);
+
+      // 🆕 Leaderboard
+      const [leaders, setLeaders] = useState([]);
+      const [leadersLastFetch, setLeadersLastFetch] = useState(0);
+      const leadersFetchRef = useRef(false);
+
+      // 🆕 Song requests
+      const [songModal, setSongModal] = useState(false);
+      const [songTitle, setSongTitle] = useState('');
+      const [songMessage, setSongMessage] = useState('');
+      const [songs, setSongs] = useState([]);
+      const [songsLastFetch, setSongsLastFetch] = useState(0);
+      const songsFetchRef = useRef(false);
+
+      // 🆕 Gift modal
+      const [giftModal, setGiftModal] = useState(false);
+      const [giftTo, setGiftTo] = useState('');
+      const [giftAmt, setGiftAmt] = useState('');
+      const [giftNote, setGiftNote] = useState('');
+      const [isGifting, setIsGifting] = useState(false);
+      const [verifiedPlayer, setVerifiedPlayer] = useState(null);
+      const [isVerifying, setIsVerifying] = useState(false);
+
+      // Refs
+      const stateRef = useRef(s);
+      const lastSyncedEnergyRef = useRef({ energy: -1, lastEnergy: 0 });
+
+      useEffect(() => { stateRef.current = s; }, [s]);
+
+      // Settings check (no listener)
+      useEffect(() => {
+        let cancelled = false;
+        const check = async () => {
+          try {
+            await db.collection("settings").doc("game").get();
+            // (No maintenance check needed on club — game handles it elsewhere)
+          } catch (e) {}
+        };
+        check();
+        const iv = setInterval(check, SETTINGS_REFRESH_MS);
+        return () => { cancelled = true; clearInterval(iv); };
+      }, []);
+
+      // Paystack config
       useEffect(() => {
         fetch('/api/config')
           .then(res => res.json())
           .then(data => setPaystackKey(data.publicKey))
-          .catch(err => console.error("Could not load Paystack config", err));
+          .catch(err => console.error("Paystack config error", err));
+      }, []);
 
+      // ✅ Auth + ONE onSnapshot (own user only)
+      useEffect(() => {
         let userUnsub = null;
         const authUnsub = auth.onAuthStateChanged((user) => {
           if (!user) { window.location.href = '/login.html'; return; }
@@ -286,6 +341,19 @@
 
           const userId = user.uid;
           setUid(userId);
+
+          // Password check
+          const hasPassword = (user.providerData || []).some(p => p.providerId === 'password');
+          if (!hasPassword) {
+            const lastShown = parseInt(localStorage.getItem('pw_reminder_club') || '0', 10);
+            const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+            if (lastShown < dayAgo) {
+              setTimeout(() => {
+                setShowPasswordReminder(true);
+                localStorage.setItem('pw_reminder_club', String(Date.now()));
+              }, 5000);
+            }
+          }
 
           const userRef = db.collection("users").doc(userId);
           userUnsub = userRef.onSnapshot((doc) => {
@@ -297,6 +365,7 @@
                   xp: typeof dbData.xp === 'number' ? dbData.xp : 0,
                   lastSpinAt: typeof dbData.lastSpinAt === 'number' ? dbData.lastSpinAt : 0,
                   flexHistory: Array.isArray(dbData.flexHistory) ? dbData.flexHistory : [],
+                  clubSpent: typeof dbData.clubSpent === 'number' ? dbData.clubSpent : 0,
                 });
                 try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
                 return newData;
@@ -307,7 +376,7 @@
                 cash: 25000, real: 0, energy: MAX_E,
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [], street: {},
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
-                xp: 0, lastSpinAt: 0, flexHistory: [],
+                xp: 0, lastSpinAt: 0, flexHistory: [], clubSpent: 0,
                 transactions: []
               };
               userRef.set(defaultData).catch(() => {});
@@ -320,19 +389,21 @@
         return () => { authUnsub(); if (userUnsub) userUnsub(); };
       }, []);
 
+      // Music unlock
       useEffect(() => {
         const unlock = () => { if (!musicOn) { AudioEngine.startMusic(); setMusicOn(true); } };
         window.addEventListener("pointerdown", unlock, { once: true });
         return () => window.removeEventListener("pointerdown", unlock);
       }, [musicOn]);
 
+      // Toast auto-dismiss
       useEffect(() => {
         if (!toast) return;
         const t = setTimeout(() => setToast(null), 2600);
         return () => clearTimeout(t);
       }, [toast]);
 
-      // 🔥 clear streak after window expires
+      // Clear streak when window expires
       useEffect(() => {
         if (!lastPurchaseAt) return;
         const remaining = STREAK_WINDOW_MS - (Date.now() - lastPurchaseAt);
@@ -343,7 +414,7 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      // ⚡ Energy regen
+      // ✅ Energy regen — local only (NO writes)
       useEffect(() => {
         if (!uid) return;
         const iv = setInterval(() => {
@@ -354,19 +425,106 @@
             if (gained <= 0) return p;
             const energy = Math.min(MAX_E, p.energy + gained);
             const lastEnergy = energy >= MAX_E ? nowT : p.lastEnergy + gained * ENERGY_MS;
-            db.collection("users").doc(uid).update({ energy, lastEnergy }).catch(() => {});
-            return Object.assign({}, p, { energy, lastEnergy });
+            const next = Object.assign({}, p, { energy, lastEnergy });
+            stateRef.current = next;
+            return next;
           });
         }, 1000);
         return () => clearInterval(iv);
       }, [uid]);
 
+      // ✅ Energy sync — 60s, only when changed
+      useEffect(() => {
+        if (!uid) return;
+        const sync = async () => {
+          const cur = stateRef.current;
+          const last = lastSyncedEnergyRef.current;
+          if (cur.energy === last.energy && cur.lastEnergy === last.lastEnergy) return;
+          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
+          try {
+            await db.collection("users").doc(uid).update({
+              energy: cur.energy,
+              lastEnergy: cur.lastEnergy,
+              lastSeen: Date.now()
+            });
+          } catch (e) {}
+        };
+        const iv = setInterval(sync, ENERGY_SYNC_MS);
+        return () => clearInterval(iv);
+      }, [uid]);
+
+      // Flush on hidden / unload
+      useEffect(() => {
+        if (!uid) return;
+        const flush = () => {
+          const cur = stateRef.current;
+          const last = lastSyncedEnergyRef.current;
+          if (cur.energy === last.energy && cur.lastEnergy === last.lastEnergy) return;
+          db.collection("users").doc(uid).update({
+            energy: cur.energy,
+            lastEnergy: cur.lastEnergy,
+            lastSeen: Date.now()
+          }).catch(() => {});
+        };
+        const handleVis = () => { if (document.visibilityState === 'hidden') flush(); };
+        document.addEventListener('visibilitychange', handleVis);
+        window.addEventListener('beforeunload', flush);
+        return () => {
+          document.removeEventListener('visibilitychange', handleVis);
+          window.removeEventListener('beforeunload', flush);
+        };
+      }, [uid]);
+
+      // Feed rotation
       useEffect(() => {
         const iv = setInterval(() => {
           setFeed((f) => [makeFeed(), ...f].slice(0, 40));
         }, 5000);
         return () => clearInterval(iv);
       }, []);
+
+      // ✅ Fetch leaderboard (cached 5 min)
+      useEffect(() => {
+        if (!uid) return;
+        const fetch = async () => {
+          if (leadersFetchRef.current) return;
+          if (Date.now() - leadersLastFetch < LEADERBOARD_CACHE_MS) return;
+          leadersFetchRef.current = true;
+          try {
+            const snap = await db.collection("users").orderBy("clubSpent", "desc").limit(3).get();
+            const arr = [];
+            snap.forEach(doc => {
+              const d = doc.data();
+              arr.push({ id: doc.id, name: d.name || 'Hustler', spent: d.clubSpent || 0 });
+            });
+            setLeaders(arr);
+            setLeadersLastFetch(Date.now());
+          } catch (e) { console.error("Leaders fetch:", e); }
+          finally { leadersFetchRef.current = false; }
+        };
+        const t = setTimeout(fetch, 1500);
+        return () => clearTimeout(t);
+      }, [uid]);
+
+      // ✅ Fetch songs (cached 1 min)
+      const fetchSongs = async (force = false) => {
+        if (!uid) return;
+        if (!force && Date.now() - songsLastFetch < SONGS_CACHE_MS) return;
+        if (songsFetchRef.current) return;
+        songsFetchRef.current = true;
+        try {
+          const snap = await db.collection("club_songs").orderBy("createdAt", "desc").limit(10).get();
+          const arr = [];
+          snap.forEach(doc => arr.push({ id: doc.id, ...doc.data() }));
+          setSongs(arr);
+          setSongsLastFetch(Date.now());
+        } catch (e) { console.error("Songs fetch:", e); }
+        finally { songsFetchRef.current = false; }
+      };
+
+      useEffect(() => {
+        if (uid) fetchSongs();
+      }, [uid]);
 
       if (authError) return h('div', { className: 'min-h-screen flex items-center justify-center flex-col gap-3 p-6 text-center text-red-500' }, h('div', { className: 'text-4xl' }, '⚠️'), h('div', { className: 'font-bold' }, 'Auth Error'), h('div', { className: 'text-sm' }, authError));
 
@@ -385,17 +543,11 @@
         const levelIdx = getLevelIdx(s.xp || 0);
         const levelBonus = LEVELS[levelIdx].bonus;
 
-        // 🎲 Lucky roll
         const roll = Math.random();
         let luckMult = 1;
         let luckMsg = '';
-        if (roll < 0.05) {
-          luckMult = 0.25;
-          luckMsg = '😭 SCAMMED!';
-        } else if (roll < 0.20) {
-          luckMult = 2;
-          luckMsg = '🎉 2X LUCKY!';
-        }
+        if (roll < 0.05) { luckMult = 0.25; luckMsg = '😭 SCAMMED!'; }
+        else if (roll < 0.20) { luckMult = 2; luckMsg = '🎉 2X LUCKY!'; }
 
         const baseGain = item.price * item.multiplier;
         const totalMult = (1 + streakBonus + levelBonus) * luckMult;
@@ -403,12 +555,8 @@
 
         const newXp = (s.xp || 0) + item.price;
         const newHistory = [{
-          id: now,
-          label: item.label,
-          emoji: item.emoji,
-          price: item.price,
-          gain: fakeGain,
-          t: now,
+          id: now, label: item.label, emoji: item.emoji,
+          price: item.price, gain: fakeGain, t: now,
         }, ...(s.flexHistory || [])].slice(0, 10);
 
         setStreak(newStreak);
@@ -420,9 +568,11 @@
             cash: p.cash + fakeGain,
             clout: (p.clout || 0) + item.price,
             xp: newXp,
+            clubSpent: (p.clubSpent || 0) + item.price,
             flexHistory: newHistory,
             goldName: item.id === 'gold' ? true : p.goldName,
           });
+          stateRef.current = next;
           try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
           return next;
         });
@@ -434,7 +584,6 @@
           me: true,
         }].concat(f).slice(0, 40));
 
-        // Audio/vibration feedback
         if (luckMult < 1) AudioEngine.scam();
         else if (luckMult > 1) AudioEngine.jackpot();
         else AudioEngine.purchase();
@@ -447,20 +596,30 @@
         notify(msg, luckMult < 1 ? 'bad' : 'good');
 
         if (uid) {
+          const cur = stateRef.current;
+          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
           const updates = {
             real: firebase.firestore.FieldValue.increment(-item.price),
             cash: firebase.firestore.FieldValue.increment(fakeGain),
             clout: firebase.firestore.FieldValue.increment(item.price),
             xp: firebase.firestore.FieldValue.increment(item.price),
+            clubSpent: firebase.firestore.FieldValue.increment(item.price),
             flexHistory: newHistory,
+            energy: cur.energy,
+            lastEnergy: cur.lastEnergy,
             lastSeen: Date.now()
           };
           if (item.id === 'gold') updates.goldName = true;
           await db.collection("users").doc(uid).update(updates).catch(() => {});
+          // Refresh leaderboard after a purchase
+          setTimeout(() => {
+            leadersFetchRef.current = false;
+            setLeadersLastFetch(0);
+          }, 1000);
         }
       };
 
-      // 🎰 Daily lucky spin
+      // 🎰 Spin
       const doSpin = () => {
         const now = Date.now();
         const elapsed = now - (s.lastSpinAt || 0);
@@ -471,28 +630,145 @@
           AudioEngine.error();
           return notify('⏳ Spin ready in ' + hrs + 'h ' + mins + 'm', 'bad');
         }
-
         const reward = Math.floor(SPIN_MIN + Math.random() * (SPIN_MAX - SPIN_MIN));
-
         setS((p) => {
-          const next = Object.assign({}, p, {
-            cash: p.cash + reward,
-            lastSpinAt: now,
-          });
-          try { localStorage.setItem("lagos_user_data", JSON.stringify(next)); } catch(e) {}
+          const next = Object.assign({}, p, { cash: p.cash + reward, lastSpinAt: now });
+          stateRef.current = next;
           return next;
         });
-
         AudioEngine.jackpot();
         try { if (navigator.vibrate) navigator.vibrate([40,30,40,30,60]); } catch(e) {}
         notify('🎰 LUCKY SPIN: +' + fmt(reward) + ' 🎉', 'good');
-
         if (uid) {
+          const cur = stateRef.current;
+          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
           db.collection("users").doc(uid).update({
             cash: firebase.firestore.FieldValue.increment(reward),
             lastSpinAt: now,
+            energy: cur.energy,
+            lastEnergy: cur.lastEnergy,
             lastSeen: Date.now()
           }).catch(() => {});
+        }
+      };
+
+      // 🎵 Request Song
+      const requestSong = async () => {
+        if ((s.real || 0) < SONG_PRICE) { AudioEngine.error(); return notify('Need ₦' + SONG_PRICE + ' real balance', 'bad'); }
+        if (!songTitle.trim()) return notify('Enter song title', 'bad');
+        try {
+          const now = Date.now();
+          const songData = {
+            userId: uid,
+            userName: s.name || 'Hustler',
+            title: songTitle.trim().slice(0, 50),
+            message: songMessage.trim().slice(0, 80),
+            createdAt: now
+          };
+          const batch = db.batch();
+          const songRef = db.collection("club_songs").doc();
+          batch.set(songRef, songData);
+          // Deduct real balance
+          const cur = stateRef.current;
+          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
+          batch.update(db.collection("users").doc(uid), {
+            real: firebase.firestore.FieldValue.increment(-SONG_PRICE),
+            energy: cur.energy,
+            lastEnergy: cur.lastEnergy,
+            lastSeen: now
+          });
+          await batch.commit();
+
+          setS((p) => {
+            const next = Object.assign({}, p, { real: p.real - SONG_PRICE });
+            stateRef.current = next;
+            return next;
+          });
+          setSongs(prev => [songData, ...prev].slice(0, 10));
+          setSongsLastFetch(now);
+
+          // Add to feed
+          setFeed(f => [{
+            id: ++feedSeq,
+            text: '🎵 ' + (s.name || 'Hustler') + ' requested: "' + songData.title + '"' + (songData.message ? ' — ' + songData.message : ''),
+            t: Date.now(),
+            me: true
+          }].concat(f).slice(0, 40));
+
+          AudioEngine.song();
+          notify('🎵 Song requested! DJ go play am soon', 'good');
+          setSongModal(false);
+          setSongTitle('');
+          setSongMessage('');
+        } catch (e) {
+          console.error(e);
+          AudioEngine.error();
+          notify('Request failed', 'bad');
+        }
+      };
+
+      // 🎁 Gift a drink
+      const verifyGiftTarget = async () => {
+        if (!giftTo.trim()) return setVerifiedPlayer(null);
+        setIsVerifying(true);
+        try {
+          const snap = await db.collection("users").where("name", "==", giftTo.trim()).limit(1).get();
+          if (!snap.empty && snap.docs[0].id !== uid) {
+            const d = snap.docs[0].data();
+            setVerifiedPlayer({ id: snap.docs[0].id, name: d.name, bank: d.bankName || 'Bank' });
+          } else {
+            setVerifiedPlayer(null);
+          }
+        } catch (e) { setVerifiedPlayer(null); }
+        setIsVerifying(false);
+      };
+
+      const sendGift = async () => {
+        if (isGifting) return;
+        const amt = Math.floor(Number(giftAmt));
+        if (!verifiedPlayer) return notify('Verify the player name first', 'bad');
+        if (!amt || amt < GIFT_MIN) return notify('Min gift na ₦' + GIFT_MIN, 'bad');
+        if (amt > s.cash) return notify('You no get that money 💸', 'bad');
+
+        setIsGifting(true);
+        try {
+          const now = Date.now();
+          const giftId = now.toString();
+          const sentTx = { id: giftId, type: 'sent', name: verifiedPlayer.name, amount: amt, date: now, note: giftNote || 'Gift from club' };
+          const receiveTx = { id: giftId, type: 'received', name: s.name, amount: amt, date: now, note: giftNote || 'Gift from club' };
+
+          await db.runTransaction(async (t) => {
+            const buyerRef = db.collection("users").doc(uid);
+            const recipientRef = db.collection("users").doc(verifiedPlayer.id);
+            const buyerDoc = await t.get(buyerRef);
+            if (buyerDoc.data().cash < amt) throw new Error("Not enough cash");
+            t.update(buyerRef, {
+              cash: firebase.firestore.FieldValue.increment(-amt),
+              transactions: firebase.firestore.FieldValue.arrayUnion(sentTx)
+            });
+            t.update(recipientRef, {
+              cash: firebase.firestore.FieldValue.increment(amt),
+              transactions: firebase.firestore.FieldValue.arrayUnion(receiveTx)
+            });
+          });
+
+          setFeed(f => [{
+            id: ++feedSeq,
+            text: '🍾 ' + (s.name || 'Hustler') + ' gifted ' + verifiedPlayer.name + ' ' + fmt(amt) + (giftNote ? ' — "' + giftNote + '"' : ''),
+            t: Date.now(),
+            me: true
+          }].concat(f).slice(0, 40));
+
+          AudioEngine.jackpot();
+          notify('🍾 Gift sent to ' + verifiedPlayer.name, 'good');
+          setGiftModal(false);
+          setGiftTo(''); setGiftAmt(''); setGiftNote(''); setVerifiedPlayer(null);
+        } catch (e) {
+          console.error(e);
+          AudioEngine.error();
+          notify(e.message || 'Gift failed', 'bad');
+        } finally {
+          setIsGifting(false);
         }
       };
 
@@ -525,7 +801,6 @@
         { id: 'more', label: 'More', icon: '⋯', href: 'more.html' },
       ];
 
-      // 🏆 Level info
       const lvlIdx = getLevelIdx(s.xp || 0);
       const curLevel = LEVELS[lvlIdx];
       const nextLevel = LEVELS[lvlIdx + 1];
@@ -533,14 +808,12 @@
         ? Math.max(0, Math.min(1, ((s.xp || 0) - curLevel.xp) / (nextLevel.xp - curLevel.xp)))
         : 1;
 
-      // 🎰 Spin cooldown
       const spinElapsed = Date.now() - (s.lastSpinAt || 0);
       const spinReady = spinElapsed >= SPIN_COOLDOWN_MS;
       const spinRemainMs = Math.max(0, SPIN_COOLDOWN_MS - spinElapsed);
       const spinHrs = Math.floor(spinRemainMs / 3600000);
       const spinMins = Math.floor((spinRemainMs % 3600000) / 60000);
 
-      // 🔥 Streak active?
       const streakActive = streak > 0 && (Date.now() - lastPurchaseAt) < STREAK_WINDOW_MS;
 
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
@@ -548,10 +821,10 @@
 
           h('button', {
             onClick: () => { const on = AudioEngine.toggle(); setMusicOn(on); },
-            className: 'music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition backdrop-blur'
+            className: 'music-toggle w-10 h-10 rounded-full bg-white/[0.08] border border-white/15 grid place-items-center active:scale-95 transition'
           }, h('span', { className: 'text-base' }, musicOn ? '🔊' : '🔇')),
 
-          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/85 backdrop-blur-xl border-b border-white/[0.06]' },
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B] border-b border-white/[0.06]' },
             h('div', { className: 'px-4 py-2.5 flex items-center justify-between gap-2' },
               h('div', { className: 'flex items-center gap-2 min-w-0' },
                 h('div', { className: 'w-9 h-9 rounded-xl bg-gradient-to-br from-[#FFE566] to-[#FFB800] grid place-items-center text-black font-black text-sm shrink-0 shadow-[0_4px_16px_-4px_rgba(255,214,10,0.7)] font-display' }, 'L'),
@@ -569,13 +842,12 @@
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
 
-            // Banner
             h('div', { className: 'mt-3 p-3 rounded-xl bg-gradient-to-r from-green-500/20 to-[#FFD60A]/20 border border-green-500/30 text-center animate-popIn' },
               h('div', { className: 'text-[12px] font-black text-white' }, '💸 ₦100 REAL = ₦500 BILLION FAKE! 💸'),
               h('div', { className: 'text-[10px] text-white/70 mt-0.5 font-bold' }, '₦100→500B · ₦500→500T · ₦1k→1000T · ₦5k→6000T 🇳🇬')
             ),
 
-            // 💎 LEVEL BAR (Feature 3)
+            // Level bar
             h(Card, { className: 'p-3 mt-3' },
               h('div', { className: 'flex items-center justify-between mb-1.5' },
                 h('div', { className: 'flex items-center gap-1.5' },
@@ -597,7 +869,7 @@
               )
             ),
 
-            // Real Balance card
+            // Real balance
             h(Card, { className: 'relative overflow-hidden p-4 mt-3 hero-grid', gold: true },
               h('div', { className: 'absolute -top-16 -right-12 w-48 h-48 rounded-full bg-[#22C55E]/20 blur-3xl pointer-events-none' }),
               h('div', { className: 'relative' },
@@ -607,7 +879,6 @@
                 ),
                 h('div', { className: 'text-3xl font-black text-[#22C55E] tabular-nums font-display mt-1' }, fmtReal(s.real || 0)),
                 h('div', { className: 'text-[10px] text-white/45 mt-1.5' }, 'Pay real money for flex moves inside club'),
-
                 h('div', { className: 'mt-3 pt-3 border-t border-white/[0.08]' },
                   h('div', { className: 'flex gap-2' },
                     h('div', { className: 'flex-1 flex items-center bg-white/[0.05] border border-white/10 rounded-xl px-3' },
@@ -626,7 +897,7 @@
               )
             ),
 
-            // 🎰 LUCKY SPIN (Feature 2)
+            // Spin
             h(Card, { className: 'p-3 mt-3 relative overflow-hidden', gold: spinReady },
               h('div', { className: 'absolute -top-6 -right-6 w-24 h-24 rounded-full bg-[#A855F7]/25 blur-2xl pointer-events-none' }),
               h('div', { className: 'relative flex items-center gap-3' },
@@ -649,6 +920,34 @@
                       ? 'bg-gradient-to-b from-[#A855F7] to-[#7C3AED] text-white shadow-[0_4px_14px_-4px_rgba(168,85,247,0.6)]'
                       : 'bg-white/[0.06] text-white/25 border border-white/[0.08]')
                 }, spinReady ? 'SPIN' : 'WAIT')
+              )
+            ),
+
+            // 🎵 + 🎁 Quick Actions
+            h('div', { className: 'grid grid-cols-2 gap-2.5 mt-3' },
+              h('button', {
+                onClick: () => setSongModal(true),
+                className: 'card-gradient rounded-2xl p-3 text-left active:scale-[0.98] transition relative overflow-hidden'
+              },
+                h('div', { className: 'flex items-center gap-2.5' },
+                  h('div', { className: 'text-2xl' }, '🎵'),
+                  h('div', { className: 'flex-1 min-w-0' },
+                    h('div', { className: 'text-[11px] font-black font-display' }, 'Request Song'),
+                    h('div', { className: 'text-[9px] text-white/50 font-bold' }, '₦' + SONG_PRICE + ' real')
+                  )
+                )
+              ),
+              h('button', {
+                onClick: () => setGiftModal(true),
+                className: 'card-gradient rounded-2xl p-3 text-left active:scale-[0.98] transition relative overflow-hidden'
+              },
+                h('div', { className: 'flex items-center gap-2.5' },
+                  h('div', { className: 'text-2xl' }, '🍾'),
+                  h('div', { className: 'flex-1 min-w-0' },
+                    h('div', { className: 'text-[11px] font-black font-display' }, 'Gift Drink'),
+                    h('div', { className: 'text-[9px] text-white/50 font-bold' }, 'Send fake cash')
+                  )
+                )
               )
             ),
 
@@ -702,7 +1001,43 @@
               })
             ),
 
-            // 📜 FLEX HISTORY (Feature 5)
+            // 🏆 Leaderboard
+            leaders.length > 0 && h(React.Fragment, null,
+              h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A]' }, 'TOP 3 SPENDERS') }, '🏆 Club Leaderboard'),
+              h(Card, { className: 'p-2 space-y-1.5' },
+                leaders.map((l, i) => {
+                  const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
+                  const isMe = l.id === uid;
+                  return h('div', {
+                    key: l.id,
+                    className: 'flex items-center gap-2.5 px-2 py-2 rounded-xl ' + (isMe ? 'bg-[#FFD60A]/15 border border-[#FFD60A]/30' : 'bg-white/[0.03]')
+                  },
+                    h('div', { className: 'text-xl shrink-0' }, medal),
+                    h('div', { className: 'flex-1 min-w-0' },
+                      h('div', { className: 'text-[12px] font-extrabold font-display truncate' }, l.name + (isMe ? ' (You)' : '')),
+                      h('div', { className: 'text-[10px] text-white/40 font-bold' }, 'Spent: ₦' + l.spent + ' real')
+                    )
+                  );
+                })
+              )
+            ),
+
+            // 🎵 Recent Song Requests
+            songs.length > 0 && h(React.Fragment, null,
+              h(SectionTitle, { right: h('button', { onClick: () => fetchSongs(true), className: 'text-[10px] font-black text-[#FFD60A] bg-white/[0.05] border border-white/10 px-2 py-1 rounded-md active:scale-95' }, '🔄 Refresh') }, '🎵 Recent Requests'),
+              h(Card, { className: 'divide-y divide-white/[0.05] overflow-hidden' },
+                songs.slice(0, 5).map(song => h('div', { key: song.id, className: 'px-3.5 py-2.5 flex items-start gap-2.5' },
+                  h('div', { className: 'text-lg shrink-0' }, '🎵'),
+                  h('div', { className: 'flex-1 min-w-0' },
+                    h('div', { className: 'text-[11px] font-extrabold truncate font-display' }, '"' + song.title + '"'),
+                    h('div', { className: 'text-[9.5px] text-white/50' }, 'by ' + song.userName + (song.message ? ' — "' + song.message + '"' : '')),
+                    h('div', { className: 'text-[9px] text-white/30 mt-0.5' }, timeAgo(song.createdAt))
+                  )
+                ))
+              )
+            ),
+
+            // Flex history
             (s.flexHistory && s.flexHistory.length > 0) && h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-white/30' }, 'Last 10') }, 'Flex History'),
             (s.flexHistory && s.flexHistory.length > 0) && h(Card, { className: 'divide-y divide-white/[0.05] max-h-64 overflow-y-auto' },
               s.flexHistory.map((f) => h('div', { key: f.id, className: 'px-3.5 py-2 flex items-center gap-2.5 text-[11px] animate-slideInRight' },
@@ -729,7 +1064,7 @@
                 h('p', { className: 'text-[10.5px] text-white/50 leading-relaxed' },
                   'Buy fast to build a ',
                   h('span', { className: 'text-orange-400 font-bold' }, 'Combo Streak'),
-                  ' (up to +45%), level up for permanent bonuses, and roll the dice — 15% of purchases trigger a ',
+                  ' (up to +45%), level up for permanent bonuses, request songs, gift drinks, and roll the dice — 15% of purchases trigger a ',
                   h('span', { className: 'text-[#22C55E] font-bold' }, '2X LUCKY'),
                   ' but 5% get scammed! 🎲'
                 )
@@ -749,6 +1084,138 @@
                   h('span', { className: 'text-[8.5px] font-extrabold tracking-wide font-display' }, n.label)
                 );
               })
+            )
+          ),
+
+          // 🎵 SONG REQUEST MODAL
+          songModal && h('div', { className: 'fixed inset-0 z-[80] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => setSongModal(false) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#A855F7]/40 rounded-3xl p-5 animate-popIn' },
+              h('div', { className: 'text-center mb-3' },
+                h('div', { className: 'text-4xl mb-2' }, '🎵'),
+                h('div', { className: 'text-[15px] font-black tracking-widest text-[#A855F7] font-display' }, 'REQUEST A SONG'),
+                h('p', { className: 'text-[11px] text-white/50 mt-1' }, 'Pay ₦' + SONG_PRICE + ' real → your song plays in the club')
+              ),
+              h('div', { className: 'space-y-2.5' },
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Song Title'),
+                  h('input', {
+                    value: songTitle,
+                    onChange: (e) => setSongTitle(e.target.value),
+                    placeholder: 'e.g. Ojuelegba by Wizkid',
+                    maxLength: 50,
+                    className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[13px] font-bold text-white placeholder-white/30 focus:border-[#A855F7]/50 transition'
+                  })
+                ),
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Dedication (optional)'),
+                  h('input', {
+                    value: songMessage,
+                    onChange: (e) => setSongMessage(e.target.value),
+                    placeholder: 'e.g. For my babe wey dey shake am',
+                    maxLength: 80,
+                    className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[13px] font-bold text-white placeholder-white/30 focus:border-[#A855F7]/50 transition'
+                  })
+                )
+              ),
+              h('div', { className: 'mt-4 space-y-2' },
+                h('button', {
+                  onClick: requestSong,
+                  disabled: !songTitle.trim() || (s.real || 0) < SONG_PRICE,
+                  className: 'w-full py-3 rounded-xl bg-gradient-to-b from-[#A855F7] to-[#7C3AED] text-white text-[12px] font-black active:scale-95 disabled:opacity-40'
+                }, '🎵 PAY ₦' + SONG_PRICE + ' & REQUEST'),
+                h('button', { onClick: () => setSongModal(false), className: 'w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 text-[11px] font-bold' }, 'Cancel')
+              )
+            )
+          ),
+
+          // 🎁 GIFT MODAL
+          giftModal && h('div', { className: 'fixed inset-0 z-[80] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => !isGifting && setGiftModal(false) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/40 rounded-3xl p-5 animate-popIn' },
+              h('div', { className: 'text-center mb-3' },
+                h('div', { className: 'text-4xl mb-2' }, '🍾'),
+                h('div', { className: 'text-[15px] font-black tracking-widest text-[#FFD60A] font-display' }, 'GIFT A DRINK'),
+                h('p', { className: 'text-[11px] text-white/50 mt-1' }, 'Send fake cash to another hustler')
+              ),
+              h('div', { className: 'space-y-2.5' },
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Recipient Name'),
+                  h('input', {
+                    value: giftTo,
+                    onChange: (e) => { setGiftTo(e.target.value); setVerifiedPlayer(null); },
+                    onBlur: verifyGiftTarget,
+                    disabled: isGifting,
+                    placeholder: 'Type their in-game name',
+                    className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[13px] font-bold text-white placeholder-white/30 focus:border-[#FFD60A]/50 transition disabled:opacity-50'
+                  }),
+                  isVerifying && h('div', { className: 'text-[10px] text-[#FFD60A] mt-1 animate-pulse' }, 'Verifying...'),
+                  verifiedPlayer && h('div', { className: 'mt-1.5 px-3 py-2 rounded-lg bg-[#22C55E]/15 border border-[#22C55E]/30 flex items-center gap-1.5' },
+                    h('span', { className: 'text-[#22C55E] text-sm' }, '✅'),
+                    h('div', { className: 'text-[11px] text-[#22C55E] font-black font-display' }, verifiedPlayer.name)
+                  ),
+                  giftTo && !verifiedPlayer && !isVerifying && h('div', { className: 'text-[10px] text-red-400 mt-1' }, 'Player not found')
+                ),
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Amount (₦)'),
+                  h('input', {
+                    type: 'tel',
+                    inputMode: 'numeric',
+                    value: giftAmt,
+                    onChange: (e) => setGiftAmt(e.target.value.replace(/\D/g, '').slice(0, 15)),
+                    disabled: isGifting,
+                    placeholder: 'Min ₦' + GIFT_MIN,
+                    className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[15px] font-black text-white placeholder-white/30 focus:border-[#FFD60A]/50 transition tabular-nums disabled:opacity-50'
+                  }),
+                  giftAmt && Number(giftAmt) > 0 && h('div', {
+                    className: 'mt-2 px-3 py-2 rounded-xl flex items-center justify-between border ' +
+                      (Number(giftAmt) > s.cash ? 'bg-red-500/15 border-red-500/40' : 'bg-[#FFD60A]/10 border-[#FFD60A]/30')
+                  },
+                    h('span', { className: 'text-[10px] uppercase tracking-widest font-bold text-white/50' }, 'You are sending'),
+                    h('span', { className: 'font-black tabular-nums font-display text-[14px] ' + (Number(giftAmt) > s.cash ? 'text-red-400' : 'text-[#FFD60A]') },
+                      fmt(Math.floor(Number(giftAmt))))
+                  )
+                ),
+                h('div', null,
+                  h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Note (optional)'),
+                  h('input', {
+                    value: giftNote,
+                    onChange: (e) => setGiftNote(e.target.value),
+                    disabled: isGifting,
+                    placeholder: 'e.g. Happy birthday!',
+                    maxLength: 40,
+                    className: 'mt-1 w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2.5 text-[13px] font-bold text-white placeholder-white/30 focus:border-[#FFD60A]/50 transition disabled:opacity-50'
+                  })
+                ),
+                h('div', { className: 'text-[10px] text-white/40 tabular-nums' }, 'Available: ' + fmt(s.cash))
+              ),
+              h('div', { className: 'mt-4 space-y-2' },
+                h('button', {
+                  onClick: sendGift,
+                  disabled: isGifting || !verifiedPlayer || !giftAmt || Number(giftAmt) < GIFT_MIN || Number(giftAmt) > s.cash,
+                  className: 'w-full py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black text-[12px] font-black active:scale-95 disabled:opacity-40'
+                }, isGifting ? 'Sending...' : '🍾 SEND GIFT'),
+                h('button', { onClick: () => setGiftModal(false), disabled: isGifting, className: 'w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 text-[11px] font-bold disabled:opacity-40' }, 'Cancel')
+              )
+            )
+          ),
+
+          // 🔐 PASSWORD REMINDER
+          showPasswordReminder && h('div', { className: 'fixed inset-0 z-[95] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setShowPasswordReminder(false) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/40 rounded-3xl p-5 animate-popIn text-center' },
+              h('div', { className: 'text-5xl mb-2' }, '🔐'),
+              h('div', { className: 'text-[15px] font-black tracking-widest text-[#FFD60A] font-display' }, 'ADD A PASSWORD'),
+              h('p', { className: 'text-[11px] text-white/60 mt-2 leading-relaxed' },
+                'You signed in with Google. Add a password so you fit still login with email if Google login ever fails.'
+              ),
+              h('div', { className: 'mt-4 space-y-2' },
+                h('button', {
+                  onClick: () => { window.location.href = '/index.html'; },
+                  className: 'w-full py-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black text-[12px] font-black active:scale-95'
+                }, '🔒 Set Password Now'),
+                h('button', { onClick: () => setShowPasswordReminder(false), className: 'w-full py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white/60 text-[11px] font-bold' }, 'Later')
+              )
             )
           ),
 
