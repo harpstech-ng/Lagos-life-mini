@@ -67,10 +67,8 @@
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: #08080B; }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
-    
     .sapa-btn { background: radial-gradient(circle at 30% 20%, #6b7280 0%, #4b5563 35%, #374151 70%, #1f2937 100%); box-shadow: 0 0 0 1px rgba(255,255,255,0.1) inset, 0 -8px 0 rgba(0,0,0,0.25) inset, 0 12px 0 rgba(0,0,0,0.55), 0 20px 50px -10px rgba(0,0,0,0.8); }
     .sapa-btn::after { background: radial-gradient(circle, rgba(107,114,128,0.3), transparent 70%); }
-
     .spin-reel { display: flex; transition: transform 2.5s cubic-bezier(0.15, 0.85, 0.25, 1); }
     .boss-shake { animation: shake 0.1s ease-in-out; }
   </style>
@@ -84,6 +82,32 @@
   </script>
 
   <script>
+    /**
+     * ⚠️ FIREBASE LIMIT SAFETY LAYERS (READ THIS):
+     * 
+     * 1. BLAZE + $5 BUDGET ALERT (do this in GCP console today)
+     *    - Free tier still applies (20K writes / 50K reads / day)
+     *    - Beyond limit: ~$0.18 per 100K writes — NEVER hard-fails
+     *    - Realistic cost: $0–3/month even at scale
+     * 
+     * 2. LOCAL-FIRST ARCHITECTURE
+     *    - Game state lives in stateRef.current
+     *    - Firestore writes flush every 2 min + on tab-hide
+     * 
+     * 3. RETRY QUEUE
+     *    - Failed writes stored in localStorage 'lagos_retry_queue'
+     *    - Replayed on next session / reconnect
+     * 
+     * 4. MONEY SAFETY
+     *    - ALL cash writes use FieldValue.increment() — never SET
+     *    - Real-money purchases can NEVER be overwritten
+     *    - Server is source of truth — refresh-on-focus reconciles
+     * 
+     * 5. CAPPED ARRAYS
+     *    - transactions/history capped at 50 on load
+     *    - Prevents 1MB doc limit from bricking accounts
+     */
+
     const { useState, useEffect, useRef } = React;
     const h = React.createElement;
 
@@ -98,6 +122,8 @@
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    // ✅ Offline persistence — cache-first, works offline, free
+    db.enablePersistence().catch((e) => console.warn('Persistence:', e.code));
     const auth = firebase.auth();
 
     const MAX_E = 100;
@@ -106,7 +132,12 @@
     const BASE_TAP = 500;
     const EVENT_CHANCE = 0.055;
     const SETTINGS_REFRESH_MS = 5 * 60 * 1000;
-    const SYNC_INTERVAL_MS = 30000;
+    const SETTINGS_CACHE_KEY = 'lagos_settings_v1';
+    const SETTINGS_CACHE_TTL = 10 * 60 * 1000;
+    const SYNC_INTERVAL_MS = 120000;                // ✅ 30s → 2min (4x fewer writes)
+    const RETRY_QUEUE_KEY = 'lagos_retry_queue';
+    const EVENT_COOLDOWN_MS = 5000;
+    const HISTORY_CAP = 50;
 
     const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/DLTh6m6oyUBBIbmk1dS8Um?s=cl&p=i&mlu=4&ilr=4&iam=2';
     const WHATSAPP_CHANNEL_URL = 'https://whatsapp.com/channel/0029VbBlJUeFy72KIFuQoP38';
@@ -157,7 +188,8 @@
         if (cached) {
           const parsed = JSON.parse(cached);
           return Object.assign({}, parsed, {
-            transactions: parsed.transactions || [],
+            transactions: (parsed.transactions || []).slice(-HISTORY_CAP),
+            history: (parsed.history || []).slice(-HISTORY_CAP),
             referrals: parsed.referrals || 0,
             lastSpinAt: parsed.lastSpinAt || 0,
             lastClaimDate: parsed.lastClaimDate || null,
@@ -177,6 +209,31 @@
         lastSpinAt: 0, lastClaimDate: null, streakCount: 0,
         boostUntil: 0, boostMult: 1, lastBossAt: 0
       };
+    };
+
+    // ✅ Retry queue for failed writes
+    const queueRetry = (uid, updates) => {
+      try {
+        const q = JSON.parse(localStorage.getItem(RETRY_QUEUE_KEY) || '[]');
+        q.push({ uid, updates, ts: Date.now() });
+        localStorage.setItem(RETRY_QUEUE_KEY, JSON.stringify(q.slice(-20)));
+      } catch (e) {}
+    };
+    const drainRetryQueue = async (uid) => {
+      try {
+        const q = JSON.parse(localStorage.getItem(RETRY_QUEUE_KEY) || '[]');
+        if (q.length === 0) return;
+        const remaining = [];
+        for (const item of q) {
+          if (item.uid !== uid) { remaining.push(item); continue; }
+          try {
+            await db.collection("users").doc(uid).update(item.updates);
+          } catch (e) {
+            remaining.push(item);
+          }
+        }
+        localStorage.setItem(RETRY_QUEUE_KEY, JSON.stringify(remaining.slice(-20)));
+      } catch (e) {}
     };
 
     const EVENTS = [
@@ -290,7 +347,6 @@
       }
       function kick() { if(!ctx) return; const t=ctx.currentTime; const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(40,t+0.14); g.gain.setValueAtTime(0.8,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2); o.connect(g); g.connect(musicGain); o.start(t); o.stop(t+0.22); }
       function hat() { if(!ctx) return; const t=ctx.currentTime; const b=ctx.createBuffer(1, ctx.sampleRate*0.04, ctx.sampleRate); const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const s=ctx.createBufferSource(); s.buffer=b; const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=6000; const g=ctx.createGain(); g.gain.setValueAtTime(0.1,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04); s.connect(hp); hp.connect(g); g.connect(musicGain); s.start(t); }
-      
       function tick() {
         if (!musicPlaying) return;
         const s = step % 8;
@@ -382,6 +438,7 @@
       const [confettiTrigger, setConfettiTrigger] = useState(0);
       const [boostOpen, setBoostOpen] = useState(false);
       const [now, setNow] = useState(Date.now());
+      const [eventCooldown, setEventCooldown] = useState(0);
 
       const tapCounter = useRef(0);
       const lastEventAt = useRef(0);
@@ -392,8 +449,11 @@
       const bossIntervalRef = useRef(null);
       const touchStart = useRef({ x: 0, y: 0, isScroll: false });
       const stateRef = useRef(s);
+      const lastSyncedEnergyRef = useRef({ energy: -1, lastEnergy: 0 });
+      const isFlushingRef = useRef(false);
+      const isRefreshingRef = useRef(false);
 
-      // Keep stateRef in sync with latest state
+      // Keep stateRef in sync
       useEffect(() => { stateRef.current = s; }, [s]);
 
       useEffect(() => {
@@ -409,59 +469,62 @@
         };
       }, []);
 
-      // ✅ TASK 2: Settings — getDoc once + interval, NOT onSnapshot
+      // ✅ SETTINGS — cached 10 min, get() per refresh (NOT onSnapshot)
       useEffect(() => {
         let cancelled = false;
         const checkMaintenance = async () => {
           try {
+            const cached = JSON.parse(localStorage.getItem(SETTINGS_CACHE_KEY) || 'null');
+            if (cached && Date.now() - cached.ts < SETTINGS_CACHE_TTL) {
+              if (!cancelled) setIsMaintenance(cached.maintenance === true);
+              return;
+            }
+          } catch (e) {}
+          try {
             const doc = await db.collection("settings").doc("game").get();
             if (cancelled) return;
-            if (doc.exists && doc.data().maintenance === true) setIsMaintenance(true);
-            else setIsMaintenance(false);
-          } catch (e) {
-            // silently ignore — don't block gameplay if settings fetch fails
-          }
+            const maintenance = doc.exists && doc.data().maintenance === true;
+            try { localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify({ maintenance, ts: Date.now() })); } catch (e) {}
+            setIsMaintenance(maintenance);
+          } catch (e) {}
         };
         checkMaintenance();
         const iv = setInterval(checkMaintenance, SETTINGS_REFRESH_MS);
         return () => { cancelled = true; clearInterval(iv); };
       }, []);
 
-      // ✅ TASK 1: Auth state + ONLY ONE onSnapshot (own user doc) with cleanup
+      // ✅ AUTH — get() once, NO onSnapshot. Server is truth on login.
       useEffect(() => {
-        let userUnsub = null;
-        const authUnsub = auth.onAuthStateChanged((user) => {
-          if (!user) { window.location.href = '/login.html'; return; }
-          if (userUnsub) userUnsub();
-
-          const userId = user.uid;
-          setUid(userId);
-          const userRef = db.collection("users").doc(userId);
-
-          userUnsub = userRef.onSnapshot((doc) => {
-            if (doc.exists) {
-              setS(prev => {
-                const dbData = doc.data();
-                const bizPending = Math.floor(pendingBizCash.current);
-                const newData = Object.assign({}, prev, dbData, {
-                  businesses: dbData.businesses || prev.businesses || {},
-                  assets: dbData.assets || prev.assets || {},
-                  travels: dbData.travels || prev.travels || [],
-                  transactions: dbData.transactions || [],
-                  referrals: dbData.referrals || 0,
-                  lastSpinAt: dbData.lastSpinAt !== undefined ? dbData.lastSpinAt : (prev.lastSpinAt || 0),
-                  lastClaimDate: dbData.lastClaimDate !== undefined ? dbData.lastClaimDate : (prev.lastClaimDate || null),
-                  streakCount: dbData.streakCount !== undefined ? dbData.streakCount : (prev.streakCount || 0),
-                  boostUntil: dbData.boostUntil !== undefined ? dbData.boostUntil : (prev.boostUntil || 0),
-                  boostMult: dbData.boostMult !== undefined ? dbData.boostMult : (prev.boostMult || 1),
-                  lastBossAt: dbData.lastBossAt !== undefined ? dbData.lastBossAt : (prev.lastBossAt || 0),
-                  cash: (dbData.cash || 0) + pendingTaps.current.cash + bizPending,
-                  energy: (dbData.energy || 0) + pendingTaps.current.energy,
-                  taps: (dbData.taps || 0) + pendingTaps.current.taps
-                });
-                try { localStorage.setItem("lagos_user_data", JSON.stringify(newData)); } catch(e) {}
-                return newData;
+        let cancelled = false;
+        const unsub = auth.onAuthStateChanged(async (user) => {
+          if (cancelled) return;
+          if (!user) { window.location.href = './login.html'; return; }
+          setUid(user.uid);
+          const userRef = db.collection("users").doc(user.uid);
+          try {
+            const snap = await userRef.get();
+            if (cancelled) return;
+            if (snap.exists) {
+              const d = snap.data();
+              const merged = Object.assign({}, getCachedData(), d, {
+                businesses: d.businesses || {},
+                assets: d.assets || {},
+                travels: d.travels || [],
+                transactions: (d.transactions || []).slice(-HISTORY_CAP),
+                history: (d.history || []).slice(-HISTORY_CAP),
+                referrals: d.referrals || 0,
+                lastSpinAt: d.lastSpinAt || 0,
+                lastClaimDate: d.lastClaimDate || null,
+                streakCount: d.streakCount || 0,
+                boostUntil: d.boostUntil || 0,
+                boostMult: d.boostMult || 1,
+                lastBossAt: d.lastBossAt || 0,
+                cash: d.cash !== undefined ? d.cash : 25000,
               });
+              setS(merged);
+              stateRef.current = merged;
+              lastSyncedEnergyRef.current = { energy: merged.energy, lastEnergy: merged.lastEnergy };
+              try { localStorage.setItem("lagos_user_data", JSON.stringify(merged)); } catch(e) {}
             } else {
               const defaultData = {
                 name: user.displayName || localStorage.getItem("lagos_user_name") || 'Hustler',
@@ -472,74 +535,130 @@
                 lastSpinAt: 0, lastClaimDate: null, streakCount: 0,
                 boostUntil: 0, boostMult: 1, lastBossAt: 0
               };
-              userRef.set(defaultData).catch(() => {});
+              await userRef.set(defaultData);
+              if (cancelled) return;
               setS(defaultData);
+              stateRef.current = defaultData;
+              lastSyncedEnergyRef.current = { energy: MAX_E, lastEnergy: defaultData.lastEnergy };
               try { localStorage.setItem("lagos_user_data", JSON.stringify(defaultData)); } catch(e) {}
             }
-          }, (err) => console.error(err));
+            // ✅ Drain retry queue from previous session
+            drainRetryQueue(user.uid);
+          } catch (e) {
+            console.error("Auth load error:", e);
+          }
         });
-
-        return () => {
-          authUnsub();
-          if (userUnsub) userUnsub();
-        };
+        return () => { cancelled = true; unsub(); };
       }, []);
 
-      // ✅ FLUSH HELPER — sends pending taps + business income + current energy in ONE write
+      // ✅ FLUSH — increment only, tracks energy changes, retries on failure
       const flushPending = async (force = false) => {
         if (!uid) return false;
-        const toSync = Object.assign({}, pendingTaps.current);
-        const bizSync = Math.floor(pendingBizCash.current);
-        const cur = stateRef.current;
-
-        if (!force && toSync.cash === 0 && toSync.energy === 0 && toSync.taps === 0 && bizSync === 0) return false;
-
-        // Clear pending synchronously to prevent double-flush
-        pendingTaps.current = { cash: 0, energy: 0, taps: 0 };
-        pendingBizCash.current -= bizSync;
-
-        const updates = { lastSeen: Date.now() };
-
-        const cashDelta = toSync.cash + bizSync;
-        if (cashDelta !== 0) updates.cash = firebase.firestore.FieldValue.increment(cashDelta);
-        if (toSync.taps !== 0) updates.taps = firebase.firestore.FieldValue.increment(toSync.taps);
-        // Energy — always send absolute (includes regen + tap reductions)
-        updates.energy = cur.energy;
-        updates.lastEnergy = cur.lastEnergy;
-
+        if (isFlushingRef.current) return false;
+        isFlushingRef.current = true;
         try {
-          await db.collection("users").doc(uid).update(updates);
-          return true;
-        } catch (e) {
-          // Add back on failure for retry next cycle
-          pendingTaps.current.cash += toSync.cash;
-          pendingTaps.current.energy += toSync.energy;
-          pendingTaps.current.taps += toSync.taps;
-          pendingBizCash.current += bizSync;
-          console.error("Flush error:", e);
-          return false;
+          const cur = stateRef.current;
+          const toSync = Object.assign({}, pendingTaps.current);
+          const bizSync = Math.floor(pendingBizCash.current);
+          const energyChanged =
+            cur.energy !== lastSyncedEnergyRef.current.energy ||
+            cur.lastEnergy !== lastSyncedEnergyRef.current.lastEnergy;
+
+          if (!force && toSync.cash === 0 && toSync.taps === 0 && bizSync === 0 && !energyChanged) {
+            return false;
+          }
+
+          // Clear pending SYNCHRONOUSLY to prevent double-flush
+          pendingTaps.current = { cash: 0, energy: 0, taps: 0 };
+          pendingBizCash.current -= bizSync;
+          lastSyncedEnergyRef.current = { energy: cur.energy, lastEnergy: cur.lastEnergy };
+
+          const updates = { lastSeen: Date.now() };
+          const cashDelta = toSync.cash + bizSync;
+          if (cashDelta !== 0) updates.cash = firebase.firestore.FieldValue.increment(cashDelta);
+          if (toSync.taps !== 0) updates.taps = firebase.firestore.FieldValue.increment(toSync.taps);
+          updates.energy = cur.energy;
+          updates.lastEnergy = cur.lastEnergy;
+
+          try {
+            await db.collection("users").doc(uid).update(updates);
+            return true;
+          } catch (e) {
+            // Roll back + queue for retry
+            pendingTaps.current.cash += toSync.cash;
+            pendingTaps.current.taps += toSync.taps;
+            pendingBizCash.current += bizSync;
+            lastSyncedEnergyRef.current = { energy: -1, lastEnergy: 0 };
+            queueRetry(uid, updates);
+            console.error("Flush error:", e);
+            return false;
+          }
+        } finally {
+          isFlushingRef.current = false;
         }
       };
 
-      // ✅ CHANGE 1: Tap sync — from 1.5s → 30s
+      // ✅ Periodic sync — 2 min
       useEffect(() => {
         if (!uid) return;
         const syncInterval = setInterval(() => { flushPending(false); }, SYNC_INTERVAL_MS);
         return () => clearInterval(syncInterval);
       }, [uid]);
 
-      // ✅ CHANGE 2: Flush on close / hidden
+      // ✅ Flush on hidden / pagehide / beforeunload
       useEffect(() => {
         if (!uid) return;
-        const handleVisibility = () => {
-          if (document.visibilityState === 'hidden') flushPending(false);
-        };
+        const handleVisibility = () => { if (document.visibilityState === 'hidden') flushPending(false); };
+        const handlePageHide = () => { flushPending(false); };
         const handleBeforeUnload = () => { flushPending(false); };
         document.addEventListener('visibilitychange', handleVisibility);
+        window.addEventListener('pagehide', handlePageHide);
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => {
           document.removeEventListener('visibilitychange', handleVisibility);
+          window.removeEventListener('pagehide', handlePageHide);
           window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+      }, [uid]);
+
+      // ✅ Refresh from server on tab-focus / visible — real-money picks up instantly
+      useEffect(() => {
+        if (!uid) return;
+        let ready = false;
+        const timer = setTimeout(() => { ready = true; }, 1000);
+        const refresh = async () => {
+          if (!ready) return;
+          if (document.visibilityState !== 'visible') return;
+          if (isRefreshingRef.current) return;
+          isRefreshingRef.current = true;
+          try {
+            await flushPending(false);
+            const snap = await db.collection("users").doc(uid).get();
+            if (!snap.exists) return;
+            const d = snap.data();
+            const pendingCash = pendingTaps.current.cash + Math.floor(pendingBizCash.current);
+            setS(prev => {
+              const serverCash = d.cash !== undefined ? d.cash : prev.cash;
+              const next = Object.assign({}, prev, {
+                cash: serverCash + pendingCash,
+                real: d.real !== undefined ? d.real : prev.real
+              });
+              stateRef.current = next;
+              return next;
+            });
+          } catch (e) {
+            // silent
+          } finally {
+            isRefreshingRef.current = false;
+          }
+        };
+        const onVis = () => { if (document.visibilityState === 'visible') refresh(); };
+        document.addEventListener('visibilitychange', onVis);
+        window.addEventListener('focus', refresh);
+        return () => {
+          clearTimeout(timer);
+          document.removeEventListener('visibilitychange', onVis);
+          window.removeEventListener('focus', refresh);
         };
       }, [uid]);
 
@@ -557,8 +676,11 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      // ✅ CHANGE 3: updateUser — ONE write instead of TWO (combines pending + data)
+      // ✅ updateUser — ALWAYS increment. NEVER SET. Real-money safe.
       const updateUser = async (data) => {
+        const prevCash = stateRef.current.cash || 0;
+        const prevTaps = stateRef.current.taps || 0;
+
         setS(prev => {
           const next = Object.assign({}, prev, data);
           stateRef.current = next;
@@ -574,26 +696,22 @@
         const cur = stateRef.current;
         const updates = { lastSeen: Date.now() };
 
-        // Cash
-        if (data.cash !== undefined) {
-          updates.cash = data.cash;
-        } else {
-          const delta = toSync.cash + bizSync;
-          if (delta !== 0) updates.cash = firebase.firestore.FieldValue.increment(delta);
-        }
+        // ✅ Cash — delta, not absolute
+        const dataCashDelta = data.cash !== undefined ? data.cash - prevCash : 0;
+        const cashDelta = dataCashDelta + toSync.cash + bizSync;
+        if (cashDelta !== 0) updates.cash = firebase.firestore.FieldValue.increment(cashDelta);
 
-        // Taps
-        if (data.taps !== undefined) {
-          updates.taps = data.taps;
-        } else if (toSync.taps !== 0) {
-          updates.taps = firebase.firestore.FieldValue.increment(toSync.taps);
-        }
+        // ✅ Taps — delta
+        const dataTapsDelta = data.taps !== undefined ? data.taps - prevTaps : 0;
+        const tapsDelta = dataTapsDelta + toSync.taps;
+        if (tapsDelta !== 0) updates.taps = firebase.firestore.FieldValue.increment(tapsDelta);
 
-        // Energy — absolute (safest)
+        // ✅ Energy — absolute (lastEnergy tracking)
         updates.energy = data.energy !== undefined ? data.energy : cur.energy;
         updates.lastEnergy = data.lastEnergy !== undefined ? data.lastEnergy : cur.lastEnergy;
+        lastSyncedEnergyRef.current = { energy: updates.energy, lastEnergy: updates.lastEnergy };
 
-        // Other fields
+        // Other fields (clout, lastSpinAt, etc.) — plain set
         Object.keys(data).forEach(key => {
           if (key !== 'cash' && key !== 'energy' && key !== 'taps' && key !== 'lastEnergy') {
             updates[key] = data[key];
@@ -603,15 +721,16 @@
         try {
           await db.collection("users").doc(uid).update(updates);
         } catch (e) {
+          // Roll back + queue
           pendingTaps.current.cash += toSync.cash;
-          pendingTaps.current.energy += toSync.energy;
           pendingTaps.current.taps += toSync.taps;
           pendingBizCash.current += bizSync;
+          queueRetry(uid, updates);
           console.error("updateUser error:", e);
         }
       };
 
-      // ✅ CHANGE 4: Business income — NO MORE per-second writeDoc; accumulate in ref
+      // ✅ Business income — local only, accumulate to ref (0 writes here)
       useEffect(() => {
         if (!uid) return;
         const iv = setInterval(() => {
@@ -628,7 +747,7 @@
             }
             const perHr = Object.entries(prev.businesses || {}).reduce((a, kv) => a + kv[1] * (BIZ_PER_HR[kv[0]] || 0), 0);
             const income = perHr / 3600;
-            if (income > 0) pendingBizCash.current += income; // accumulate, don't write
+            if (income > 0) pendingBizCash.current += income;
             const next = Object.assign({}, prev, { energy, lastEnergy, cash: (prev.cash || 0) + income });
             stateRef.current = next;
             return next;
@@ -740,6 +859,8 @@
 
       const forceEvent = () => {
         if (event) return;
+        if (Date.now() < eventCooldown) return notify('Chill small ⏳', 'bad');
+        setEventCooldown(Date.now() + EVENT_COOLDOWN_MS);
         lastEventAt.current = Date.now();
         setEvent(EVENTS[Math.floor(Math.random() * EVENTS.length)]);
       };
@@ -772,7 +893,7 @@
       };
 
       const shareReferral = () => {
-        const refLink = window.location.origin + '/login.html?ref=' + uid;
+        const refLink = new URL('login.html?ref=' + uid, window.location.href).href;
         const text = 'Join me on Lagos Life Mini and let\'s hustle together! 🇳🇬🔥 Tap the link to play and we both get ₦50,000 bonus: ' + refLink;
         if (navigator.share) {
           navigator.share({ title: 'Lagos Life Mini', text: text, url: refLink }).catch(() => {});
@@ -898,6 +1019,7 @@
       ];
 
       const eventColorClass = (c) => c === 'red' ? 'from-[#F87171] to-[#EF4444]' : 'from-[#34D976] to-[#22C55E]';
+      const eventButtonDisabled = now < eventCooldown || !!event;
 
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white antialiased font-sans selection:bg-[#FFD60A] selection:text-black' },
         h(Confetti, { trigger: confettiTrigger }),
@@ -1083,9 +1205,9 @@
             h(SectionTitle, { right: h('span', { className: 'text-[10px] font-bold text-[#FFD60A]' }, '~5.5% per tap') }, 'Street Events'),
             h(Card, { className: 'p-4' },
               h('p', { className: 'text-[11px] text-white/55 leading-relaxed' }, 'LASTMA, Agbero, Police Checkpoint, Bet9ja win and plenty other wahala dey wait for you. Keep tapping — events pop up randomly. Choose wisely.'),
-              h('button', { onClick: forceEvent, disabled: !!event,
+              h('button', { onClick: forceEvent, disabled: eventButtonDisabled,
                 className: 'w-full mt-3 rounded-xl bg-gradient-to-b from-[#FFE566] to-[#FFB800] py-3 text-[12px] font-black text-black active:scale-[0.97] transition disabled:opacity-40 font-display shadow-[0_8px_24px_-8px_rgba(255,214,10,0.7)]' },
-                '🎲 Trigger Random Event'
+                eventButtonDisabled ? '⏳ Wait small' : '🎲 Trigger Random Event'
               )
             ),
 
