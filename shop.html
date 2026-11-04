@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Lagos Life Mini — Gift Shop 🎁</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js'"></script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+      }},
+    };
+  </script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; -webkit-overflow-scrolling: touch; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(236,72,153,0.1), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(168,85,247,0.08), transparent); }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.03); opacity: 1; } 100% { transform: scale(1); } }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes confetti { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(600px) rotate(720deg); opacity: 0; } }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    @keyframes giftFloat { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-8px) rotate(8deg); } }
+    .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideUp { animation: slideUp 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .animate-giftFloat { animation: giftFloat 3s ease-in-out infinite; }
+    .shop-hero { background: radial-gradient(circle at top right, rgba(236,72,153,0.4) 0%, transparent 55%), radial-gradient(circle at bottom left, rgba(168,85,247,0.35) 0%, transparent 55%), linear-gradient(135deg, #1a0a1f 0%, #0f0a1a 100%); }
+    .shimmer-line { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); background-size: 200% 100%; animation: shimmer 3s infinite; }
+    .cat-pill { transition: all 0.2s; }
+    .cat-pill.active { background: linear-gradient(135deg, #EC4899, #A855F7); color: #fff; box-shadow: 0 4px 16px -4px rgba(236,72,153,0.5); border-color: transparent; }
+    .prod-card:active { transform: scale(0.96); }
+    input, select { -webkit-user-select: text; user-select: text; }
+    input:focus, select:focus { outline: none; }
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .confetti-piece { position: fixed; top: -20px; font-size: 22px; animation: confetti 2.5s linear forwards; pointer-events: none; z-index: 999; }
+    .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { console.error('Unhandled rejection:', e.reason); });
+  </script>
+
+  <script>
+    const { useState, useEffect, useRef, useMemo } = React;
+    const h = React.createElement;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const FEE_RATE = 0.20;
+    const EXPIRY_DAYS = 90;
+    const MIN_AMOUNT = 200;
+    const MAX_AMOUNT = 50000;
+
+    const fmt = (n) => {
+      n = Math.floor(n || 0);
+      if (n >= 1e6) return '₦' + (n / 1e6).toFixed(1) + 'M';
+      if (n >= 1e3) return '₦' + (n / 1e3).toFixed(1) + 'K';
+      return '₦' + n.toLocaleString();
+    };
+    const fmtFull = (n) => '₦' + Math.floor(n || 0).toLocaleString();
+
+    const THEMES = {
+      food:      { bg: ['#FF6B35', '#C41E3A'], accent: '#FFD166', text: '#FFFFFF' },
+      tech:      { bg: ['#1E3A8A', '#6D28D9'], accent: '#60A5FA', text: '#FFFFFF' },
+      luxury:    { bg: ['#0a0a0a', '#2a1a0a'], accent: '#FFD700', text: '#FFD700' },
+      fashion:   { bg: ['#DB2777', '#7E22CE'], accent: '#F9A8D4', text: '#FFFFFF' },
+      lifestyle: { bg: ['#047857', '#0891B2'], accent: '#5EEAD4', text: '#FFFFFF' },
+      wellness:  { bg: ['#7C3AED', '#0891B2'], accent: '#A5F3FC', text: '#FFFFFF' },
+    };
+
+    const CATS = [
+      { id: 'all', name: 'All', emoji: '✨' },
+      { id: 'food', name: 'Food & Drinks', emoji: '🍽️' },
+      { id: 'tech', name: 'Tech & Gaming', emoji: '🎮' },
+      { id: 'luxury', name: 'Luxury', emoji: '💎' },
+      { id: 'fashion', name: 'Fashion', emoji: '👗' },
+      { id: 'lifestyle', name: 'Lifestyle', emoji: '🌿' },
+      { id: 'wellness', name: 'Wellness', emoji: '💆' },
+    ];
+
+    const PRODUCTS = [
+      // ── FOOD & DRINKS (10 items) ──
+      { id: 'coffee', name: 'Coffee', emoji: '☕', cat: 'food', min: 200, max: 2000 },
+      { id: 'icecream', name: 'Ice Cream', emoji: '🍦', cat: 'food', min: 200, max: 3000 },
+      { id: 'snack', name: 'Snack Pack', emoji: '🍿', cat: 'food', min: 200, max: 1500 },
+      { id: 'drink', name: 'Soft Drink', emoji: '🥤', cat: 'food', min: 200, max: 1500 },
+      { id: 'tea', name: 'Bubble Tea', emoji: '🧋', cat: 'food', min: 200, max: 2000 },
+      { id: 'shawarma', name: 'Shawarma', emoji: '🥙', cat: 'food', min: 500, max: 5000 },
+      { id: 'jollof', name: 'Jollof Rice', emoji: '🍛', cat: 'food', min: 800, max: 8000 },
+      { id: 'burger', name: 'Burger Combo', emoji: '🍔', cat: 'food', min: 1000, max: 10000 },
+      { id: 'chicken', name: 'Fried Chicken', emoji: '🍗', cat: 'food', min: 1000, max: 10000 },
+      { id: 'pizza', name: 'Pizza', emoji: '🍕', cat: 'food', min: 1500, max: 15000 },
+      // ── TECH & GAMING (8 items) ──
+      { id: 'gplay', name: 'Google Play', emoji: '🎮', cat: 'tech', min: 500, max: 20000 },
+      { id: 'spotify', name: 'Spotify Gift', emoji: '🎵', cat: 'tech', min: 500, max: 10000 },
+      { id: 'netflix', name: 'Netflix Gift', emoji: '🎬', cat: 'tech', min: 1500, max: 15000 },
+      { id: 'steam', name: 'Steam Wallet', emoji: '🎯', cat: 'tech', min: 2000, max: 30000 },
+      { id: 'apple', name: 'Apple Gift Card', emoji: '🍎', cat: 'tech', min: 5000, max: 50000 },
+      { id: 'amazon', name: 'Amazon Card', emoji: '📦', cat: 'tech', min: 5000, max: 50000 },
+      { id: 'ps', name: 'PlayStation Card', emoji: '🕹️', cat: 'tech', min: 10000, max: 50000 },
+      { id: 'xbox', name: 'Xbox Card', emoji: '🎮', cat: 'tech', min: 10000, max: 50000 },
+      // ── LUXURY (5 items) ──
+      { id: 'perfume', name: 'Luxury Perfume', emoji: '🌸', cat: 'luxury', min: 2000, max: 30000 },
+      { id: 'watch', name: 'Luxury Watch', emoji: '⌚', cat: 'luxury', min: 8000, max: 50000 },
+      { id: 'gold', name: 'Gold Chain', emoji: '📿', cat: 'luxury', min: 10000, max: 50000 },
+      { id: 'pearl', name: 'Pearl Necklace', emoji: '📿', cat: 'luxury', min: 10000, max: 50000 },
+      { id: 'diamond', name: 'Diamond Ring', emoji: '💍', cat: 'luxury', min: 20000, max: 50000 },
+      // ── FASHION (5 items) ──
+      { id: 'cap', name: 'Snapback Cap', emoji: '🧢', cat: 'fashion', min: 200, max: 3000 },
+      { id: 'scarf', name: 'Silk Scarf', emoji: '🧣', cat: 'fashion', min: 500, max: 15000 },
+      { id: 'shades', name: 'Designer Shades', emoji: '🕶️', cat: 'fashion', min: 1000, max: 20000 },
+      { id: 'bag', name: 'Designer Handbag', emoji: '👜', cat: 'fashion', min: 5000, max: 50000 },
+      { id: 'nike', name: 'Nike Sneakers', emoji: '👟', cat: 'fashion', min: 10000, max: 50000 },
+      // ── LIFESTYLE (5 items) ──
+      { id: 'book', name: 'Book Gift', emoji: '📚', cat: 'lifestyle', min: 200, max: 3000 },
+      { id: 'plant', name: 'Potted Plant', emoji: '🌱', cat: 'lifestyle', min: 200, max: 3000 },
+      { id: 'candle', name: 'Scented Candle', emoji: '🕯️', cat: 'lifestyle', min: 200, max: 2000 },
+      { id: 'frame', name: 'Photo Frame', emoji: '🖼️', cat: 'lifestyle', min: 500, max: 10000 },
+      { id: 'case', name: 'Phone Case', emoji: '📱', cat: 'lifestyle', min: 500, max: 10000 },
+      // ── WELLNESS (3 items) ──
+      { id: 'powerbank', name: 'Power Bank', emoji: '🔋', cat: 'wellness', min: 2000, max: 15000 },
+      { id: 'spa', name: 'Spa Voucher', emoji: '💆', cat: 'wellness', min: 5000, max: 30000 },
+      { id: 'airpods', name: 'AirPods', emoji: '🎧', cat: 'wellness', min: 8000, max: 50000 },
+    ];
+
+    const genCode = () => {
+      const C = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+      const seg = () => Array.from({ length: 4 }, () => C[Math.floor(Math.random() * C.length)]).join('');
+      return 'LGM-' + seg() + '-' + seg() + '-' + seg();
+    };
+
+    const getPresets = (min, max) => {
+      const spread = max - min;
+      const p2 = Math.max(min, Math.round((min + spread * 0.33) / 50) * 50);
+      const p3 = Math.max(p2, Math.round((min + spread * 0.66) / 100) * 100);
+      return [min, p2, p3, max];
+    };
+
+    function drawCardCanvas(card) {
+      const c = document.createElement('canvas');
+      c.width = 1200; c.height = 750;
+      const x = c.getContext('2d');
+      const t = THEMES[card.cat] || THEMES.luxury;
+
+      const g = x.createLinearGradient(0, 0, 1200, 750);
+      g.addColorStop(0, t.bg[0]); g.addColorStop(1, t.bg[1]);
+      x.fillStyle = g; x.fillRect(0, 0, 1200, 750);
+
+      x.fillStyle = t.accent + '22';
+      x.beginPath(); x.arc(1050, 100, 280, 0, Math.PI * 2); x.fill();
+      x.fillStyle = t.accent + '15';
+      x.beginPath(); x.arc(100, 720, 320, 0, Math.PI * 2); x.fill();
+
+      for (let i = 0; i < 60; i++) {
+        x.fillStyle = 'rgba(255,255,255,' + (0.03 + Math.random() * 0.05) + ')';
+        x.fillRect(Math.random() * 1200, Math.random() * 750, 2, 2);
+      }
+
+      const sh = x.createLinearGradient(0, 0, 1200, 750);
+      sh.addColorStop(0, 'rgba(255,255,255,0.06)');
+      sh.addColorStop(0.5, 'rgba(255,255,255,0)');
+      sh.addColorStop(1, 'rgba(255,255,255,0.04)');
+      x.fillStyle = sh; x.fillRect(0, 0, 1200, 750);
+
+      x.strokeStyle = t.accent + '70'; x.lineWidth = 5;
+      x.strokeRect(25, 25, 1150, 700);
+
+      x.textAlign = 'left';
+      x.font = 'bold 30px Sora, sans-serif'; x.fillStyle = t.text;
+      x.fillText('LAGOS LIFE MINI', 60, 95);
+      x.font = 'bold 18px Inter, sans-serif'; x.fillStyle = t.accent;
+      x.fillText('★ GIFT CARD ★', 60, 125);
+
+      x.font = '100px sans-serif'; x.textAlign = 'right';
+      x.fillText(card.emoji, 1150, 150); x.textAlign = 'left';
+
+      if (card.recipientName) {
+        x.font = 'bold 24px Inter, sans-serif'; x.fillStyle = 'rgba(255,255,255,0.6)';
+        x.fillText('FOR', 60, 250);
+        x.font = 'bold 56px Sora, sans-serif'; x.fillStyle = t.text;
+        x.fillText(card.recipientName.slice(0, 20), 60, 305);
+      }
+
+      x.font = 'bold 26px Inter, sans-serif'; x.fillStyle = 'rgba(255,255,255,0.55)';
+      x.fillText('GIFT VALUE', 60, 390);
+
+      x.font = 'bold 130px Sora, sans-serif';
+      const vg = x.createLinearGradient(60, 400, 720, 520);
+      vg.addColorStop(0, t.accent); vg.addColorStop(1, '#FFFFFF');
+      x.fillStyle = vg;
+      x.fillText('₦' + card.redeemValue.toLocaleString(), 60, 510);
+
+      x.font = 'bold 34px Inter, sans-serif'; x.fillStyle = t.text;
+      x.fillText(card.emoji + ' ' + card.productName, 60, 590);
+
+      if (card.message) {
+        x.font = 'italic 22px Inter, sans-serif'; x.fillStyle = 'rgba(255,255,255,0.7)';
+        x.fillText('"' + card.message.slice(0, 55) + '"', 60, 640);
+      }
+
+      x.fillStyle = 'rgba(0,0,0,0.55)';
+      x.fillRect(60, 660, 540, 56);
+      x.strokeStyle = t.accent; x.lineWidth = 2;
+      x.strokeRect(60, 660, 540, 56);
+      x.font = 'bold 30px monospace'; x.fillStyle = t.accent;
+      x.fillText(card.code, 82, 700);
+
+      const qx = 1000, qy = 630, qs = 130;
+      for (let i = 0; i < 7; i++) {
+        for (let j = 0; j < 7; j++) {
+          const seed = (i * 7 + j + card.code.charCodeAt(i % card.code.length)) % 3;
+          if (seed !== 0) {
+            x.fillStyle = 'rgba(255,255,255,0.92)';
+            x.fillRect(qx + i * (qs / 7), qy + j * (qs / 7), qs / 7 - 1.5, qs / 7 - 1.5);
+          }
+        }
+      }
+      x.font = 'bold 20px Inter, sans-serif'; x.fillStyle = 'rgba(255,255,255,0.5)';
+      x.textAlign = 'center';
+      x.fillText('Redeem at lagoslifemini.online/redeem.html', 600, 725);
+
+      return c;
+    }
+
+    function App() {
+      const [uid, setUid] = useState(null);
+      const [userEmail, setUserEmail] = useState('');
+      const [userName, setUserName] = useState('Hustler');
+      const [paystackKey, setPaystackKey] = useState('');
+      const [tab, setTab] = useState('shop');
+      const [activeCat, setActiveCat] = useState('all');
+      const [selectedProduct, setSelectedProduct] = useState(null);
+      const [giftAmount, setGiftAmount] = useState(1000);
+      const [customAmount, setCustomAmount] = useState('');
+      const [recipientName, setRecipientName] = useState('');
+      const [message, setMessage] = useState('');
+      const [payLoading, setPayLoading] = useState(false);
+      const [myCards, setMyCards] = useState([]);
+      const [loadingCards, setLoadingCards] = useState(false);
+      const [viewCard, setViewCard] = useState(null);
+      const [cardImageUrl, setCardImageUrl] = useState(null);
+      const [toast, setToast] = useState(null);
+      const [confetti, setConfetti] = useState(false);
+      const [successMessage, setSuccessMessage] = useState(null);
+
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2800);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      useEffect(() => {
+        fetch('/api/config').then(r => r.json()).then(d => setPaystackKey(d.publicKey || '')).catch(() => {});
+      }, []);
+
+      useEffect(() => {
+        const unsub = auth.onAuthStateChanged(user => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          setUid(user.uid);
+          setUserEmail(user.email || 'user@lagoslife.com');
+          try {
+            const cached = JSON.parse(localStorage.getItem('lagos_user_data') || '{}');
+            setUserName(cached.name || 'Hustler');
+          } catch (e) {}
+        });
+        return () => unsub();
+      }, []);
+
+      const loadMyCards = async () => {
+        if (!uid) return;
+        setLoadingCards(true);
+        try {
+          const snap = await db.collection('gift_cards')
+            .where('buyerId', '==', uid)
+            .orderBy('createdAt', 'desc')
+            .limit(50).get();
+          const arr = [];
+          snap.forEach(d => arr.push(Object.assign({ id: d.id }, d.data())));
+          setMyCards(arr);
+        } catch (e) {
+          console.error(e);
+          notify('Could not load cards', 'bad');
+        } finally { setLoadingCards(false); }
+      };
+
+      useEffect(() => { if (tab === 'cards' && uid) loadMyCards(); }, [tab, uid]);
+
+      const filteredProducts = useMemo(() => {
+        if (activeCat === 'all') return PRODUCTS;
+        return PRODUCTS.filter(p => p.cat === activeCat);
+      }, [activeCat]);
+
+      const openProduct = (p) => {
+        setSelectedProduct(p);
+        setGiftAmount(Math.round((p.min + p.max) / 2 / 100) * 100);
+        setCustomAmount('');
+        setRecipientName('');
+        setMessage('');
+      };
+
+      const totalPay = giftAmount;
+      const feeAmount = Math.round(totalPay * FEE_RATE);
+      const redeemValue = totalPay - feeAmount;
+
+      const handlePaystack = () => {
+        if (!paystackKey) return notify('Payment loading... try again', 'bad');
+        if (!selectedProduct) return;
+        if (giftAmount < MIN_AMOUNT) return notify('Minimum gift is ₦200', 'bad');
+        if (giftAmount > MAX_AMOUNT) return notify('Maximum gift is ₦50,000', 'bad');
+
+        setPayLoading(true);
+        const handler = PaystackPop.setup({
+          key: paystackKey,
+          email: userEmail,
+          amount: totalPay * 100,
+          currency: 'NGN',
+          ref: 'LGS_GIFT_' + Date.now() + '_' + Math.floor(Math.random() * 9999),
+          metadata: {
+            custom_fields: [
+              { display_name: 'Product', variable_name: 'product', value: selectedProduct.name },
+              { display_name: 'Recipient', variable_name: 'recipient', value: recipientName || 'N/A' }
+            ]
+          },
+          callback: (response) => { onPaymentSuccess(response.reference); },
+          onClose: () => { setPayLoading(false); notify('Payment cancelled', 'bad'); }
+        });
+        handler.openIframe();
+      };
+
+      const onPaymentSuccess = async (ref) => {
+        const code = genCode();
+        const card = {
+          code,
+          productId: selectedProduct.id,
+          productName: selectedProduct.name,
+          emoji: selectedProduct.emoji,
+          cat: selectedProduct.cat,
+          amountPaid: totalPay,
+          feeAmount,
+          redeemValue,
+          buyerId: uid,
+          buyerName: userName,
+          recipientName: recipientName.trim() || '',
+          message: message.trim() || '',
+          status: 'active',
+          createdAt: Date.now(),
+          expiresAt: Date.now() + EXPIRY_DAYS * 86400000,
+          paystackRef: ref
+        };
+
+        try {
+          await db.collection('gift_cards').add(card);
+          setPayLoading(false);
+          setSelectedProduct(null);
+          setConfetti(true);
+          setTimeout(() => setConfetti(false), 3000);
+          showCardPreview(card);
+          notify('🎁 Gift card created!');
+        } catch (e) {
+          console.error(e);
+          setPayLoading(false);
+          notify('Card save failed. Contact support with ref: ' + ref, 'bad');
+        }
+      };
+
+      const showCardPreview = (card) => {
+        setViewCard(card);
+        const canvas = drawCardCanvas(card);
+        setCardImageUrl(canvas.toDataURL('image/png'));
+      };
+
+      const downloadCard = () => {
+        if (!cardImageUrl) return;
+        const a = document.createElement('a');
+        a.href = cardImageUrl;
+        a.download = 'lagos-gift-' + (viewCard ? viewCard.code : Date.now()) + '.png';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        notify('Downloaded! 📥');
+      };
+
+      const shareCard = async () => {
+        if (!viewCard) return;
+        const text = '🎁 I got you a gift! ' + viewCard.emoji + ' ' + viewCard.productName + ' worth ' + fmtFull(viewCard.redeemValue) + '\n\n' +
+          'Redeem code: ' + viewCard.code + '\n' +
+          'Go to: https://lagoslifemini.online/redeem.html\n\n' +
+          'From: ' + viewCard.buyerName;
+        try {
+          if (navigator.share) await navigator.share({ title: 'You have a gift! 🎁', text });
+          else if (navigator.clipboard) { await navigator.clipboard.writeText(text); notify('Copied to clipboard! 📋'); }
+        } catch (e) {}
+      };
+
+      const copyCode = async () => {
+        if (!viewCard) return;
+        try {
+          await navigator.clipboard.writeText(viewCard.code);
+          notify('Code copied! 📋');
+        } catch (e) {}
+      };
+
+      if (!uid) return h('div', { className: 'min-h-screen grid place-items-center text-white/50 font-sans' }, '⏳ Loading shop...');
+
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white font-sans selection:bg-pink-500 selection:text-white' },
+        h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
+
+          // Header
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/95 backdrop-blur border-b border-white/[0.06]' },
+            h('div', { className: 'px-4 py-2.5 flex items-center gap-3' },
+              h('button', {
+                onClick: () => window.location.href = 'more.html',
+                className: 'w-9 h-9 rounded-lg bg-white/[0.06] border border-white/10 grid place-items-center active:scale-90 transition'
+              }, '←'),
+              h('div', { className: 'flex-1 min-w-0' },
+                h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-pink-400/80 leading-none font-display' }, 'Gift Shop'),
+                h('div', { className: 'text-[13px] font-black truncate font-display mt-0.5' }, '🎁 Send love, earn smiles')
+              ),
+              h('div', { className: 'px-2 py-1 rounded-lg bg-pink-500/15 border border-pink-400/30 text-pink-300 text-[10px] font-extrabold' }, '20% fee')
+            )
+          ),
+
+          // Tab switcher
+          h('div', { className: 'px-4 py-3' },
+            h('div', { className: 'flex gap-1 p-1 rounded-xl bg-white/[0.05] border border-white/10' },
+              h('button', {
+                onClick: () => setTab('shop'),
+                className: 'flex-1 py-2 rounded-lg text-[11px] font-black transition ' + (tab === 'shop' ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg' : 'text-white/50')
+              }, '🛍️ Shop'),
+              h('button', {
+                onClick: () => setTab('cards'),
+                className: 'flex-1 py-2 rounded-lg text-[11px] font-black transition ' + (tab === 'cards' ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg' : 'text-white/50')
+              }, '🎟️ My Cards')
+            )
+          ),
+
+          // SHOP TAB
+          tab === 'shop' && h('main', { className: 'flex-1 px-4 pb-4' },
+            h('div', { className: 'rounded-2xl shop-hero border border-pink-400/30 p-4 relative overflow-hidden' },
+              h('div', { className: 'absolute inset-0 shimmer-line pointer-events-none' }),
+              h('div', { className: 'relative' },
+                h('div', { className: 'text-2xl mb-1' }, '🎁'),
+                h('div', { className: 'text-[15px] font-black font-display text-white' }, 'Buy a gift for someone special'),
+                h('div', { className: 'text-[10.5px] text-white/60 mt-1 leading-relaxed' },
+                  'Send shawarma, Apple cards, diamond rings & more. ',
+                  h('span', { className: 'text-pink-300 font-bold' }, 'They redeem it for real cash.'),
+                  ' We keep a 20% fee.'
+                )
+              )
+            ),
+
+            // Category pills
+            h('div', { className: 'mt-4 flex gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4' },
+              CATS.map(c =>
+                h('button', {
+                  key: c.id,
+                  onClick: () => setActiveCat(c.id),
+                  className: 'cat-pill shrink-0 px-3 py-1.5 rounded-full text-[10px] font-black border whitespace-nowrap ' +
+                    (activeCat === c.id
+                      ? 'active'
+                      : 'bg-white/[0.04] border-white/10 text-white/60')
+                }, c.emoji + ' ' + c.name)
+              )
+            ),
+
+            // Products grid
+            h('div', { className: 'mt-3 grid grid-cols-2 gap-2.5' },
+              filteredProducts.map(p => {
+                const t = THEMES[p.cat];
+                return h('button', {
+                  key: p.id,
+                  onClick: () => openProduct(p),
+                  className: 'prod-card rounded-2xl p-3 text-left border transition-all relative overflow-hidden card-gradient'
+                },
+                  h('div', {
+                    className: 'absolute -top-8 -right-8 w-20 h-20 rounded-full opacity-30 blur-2xl pointer-events-none',
+                    style: { background: t.bg[0] }
+                  }),
+                  h('div', { className: 'relative' },
+                    h('div', { className: 'text-3xl mb-1.5' }, p.emoji),
+                    h('div', { className: 'text-[11.5px] font-black font-display leading-tight' }, p.name),
+                    h('div', { className: 'text-[9px] text-white/45 mt-1 tabular-nums' }, fmtFull(p.min) + ' – ' + fmtFull(p.max))
+                  )
+                );
+              })
+            ),
+
+            h('div', { className: 'mt-6 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]' },
+              h('div', { className: 'flex items-start gap-2' },
+                h('span', { className: 'text-base' }, '💡'),
+                h('div', { className: 'text-[10px] text-white/50 leading-relaxed' },
+                  'After payment, we generate a beautiful gift card with a unique code. Send it to your loved one — they redeem at ',
+                  h('span', { className: 'text-pink-300 font-bold' }, 'redeem.html'),
+                  ' and get the money. Codes expire after 90 days.'
+                )
+              )
+            )
+          ),
+
+          // CARDS TAB
+          tab === 'cards' && h('main', { className: 'flex-1 px-4 pb-4' },
+            loadingCards ? h('div', { className: 'text-center py-20 text-white/40 text-[12px] animate-pulse' }, 'Loading your cards...') :
+            myCards.length === 0 ? h('div', { className: 'text-center py-20' },
+              h('div', { className: 'text-6xl mb-3 animate-giftFloat' }, '🎁'),
+              h('div', { className: 'text-[13px] font-black font-display text-white/70' }, 'No gift cards yet'),
+              h('div', { className: 'text-[11px] text-white/40 mt-1' }, 'Buy your first gift to see it here'),
+              h('button', {
+                onClick: () => setTab('shop'),
+                className: 'mt-4 px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-black text-[11px] active:scale-95 shadow-lg'
+              }, '🛍️ Go to Shop')
+            ) : h('div', { className: 'space-y-2.5' },
+              myCards.map(card => {
+                const statusColor = card.status === 'active' ? '#22C55E' : card.status === 'redeemed' ? '#FFD60A' : '#EF4444';
+                const statusLabel = card.status === 'active' ? 'ACTIVE' : card.status === 'redeemed' ? 'REDEEMED' : 'EXPIRED';
+                return h('div', { key: card.id, className: 'card-gradient rounded-2xl p-3' },
+                  h('div', { className: 'flex items-center gap-2.5' },
+                    h('div', { className: 'text-3xl' }, card.emoji),
+                    h('div', { className: 'flex-1 min-w-0' },
+                      h('div', { className: 'flex items-center gap-1.5 flex-wrap' },
+                        h('div', { className: 'text-[12px] font-black font-display truncate' }, card.productName),
+                        h('span', { className: 'text-[8px] font-black px-1.5 py-0.5 rounded', style: { background: statusColor + '25', color: statusColor } }, statusLabel)
+                      ),
+                      h('div', { className: 'text-[10px] text-white/50 mt-0.5' },
+                        fmtFull(card.redeemValue),
+                        card.recipientName && (' · For ' + card.recipientName)
+                      ),
+                      h('div', { className: 'text-[9px] font-mono text-pink-300 mt-1' }, card.code)
+                    )
+                  ),
+                  h('div', { className: 'mt-2 flex gap-1.5' },
+                    h('button', {
+                      onClick: () => showCardPreview(card),
+                      className: 'flex-1 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-black text-white/80 active:scale-95'
+                    }, '👁️ View'),
+                    h('button', {
+                      onClick: async () => {
+                        try { await navigator.clipboard.writeText(card.code); notify('Copied!'); } catch (e) {}
+                      },
+                      className: 'flex-1 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-black text-white/80 active:scale-95'
+                    }, '📋 Code')
+                  )
+                );
+              })
+            )
+          ),
+
+          // Purchase modal
+          selectedProduct && h('div', { className: 'fixed inset-0 z-[100] grid place-items-end sm:place-items-center p-0 sm:p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => !payLoading && setSelectedProduct(null) }),
+            h('div', { className: 'relative w-full max-w-md bg-[#121218] border-t sm:border border-pink-400/30 rounded-t-3xl sm:rounded-3xl p-5 animate-slideUp max-h-[90vh] overflow-y-auto' },
+              h('div', { className: 'w-12 h-1 bg-white/20 rounded-full mx-auto mb-4 sm:hidden' }),
+              h('div', { className: 'text-center mb-4' },
+                h('div', { className: 'text-6xl mb-2 animate-giftFloat' }, selectedProduct.emoji),
+                h('div', { className: 'text-[16px] font-black font-display' }, selectedProduct.name),
+                h('div', { className: 'text-[10px] text-white/50 mt-0.5' }, 'Range: ' + fmtFull(selectedProduct.min) + ' – ' + fmtFull(selectedProduct.max))
+              ),
+
+              h('div', { className: 'mb-3' },
+                h('div', { className: 'text-[10px] uppercase tracking-widest font-extrabold text-white/40 mb-1.5' }, 'How much you want to pay?'),
+                h('div', { className: 'grid grid-cols-4 gap-1.5' },
+                  getPresets(selectedProduct.min, selectedProduct.max).map(p =>
+                    h('button', {
+                      key: p,
+                      onClick: () => { setGiftAmount(p); setCustomAmount(''); },
+                      className: 'py-2 rounded-lg text-[10.5px] font-black tabular-nums transition ' +
+                        (giftAmount === p && !customAmount
+                          ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg'
+                          : 'bg-white/[0.05] border border-white/10 text-white/70')
+                    }, fmt(p))
+                  )
+                ),
+                h('div', { className: 'mt-1.5 flex items-center bg-white/[0.05] border border-white/10 rounded-lg px-2' },
+                  h('span', { className: 'text-[12px] font-black text-white/50' }, '₦'),
+                  h('input', {
+                    type: 'number',
+                    placeholder: 'Custom amount (₦200 – ₦50,000)',
+                    value: customAmount,
+                    onChange: (e) => {
+                      const raw = e.target.value;
+                      const v = Math.floor(Number(raw));
+                      setCustomAmount(raw);
+                      if (v >= MIN_AMOUNT && v <= MAX_AMOUNT) setGiftAmount(v);
+                    },
+                    className: 'w-full bg-transparent py-2 text-[12px] font-black text-white placeholder-white/30 ml-1 tabular-nums'
+                  })
+                )
+              ),
+
+              h('div', { className: 'mb-3' },
+                h('div', { className: 'text-[10px] uppercase tracking-widest font-extrabold text-white/40 mb-1.5' }, 'Recipient name (optional)'),
+                h('input', {
+                  value: recipientName,
+                  onChange: (e) => setRecipientName(e.target.value.slice(0, 24)),
+                  placeholder: 'e.g. Tunde, My Love, Mom',
+                  className: 'w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[12px] font-bold text-white placeholder-white/30'
+                })
+              ),
+
+              h('div', { className: 'mb-3' },
+                h('div', { className: 'text-[10px] uppercase tracking-widest font-extrabold text-white/40 mb-1.5' }, 'Message (optional)'),
+                h('input', {
+                  value: message,
+                  onChange: (e) => setMessage(e.target.value.slice(0, 60)),
+                  placeholder: 'e.g. Enjoy your shawarma! 😋',
+                  className: 'w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[12px] font-bold text-white placeholder-white/30'
+                })
+              ),
+
+              h('div', { className: 'rounded-xl bg-white/[0.03] border border-white/[0.08] p-3 mb-3' },
+                h('div', { className: 'flex justify-between items-center py-1' },
+                  h('span', { className: 'text-[11px] text-white/60' }, 'You pay'),
+                  h('span', { className: 'text-[13px] font-black tabular-nums' }, fmtFull(giftAmount))
+                ),
+                h('div', { className: 'flex justify-between items-center py-1' },
+                  h('span', { className: 'text-[11px] text-white/60' }, 'Our fee (20%)'),
+                  h('span', { className: 'text-[11px] font-black tabular-nums text-red-400' }, '−' + fmtFull(feeAmount))
+                ),
+                h('div', { className: 'flex justify-between items-center py-1 border-t border-white/[0.08] mt-1 pt-2' },
+                  h('span', { className: 'text-[11px] font-black text-pink-300' }, 'They receive'),
+                  h('span', { className: 'text-[14px] font-black tabular-nums text-pink-300' }, fmtFull(redeemValue))
+                )
+              ),
+
+              h('button', {
+                onClick: handlePaystack,
+                disabled: payLoading || !paystackKey || giftAmount < MIN_AMOUNT || giftAmount > MAX_AMOUNT,
+                className: 'w-full py-3.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-black text-[13px] font-display shadow-[0_8px_24px_-8px_rgba(236,72,153,0.7)] active:scale-[0.97] disabled:opacity-50 disabled:shadow-none transition'
+              }, payLoading ? '⏳ Processing...' : !paystackKey ? '⏳ Loading payment...' : '💳 Pay ' + fmtFull(giftAmount)),
+
+              h('button', {
+                onClick: () => setSelectedProduct(null),
+                disabled: payLoading,
+                className: 'mt-2 w-full py-2 text-[11px] font-bold text-white/40'
+              }, 'Cancel')
+            )
+          ),
+
+          // Card preview modal
+          viewCard && cardImageUrl && h('div', { className: 'fixed inset-0 z-[105] grid place-items-center p-4' },
+            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setViewCard(null) }),
+            h('div', { className: 'relative w-full max-w-sm animate-popIn' },
+              h('div', { className: 'text-center mb-3' },
+                h('div', { className: 'text-[13px] font-black tracking-widest text-pink-300 font-display' }, '🎁 YOUR GIFT CARD'),
+                h('div', { className: 'text-[10px] text-white/50 mt-0.5' }, 'Send this to your loved one')
+              ),
+              h('div', { className: 'rounded-2xl overflow-hidden border-2 border-pink-400/40 shadow-[0_0_40px_-8px_rgba(236,72,153,0.6)]' },
+                h('img', { src: cardImageUrl, alt: 'Gift Card', className: 'w-full block' })
+              ),
+              h('div', { className: 'mt-3 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-between' },
+                h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'CODE'),
+                h('div', { className: 'text-[12px] font-black font-mono text-pink-300 truncate mx-2' }, viewCard.code),
+                h('button', { onClick: copyCode, className: 'text-lg active:scale-90 shrink-0' }, '📋')
+              ),
+              h('div', { className: 'mt-2 grid grid-cols-2 gap-2' },
+                h('button', {
+                  onClick: downloadCard,
+                  className: 'py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white text-[12px] font-black active:scale-95'
+                }, '⬇️ Download'),
+                h('button', {
+                  onClick: shareCard,
+                  className: 'py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[12px] font-black active:scale-95 shadow-lg'
+                }, '📤 Share')
+              ),
+              h('button', {
+                onClick: () => setViewCard(null),
+                className: 'mt-2 w-full py-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-white/50 text-[11px] font-bold active:scale-95'
+              }, 'Close')
+            )
+          ),
+
+          // Confetti
+          confetti && h('div', { className: 'fixed inset-0 pointer-events-none z-[200]' },
+            Array.from({ length: 30 }).map((_, i) =>
+              h('div', {
+                key: i,
+                className: 'confetti-piece',
+                style: { left: Math.random() * 100 + '%', animationDelay: Math.random() * 0.5 + 's' }
+              }, ['🎉', '🎊', '⭐', '💎', '🎁', '✨'][i % 6])
+            )
+          ),
+
+          // Toast
+          toast && h('div', {
+            className: 'fixed top-20 left-1/2 -translate-x-1/2 z-[150] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl animate-slideDown font-display whitespace-nowrap max-w-[90vw] truncate ' +
+              (toast.kind === 'bad' ? 'bg-gradient-to-b from-red-500 to-red-600 text-white' : 'bg-gradient-to-b from-pink-400 to-purple-500 text-white')
+          }, toast.msg)
+        )
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+  </script>
+</body>
+</html>
