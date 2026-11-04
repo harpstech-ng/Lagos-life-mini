@@ -123,7 +123,6 @@
     ];
 
     const PRODUCTS = [
-      // ── FOOD & DRINKS (10 items) ──
       { id: 'coffee', name: 'Coffee', emoji: '☕', cat: 'food', min: 200, max: 2000 },
       { id: 'icecream', name: 'Ice Cream', emoji: '🍦', cat: 'food', min: 200, max: 3000 },
       { id: 'snack', name: 'Snack Pack', emoji: '🍿', cat: 'food', min: 200, max: 1500 },
@@ -134,7 +133,6 @@
       { id: 'burger', name: 'Burger Combo', emoji: '🍔', cat: 'food', min: 1000, max: 10000 },
       { id: 'chicken', name: 'Fried Chicken', emoji: '🍗', cat: 'food', min: 1000, max: 10000 },
       { id: 'pizza', name: 'Pizza', emoji: '🍕', cat: 'food', min: 1500, max: 15000 },
-      // ── TECH & GAMING (8 items) ──
       { id: 'gplay', name: 'Google Play', emoji: '🎮', cat: 'tech', min: 500, max: 20000 },
       { id: 'spotify', name: 'Spotify Gift', emoji: '🎵', cat: 'tech', min: 500, max: 10000 },
       { id: 'netflix', name: 'Netflix Gift', emoji: '🎬', cat: 'tech', min: 1500, max: 15000 },
@@ -143,25 +141,21 @@
       { id: 'amazon', name: 'Amazon Card', emoji: '📦', cat: 'tech', min: 5000, max: 50000 },
       { id: 'ps', name: 'PlayStation Card', emoji: '🕹️', cat: 'tech', min: 10000, max: 50000 },
       { id: 'xbox', name: 'Xbox Card', emoji: '🎮', cat: 'tech', min: 10000, max: 50000 },
-      // ── LUXURY (5 items) ──
       { id: 'perfume', name: 'Luxury Perfume', emoji: '🌸', cat: 'luxury', min: 2000, max: 30000 },
       { id: 'watch', name: 'Luxury Watch', emoji: '⌚', cat: 'luxury', min: 8000, max: 50000 },
       { id: 'gold', name: 'Gold Chain', emoji: '📿', cat: 'luxury', min: 10000, max: 50000 },
       { id: 'pearl', name: 'Pearl Necklace', emoji: '📿', cat: 'luxury', min: 10000, max: 50000 },
       { id: 'diamond', name: 'Diamond Ring', emoji: '💍', cat: 'luxury', min: 20000, max: 50000 },
-      // ── FASHION (5 items) ──
       { id: 'cap', name: 'Snapback Cap', emoji: '🧢', cat: 'fashion', min: 200, max: 3000 },
       { id: 'scarf', name: 'Silk Scarf', emoji: '🧣', cat: 'fashion', min: 500, max: 15000 },
       { id: 'shades', name: 'Designer Shades', emoji: '🕶️', cat: 'fashion', min: 1000, max: 20000 },
       { id: 'bag', name: 'Designer Handbag', emoji: '👜', cat: 'fashion', min: 5000, max: 50000 },
       { id: 'nike', name: 'Nike Sneakers', emoji: '👟', cat: 'fashion', min: 10000, max: 50000 },
-      // ── LIFESTYLE (5 items) ──
       { id: 'book', name: 'Book Gift', emoji: '📚', cat: 'lifestyle', min: 200, max: 3000 },
       { id: 'plant', name: 'Potted Plant', emoji: '🌱', cat: 'lifestyle', min: 200, max: 3000 },
       { id: 'candle', name: 'Scented Candle', emoji: '🕯️', cat: 'lifestyle', min: 200, max: 2000 },
       { id: 'frame', name: 'Photo Frame', emoji: '🖼️', cat: 'lifestyle', min: 500, max: 10000 },
       { id: 'case', name: 'Phone Case', emoji: '📱', cat: 'lifestyle', min: 500, max: 10000 },
-      // ── WELLNESS (3 items) ──
       { id: 'powerbank', name: 'Power Bank', emoji: '🔋', cat: 'wellness', min: 2000, max: 15000 },
       { id: 'spa', name: 'Spa Voucher', emoji: '💆', cat: 'wellness', min: 5000, max: 30000 },
       { id: 'airpods', name: 'AirPods', emoji: '🎧', cat: 'wellness', min: 8000, max: 50000 },
@@ -285,7 +279,6 @@
       const [cardImageUrl, setCardImageUrl] = useState(null);
       const [toast, setToast] = useState(null);
       const [confetti, setConfetti] = useState(false);
-      const [successMessage, setSuccessMessage] = useState(null);
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
@@ -299,11 +292,17 @@
         fetch('/api/config').then(r => r.json()).then(d => setPaystackKey(d.publicKey || '')).catch(() => {});
       }, []);
 
+      // ✅ Email sync on auth
       useEffect(() => {
         const unsub = auth.onAuthStateChanged(user => {
           if (!user) { window.location.href = '/login.html'; return; }
           setUid(user.uid);
           setUserEmail(user.email || 'user@lagoslife.com');
+          if (user.email) {
+            db.collection("users").doc(user.uid)
+              .update({ email: user.email, lastSeen: Date.now() })
+              .catch(() => {});
+          }
           try {
             const cached = JSON.parse(localStorage.getItem('lagos_user_data') || '{}');
             setUserName(cached.name || 'Hustler');
@@ -449,7 +448,6 @@
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white font-sans selection:bg-pink-500 selection:text-white' },
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
 
-          // Header
           h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/95 backdrop-blur border-b border-white/[0.06]' },
             h('div', { className: 'px-4 py-2.5 flex items-center gap-3' },
               h('button', {
@@ -464,7 +462,6 @@
             )
           ),
 
-          // Tab switcher
           h('div', { className: 'px-4 py-3' },
             h('div', { className: 'flex gap-1 p-1 rounded-xl bg-white/[0.05] border border-white/10' },
               h('button', {
@@ -478,7 +475,6 @@
             )
           ),
 
-          // SHOP TAB
           tab === 'shop' && h('main', { className: 'flex-1 px-4 pb-4' },
             h('div', { className: 'rounded-2xl shop-hero border border-pink-400/30 p-4 relative overflow-hidden' },
               h('div', { className: 'absolute inset-0 shimmer-line pointer-events-none' }),
@@ -493,7 +489,6 @@
               )
             ),
 
-            // Category pills
             h('div', { className: 'mt-4 flex gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4' },
               CATS.map(c =>
                 h('button', {
@@ -507,7 +502,6 @@
               )
             ),
 
-            // Products grid
             h('div', { className: 'mt-3 grid grid-cols-2 gap-2.5' },
               filteredProducts.map(p => {
                 const t = THEMES[p.cat];
@@ -541,7 +535,6 @@
             )
           ),
 
-          // CARDS TAB
           tab === 'cards' && h('main', { className: 'flex-1 px-4 pb-4' },
             loadingCards ? h('div', { className: 'text-center py-20 text-white/40 text-[12px] animate-pulse' }, 'Loading your cards...') :
             myCards.length === 0 ? h('div', { className: 'text-center py-20' },
@@ -588,7 +581,6 @@
             )
           ),
 
-          // Purchase modal
           selectedProduct && h('div', { className: 'fixed inset-0 z-[100] grid place-items-end sm:place-items-center p-0 sm:p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => !payLoading && setSelectedProduct(null) }),
             h('div', { className: 'relative w-full max-w-md bg-[#121218] border-t sm:border border-pink-400/30 rounded-t-3xl sm:rounded-3xl p-5 animate-slideUp max-h-[90vh] overflow-y-auto' },
@@ -679,7 +671,6 @@
             )
           ),
 
-          // Card preview modal
           viewCard && cardImageUrl && h('div', { className: 'fixed inset-0 z-[105] grid place-items-center p-4' },
             h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setViewCard(null) }),
             h('div', { className: 'relative w-full max-w-sm animate-popIn' },
@@ -712,7 +703,6 @@
             )
           ),
 
-          // Confetti
           confetti && h('div', { className: 'fixed inset-0 pointer-events-none z-[200]' },
             Array.from({ length: 30 }).map((_, i) =>
               h('div', {
@@ -723,7 +713,6 @@
             )
           ),
 
-          // Toast
           toast && h('div', {
             className: 'fixed top-20 left-1/2 -translate-x-1/2 z-[150] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl animate-slideDown font-display whitespace-nowrap max-w-[90vw] truncate ' +
               (toast.kind === 'bad' ? 'bg-gradient-to-b from-red-500 to-red-600 text-white' : 'bg-gradient-to-b from-pink-400 to-purple-500 text-white')
