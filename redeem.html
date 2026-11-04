@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#08080B" />
+  <title>Lagos Life Mini — Redeem Gift 🎟️</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+    html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+    body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(16,185,129,0.1), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(59,130,246,0.08), transparent); }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
+    @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
+    @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes successBounce { 0% { transform: scale(0); } 60% { transform: scale(1.2); } 100% { transform: scale(1); } }
+    @keyframes coinDrop { 0% { transform: translateY(-40px) rotate(0); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(20px) rotate(180deg); opacity: 0.5; } }
+    @keyframes pulseRing { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+    .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
+    .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
+    .animate-successBounce { animation: successBounce 0.6s cubic-bezier(0.34,1.56,0.64,1); }
+    .redeem-hero { background: radial-gradient(circle at top right, rgba(16,185,129,0.4) 0%, transparent 55%), radial-gradient(circle at bottom left, rgba(59,130,246,0.35) 0%, transparent 55%), linear-gradient(135deg, #0a1a15 0%, #0a0f1a 100%); }
+    input { -webkit-user-select: text; user-select: text; letter-spacing: 0.08em; }
+    input:focus { outline: none; }
+    button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    const { useState, useEffect } = React;
+    const h = React.createElement;
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBf2lWdtfpQe-h3bMpdHqsHR4SuQHICOZs",
+      authDomain: "lagos-life-a8706.firebaseapp.com",
+      projectId: "lagos-life-a8706",
+      storageBucket: "lagos-life-a8706.firebasestorage.app",
+      messagingSenderId: "187884589425",
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const fmt = (n) => {
+      n = Math.floor(n || 0);
+      if (n >= 1e6) return '₦' + (n / 1e6).toFixed(1) + 'M';
+      if (n >= 1e3) return '₦' + (n / 1e3).toFixed(1) + 'K';
+      return '₦' + n.toLocaleString();
+    };
+    const fmtFull = (n) => '₦' + Math.floor(n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const normalize = (code) => (code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    function App() {
+      const [uid, setUid] = useState(null);
+      const [userName, setUserName] = useState('Hustler');
+      const [real, setReal] = useState(0);
+      const [inputCode, setInputCode] = useState('');
+      const [stage, setStage] = useState('input'); // input | preview | success | error
+      const [card, setCard] = useState(null);
+      const [errorMsg, setErrorMsg] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [history, setHistory] = useState([]);
+      const [loadingHistory, setLoadingHistory] = useState(true);
+      const [toast, setToast] = useState(null);
+
+      const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
+
+      useEffect(() => {
+        if (!toast) return;
+        const t = setTimeout(() => setToast(null), 2500);
+        return () => clearTimeout(t);
+      }, [toast]);
+
+      useEffect(() => {
+        const unsub = auth.onAuthStateChanged(user => {
+          if (!user) { window.location.href = '/login.html'; return; }
+          setUid(user.uid);
+          try {
+            const cached = JSON.parse(localStorage.getItem('lagos_user_data') || '{}');
+            setUserName(cached.name || 'Hustler');
+            setReal(cached.real || 0);
+          } catch (e) {}
+        });
+        return () => unsub();
+      }, []);
+
+      const loadHistory = async () => {
+        if (!uid) return;
+        setLoadingHistory(true);
+        try {
+          const snap = await db.collection('gift_cards')
+            .where('redeemedBy', '==', uid)
+            .orderBy('redeemedAt', 'desc')
+            .limit(30).get();
+          const arr = [];
+          snap.forEach(d => arr.push({ id: d.id, ...d.data() }));
+          setHistory(arr);
+        } catch (e) {
+          console.error(e);
+        } finally { setLoadingHistory(false); }
+      };
+
+      useEffect(() => { if (uid) loadHistory(); }, [uid]);
+
+      const formatInput = (val) => {
+        const clean = (val || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 14);
+        let out = '';
+        for (let i = 0; i < clean.length; i++) {
+          if (i === 3 || i === 7 || i === 11) out += '-';
+          out += clean[i];
+        }
+        return out;
+      };
+
+      const handleInput = (e) => {
+        setInputCode(formatInput(e.target.value));
+        setErrorMsg('');
+      };
+
+      const checkCode = async () => {
+        const code = inputCode.trim();
+        if (code.replace(/-/g, '').length !== 14) {
+          setErrorMsg('Code must be 14 characters (LGM-XXXX-XXXX-XXXX)');
+          return;
+        }
+        setLoading(true);
+        setErrorMsg('');
+        try {
+          const snap = await db.collection('gift_cards').where('code', '==', code).limit(1).get();
+          if (snap.empty) {
+            setErrorMsg('❌ Invalid code. Please check and try again.');
+            setLoading(false);
+            return;
+          }
+          const doc = snap.docs[0];
+          const data = { id: doc.id, ...doc.data() };
+          if (data.status === 'redeemed') {
+            setErrorMsg('🚫 This code has already been redeemed.');
+            setLoading(false);
+            return;
+          }
+          if (data.status === 'expired' || Date.now() > (data.expiresAt || 0)) {
+            setErrorMsg('⏰ This gift card has expired.');
+            setLoading(false);
+            return;
+          }
+          if (data.buyerId === uid) {
+            setErrorMsg('😅 You cannot redeem your own gift card.');
+            setLoading(false);
+            return;
+          }
+          setCard(data);
+          setStage('preview');
+        } catch (e) {
+          console.error(e);
+          setErrorMsg('⚠️ Something went wrong. Try again.');
+        } finally { setLoading(false); }
+      };
+
+      const confirmRedeem = async () => {
+        if (!card || !uid) return;
+        setLoading(true);
+        try {
+          const cardRef = db.collection('gift_cards').doc(card.id);
+          const userRef = db.collection('users').doc(uid);
+
+          await db.runTransaction(async (tx) => {
+            const freshDoc = await tx.get(cardRef);
+            const fresh = freshDoc.data();
+            if (fresh.status !== 'active') throw new Error('Already redeemed');
+            if (Date.now() > (fresh.expiresAt || 0)) throw new Error('Expired');
+
+            tx.update(cardRef, {
+              status: 'redeemed',
+              redeemedAt: Date.now(),
+              redeemedBy: uid,
+              redeemedByName: userName
+            });
+
+            tx.update(userRef, {
+              real: firebase.firestore.FieldValue.increment(fresh.redeemValue),
+              lastSeen: Date.now()
+            });
+          });
+
+          const newReal = (real || 0) + card.redeemValue;
+          setReal(newReal);
+          try {
+            const cached = JSON.parse(localStorage.getItem('lagos_user_data') || '{}');
+            cached.real = newReal;
+            localStorage.setItem('lagos_user_data', JSON.stringify(cached));
+          } catch (e) {}
+
+          setStage('success');
+          loadHistory();
+          notify('🎉 You just earned ' + fmtFull(card.redeemValue) + '!');
+        } catch (e) {
+          console.error(e);
+          setErrorMsg('Could not complete redemption. ' + e.message);
+          setStage('input');
+        } finally { setLoading(false); }
+      };
+
+      const reset = () => {
+        setStage('input');
+        setCard(null);
+        setInputCode('');
+        setErrorMsg('');
+      };
+
+      if (!uid) return h('div', { className: 'min-h-screen grid place-items-center text-white/50' }, '⏳ Loading...');
+
+      return h('div', { className: 'min-h-screen bg-[#08080B] text-white font-sans selection:bg-emerald-500 selection:text-white' },
+        h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-8 relative' },
+
+          h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/95 backdrop-blur border-b border-white/[0.06]' },
+            h('div', { className: 'px-4 py-2.5 flex items-center gap-3' },
+              h('button', { onClick: () => window.location.href = 'more.html', className: 'w-8 h-8 rounded-lg bg-white/[0.06] border border-white/10 grid place-items-center active:scale-90' }, '←'),
+              h('div', { className: 'flex-1 min-w-0' },
+                h('div', { className: 'text-[9px] uppercase tracking-[0.22em] font-extrabold text-emerald-400/80 leading-none font-display' }, 'Redeem Gift'),
+                h('div', { className: 'text-[13px] font-black truncate font-display mt-0.5' }, '🎟️ Collect your gift')
+              ),
+              h('div', { className: 'px-2 py-1 rounded-lg bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 text-[10px] font-extrabold tabular-nums' }, fmt(real))
+            )
+          ),
+
+          h('main', { className: 'flex-1 px-4 pt-4 pb-4' },
+
+            stage === 'input' && h('div', { className: 'animate-popIn' },
+              h('div', { className: 'rounded-2xl redeem-hero border border-emerald-400/30 p-5 relative overflow-hidden' },
+                h('div', { className: 'absolute -top-12 -right-12 w-40 h-40 rounded-full bg-emerald-400/20 blur-3xl' }),
+                h('div', { className: 'relative text-center' },
+                  h('div', { className: 'text-5xl mb-2' }, '🎟️'),
+                  h('div', { className: 'text-[16px] font-black font-display text-white' }, 'Enter your gift code'),
+                  h('div', { className: 'text-[11px] text-white/60 mt-1' }, 'Type the code from your gift card')
+                )
+              ),
+
+              h('div', { className: 'mt-4' },
+                h('input', {
+                  value: inputCode,
+                  onChange: handleInput,
+                  placeholder: 'LGM-XXXX-XXXX-XXXX',
+                  autoFocus: true,
+                  spellCheck: false,
+                  autoComplete: 'off',
+                  className: 'w-full bg-white/[0.05] border-2 border-white/15 focus:border-emerald-400/60 rounded-2xl px-4 py-4 text-center text-[18px] font-black font-mono text-emerald-300 placeholder-white/25 tabular-nums transition'
+                }),
+                inputCode && h('div', { className: 'mt-1 text-center text-[10px] text-white/40 tabular-nums' },
+                  inputCode.replace(/-/g, '').length + ' / 14 characters'
+                ),
+                errorMsg && h('div', { className: 'mt-2 text-center text-[11px] text-red-400 font-bold' }, errorMsg)
+              ),
+
+              h('button', {
+                onClick: checkCode,
+                disabled: loading || inputCode.replace(/-/g, '').length !== 14,
+                className: 'mt-4 w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black text-[13px] font-display shadow-[0_8px_24px_-8px_rgba(16,185,129,0.7)] active:scale-[0.97] transition disabled:opacity-40 disabled:shadow-none'
+              }, loading ? '⏳ Checking...' : '🔍 Check Code')
+            ),
+
+            stage === 'preview' && card && h('div', { className: 'animate-popIn' },
+              h('div', { className: 'rounded-2xl redeem-hero border border-emerald-400/40 p-5 text-center' },
+                h('div', { className: 'text-6xl mb-2 animate-successBounce' }, card.emoji),
+                h('div', { className: 'text-[10px] uppercase tracking-widest text-emerald-300/80 font-extrabold' }, '🎁 You received'),
+                h('div', { className: 'text-[42px] font-black font-display text-transparent bg-gradient-to-r from-emerald-300 to-teal-200 bg-clip-text leading-tight mt-1 tabular-nums' }, fmtFull(card.redeemValue)),
+                h('div', { className: 'text-[13px] font-black text-white mt-1 font-display' }, card.productName),
+                card.recipientName && h('div', { className: 'text-[10px] text-white/60 mt-1' }, 'Addressed to: ' + card.recipientName),
+                card.message && h('div', { className: 'text-[11px] italic text-white/50 mt-2' }, '"' + card.message + '"'),
+                h('div', { className: 'mt-3 pt-3 border-t border-white/[0.08] text-[10px] text-white/50' },
+                  'From: ', h('span', { className: 'text-white font-bold' }, card.buyerName || 'A friend')
+                )
+              ),
+
+              h('div', { className: 'mt-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]' },
+                h('div', { className: 'flex justify-between items-center' },
+                  h('span', { className: 'text-[10px] text-white/50' }, 'Current balance'),
+                  h('span', { className: 'text-[11px] font-black tabular-nums text-white/70' }, fmtFull(real))
+                ),
+                h('div', { className: 'flex justify-between items-center mt-1' },
+                  h('span', { className: 'text-[10px] text-emerald-300 font-bold' }, '+ After redeem'),
+                  h('span', { className: 'text-[13px] font-black tabular-nums text-emerald-300' }, fmtFull(real + card.redeemValue))
+                )
+              ),
+
+              h('button', {
+                onClick: confirmRedeem,
+                disabled: loading,
+                className: 'mt-3 w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black text-[13px] font-display shadow-[0_8px_24px_-8px_rgba(16,185,129,0.7)] active:scale-[0.97] transition disabled:opacity-50'
+              }, loading ? '⏳ Redeeming...' : '💰 Claim ' + fmtFull(card.redeemValue)),
+
+              h('button', {
+                onClick: reset,
+                disabled: loading,
+                className: 'mt-2 w-full py-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-white/50 text-[11px] font-bold'
+              }, 'Cancel')
+            ),
+
+            stage === 'success' && card && h('div', { className: 'animate-popIn text-center py-8' },
+              h('div', { className: 'relative inline-block mb-4' },
+                h('div', { className: 'absolute inset-0 rounded-full bg-emerald-400/40', style: { animation: 'pulseRing 1.2s ease-out infinite' } }),
+                h('div', { className: 'relative w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 grid place-items-center text-5xl animate-successBounce shadow-[0_8px_40px_-8px_rgba(16,185,129,0.8)]' }, '🎉')
+              ),
+              h('div', { className: 'text-[18px] font-black font-display text-emerald-300' }, 'Redeemed Successfully!'),
+              h('div', { className: 'text-[10px] text-white/50 mt-1' }, card.emoji + ' ' + card.productName),
+              h('div', { className: 'mt-4 rounded-2xl bg-gradient-to-b from-emerald-500/20 to-teal-500/10 border border-emerald-400/30 p-5' },
+                h('div', { className: 'text-[10px] uppercase tracking-widest text-white/60 font-extrabold' }, 'Added to your wallet'),
+                h('div', { className: 'text-[36px] font-black font-display text-transparent bg-gradient-to-r from-emerald-300 to-teal-200 bg-clip-text tabular-nums leading-tight mt-1' },
+                  '+' + fmtFull(card.redeemValue)
+                ),
+                h('div', { className: 'text-[10px] text-white/50 mt-1' }, 'New balance: ' + fmtFull(real))
+              ),
+              h('div', { className: 'mt-5 flex gap-2' },
+                h('button', {
+                  onClick: reset,
+                  className: 'flex-1 py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white/80 text-[12px] font-black active:scale-95'
+                }, '🎟️ Redeem Another'),
+                h('button', {
+                  onClick: () => window.location.href = 'more.html',
+                  className: 'flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[12px] font-black active:scale-95'
+                }, '🏠 Done')
+              )
+            ),
+
+            // History
+            h('div', { className: 'mt-6' },
+              h('div', { className: 'flex items-end justify-between mb-2.5' },
+                h('h2', { className: 'text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display' }, 'Your Redemptions'),
+                h('span', { className: 'text-[10px] font-bold text-emerald-400' }, history.length + ' total')
+              ),
+              loadingHistory ? h('div', { className: 'text-center py-6 text-white/40 text-[11px] animate-pulse' }, 'Loading...') :
+              history.length === 0 ? h('div', { className: 'text-center py-6 text-white/30 text-[11px]' }, 'No gifts redeemed yet') :
+              h('div', { className: 'space-y-2' },
+                history.map(c =>
+                  h('div', { key: c.id, className: 'card-gradient rounded-xl px-3 py-2.5 flex items-center gap-2.5' },
+                    h('div', { className: 'text-2xl' }, c.emoji),
+                    h('div', { className: 'flex-1 min-w-0' },
+                      h('div', { className: 'text-[11.5px] font-black font-display truncate' }, c.productName),
+                      h('div', { className: 'text-[9px] text-white/40 mt-0.5' },
+                        'From ' + (c.buyerName || 'Someone') + ' · ' + new Date(c.redeemedAt || 0).toLocaleDateString()
+                      )
+                    ),
+                    h('div', { className: 'text-[12px] font-black tabular-nums text-emerald-400' }, '+' + fmtFull(c.redeemValue))
+                  )
+                )
+              )
+            )
+          ),
+
+          toast && h('div', {
+            className: 'fixed top-20 left-1/2 -translate-x-1/2 z-[150] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl animate-slideDown font-display ' +
+              (toast.kind === 'bad' ? 'bg-gradient-to-b from-red-500 to-red-600 text-white' : 'bg-gradient-to-b from-emerald-400 to-teal-500 text-white')
+          }, toast.msg)
+        )
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+  </script>
+</body>
+</html>
