@@ -44,9 +44,14 @@
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     @keyframes floatBottles { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-8px) rotate(6deg); } }
+    @keyframes giftFloat { 0%, 100% { transform: translateY(0) rotate(-10deg); } 50% { transform: translateY(-10px) rotate(10deg); } }
+    @keyframes shopShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
     .animate-popIn { animation: popIn 0.28s cubic-bezier(0.22,1,0.36,1); }
     .animate-floatBottles { animation: floatBottles 3s ease-in-out infinite; }
+    .animate-giftFloat { animation: giftFloat 3s ease-in-out infinite; }
+    .shop-shimmer { background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%); background-size: 200% 100%; animation: shopShimmer 3.5s infinite; }
+    .shop-banner-bg { background: radial-gradient(circle at top right, rgba(236,72,153,0.35) 0%, transparent 55%), radial-gradient(circle at bottom left, rgba(168,85,247,0.3) 0%, transparent 55%), linear-gradient(135deg, #1a0a1f 0%, #0f0a1a 100%); }
     .nav-active-pill { background: linear-gradient(180deg, rgba(255,214,10,0.2) 0%, rgba(255,214,10,0.05) 100%); border: 1px solid rgba(255,214,10,0.35); box-shadow: 0 0 25px rgba(255,214,10,0.25); }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .nav-backdrop { background: #08080B; }
@@ -117,6 +122,7 @@
       { icon: '🏪', title: 'Business Income', text: 'Your businesses make money even when you dey sleep. Collect am before 48hrs.' },
       { icon: '🎰', title: 'Daily Spin', text: 'Free ₦1T–₦100T from the club lucky spin every 24hrs. No skip!' },
       { icon: '🤝', title: 'P2P Market', text: 'Buy cheap from other players, sell expensive. Profit na profit.' },
+      { icon: '🎁', title: 'Gift Shop', text: 'Buy gifts for loved ones from ₦200. They redeem for real cash at redeem.html — we keep 20% fee.' },
     ];
 
     function App() {
@@ -138,7 +144,6 @@
         return () => unsub();
       }, []);
 
-      // ✅ Presence — one-time fetch + 60s refresh (no onSnapshot)
       useEffect(() => {
         let cancelled = false;
         const fetchPresence = async () => {
@@ -221,6 +226,13 @@
           ]
         },
         {
+          category: 'Gift Shop & Rewards',
+          items: [
+            { id: 'shop', label: 'Gift Shop', icon: '🎁', desc: 'Buy gifts for loved ones', href: 'shop.html', color: 'from-pink-500/30 to-fuchsia-700/15' },
+            { id: 'redeem', label: 'Redeem Gift', icon: '🎟️', desc: 'Collect your gift money', href: 'redeem.html', color: 'from-emerald-500/30 to-teal-700/15' },
+          ]
+        },
+        {
           category: 'Head-to-Head',
           items: [
             { id: 'games', label: 'Street Corner Boardroom', icon: '🎱', desc: 'Draft, Pool, Ludo · Real opponents', href: 'games.html', color: 'from-amber-500/25 to-orange-700/10' },
@@ -251,8 +263,6 @@
         }
       ];
 
-      // ---- Helper render functions (clean, no bracket mess) ----
-
       const renderStats = () => {
         const stats = [
           { label: 'Cash', value: fmt(s.cash), emoji: '💰' },
@@ -265,6 +275,41 @@
               h('div', { className: 'text-lg mb-0.5' }, stat.emoji),
               h('div', { className: 'text-[8.5px] uppercase tracking-wider text-white/40 font-extrabold' }, stat.label),
               h('div', { className: 'text-[11px] font-black text-[#FFD60A] tabular-nums mt-0.5 truncate' }, stat.value)
+            )
+          )
+        );
+      };
+
+      const renderShopBanner = () => {
+        const gifts = ['🎁', '🎀', '💝', '🛍️', '💎'];
+        return h('button', {
+          onClick: () => window.location.href = 'shop.html',
+          className: 'w-full text-left mt-4 rounded-2xl overflow-hidden relative shop-banner-bg border border-pink-400/40 active:scale-[0.98] transition shadow-[0_8px_32px_-8px_rgba(236,72,153,0.5)]'
+        },
+          h('div', { className: 'absolute inset-0 shop-shimmer pointer-events-none' }),
+          h('div', { className: 'absolute inset-0 pointer-events-none overflow-hidden' },
+            gifts.map((e, i) =>
+              h('div', {
+                key: i,
+                className: 'absolute text-2xl opacity-20 animate-giftFloat',
+                style: { left: (8 + i * 20) + '%', top: (15 + (i % 2) * 45) + '%', animationDelay: (i * 0.4) + 's' }
+              }, e)
+            )
+          ),
+          h('div', { className: 'relative p-4' },
+            h('div', { className: 'flex items-center justify-between mb-1.5' },
+              h('div', { className: 'flex items-center gap-1.5' },
+                h('span', { className: 'text-[9px] uppercase tracking-widest text-pink-300 font-black bg-pink-400/20 px-2 py-0.5 rounded-full border border-pink-400/40' }, '✨ NEW'),
+                h('span', { className: 'text-[9px] uppercase tracking-widest text-emerald-300 font-black bg-emerald-400/15 px-2 py-0.5 rounded-full border border-emerald-400/30' }, '🎟️ REDEEMABLE')
+              )
+            ),
+            h('div', { className: 'flex items-center gap-3' },
+              h('div', { className: 'text-4xl animate-giftFloat' }, '🎁'),
+              h('div', { className: 'flex-1 min-w-0' },
+                h('div', { className: 'text-[17px] font-black font-display text-white leading-tight' }, 'Gift Shop'),
+                h('div', { className: 'text-[10px] text-white/65 mt-0.5' }, 'Send shawarma, Apple Card, diamond rings & more 🎀')
+              ),
+              h('div', { className: 'text-2xl text-pink-300 font-black' }, '→')
             )
           )
         );
@@ -399,6 +444,7 @@
               )
             ),
             renderStats(),
+            renderShopBanner(),
             renderVGCBanner(),
             renderQuickActions()
           ),
@@ -407,7 +453,7 @@
             FEATURES.map(renderFeatureSection),
             renderAccount(),
             h('div', { className: 'mt-8 mb-4 text-center' },
-              h('div', { className: 'text-[10px] font-bold text-white/20' }, 'Lagos Life Mini v2.2 — Hustle or Nothing')
+              h('div', { className: 'text-[10px] font-bold text-white/20' }, 'Lagos Life Mini v2.3 — Hustle or Nothing')
             )
           )
         ),
