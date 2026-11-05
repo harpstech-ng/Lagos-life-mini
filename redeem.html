@@ -170,10 +170,11 @@
       useEffect(() => { if (uid) { loadHistory(); loadWithdrawHistory(); } }, [uid]);
 
       const formatInput = (val) => {
-        const clean = (val || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 14);
+        // 🔥 FIXED: Changed 14 to 15 to match the generator
+        const clean = (val || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 15);
         let out = '';
         for (let i = 0; i < clean.length; i++) {
-          if (i === 3 || i === 7 || i === 11) out += '-';
+          if (i === 3 || i === 8 || i === 13) out += '-'; // Adjusted hyphen logic for 15 chars
           out += clean[i];
         }
         return out;
@@ -186,8 +187,9 @@
 
       const checkCode = async () => {
         const code = inputCode.trim();
-        if (code.replace(/-/g, '').length !== 14) {
-          setErrorMsg('Code must be 14 characters (LGM-XXXX-XXXX-XXXX)');
+        // 🔥 FIXED: Changed 14 to 15
+        if (code.replace(/-/g, '').length !== 15) {
+          setErrorMsg('Code must be 15 characters (LGM-XXXX-XXXX-XXXX)');
           return;
         }
         setLoading(true);
@@ -371,14 +373,14 @@
                   className: 'w-full bg-white/[0.05] border-2 border-white/15 focus:border-emerald-400/60 rounded-2xl px-4 py-4 text-center text-[18px] font-black font-mono text-emerald-300 placeholder-white/25 tabular-nums transition'
                 }),
                 inputCode && h('div', { className: 'mt-1 text-center text-[10px] text-white/40 tabular-nums' },
-                  inputCode.replace(/-/g, '').length + ' / 14 characters'
+                  inputCode.replace(/-/g, '').length + ' / 15 characters' // 🔥 FIXED TEXT
                 ),
                 errorMsg && h('div', { className: 'mt-2 text-center text-[11px] text-red-400 font-bold' }, errorMsg)
               ),
 
               h('button', {
                 onClick: checkCode,
-                disabled: loading || inputCode.replace(/-/g, '').length !== 14,
+                disabled: loading || inputCode.replace(/-/g, '').length !== 15, // 🔥 FIXED CHECK
                 className: 'mt-4 w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black text-[13px] font-display shadow-[0_8px_24px_-8px_rgba(16,185,129,0.7)] active:scale-[0.97] transition disabled:opacity-40 disabled:shadow-none'
               }, loading ? '⏳ Checking...' : '🔍 Check Code')
             ),
