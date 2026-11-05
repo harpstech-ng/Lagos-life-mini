@@ -4,26 +4,44 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#08080B" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Lagos Life Mini — Redeem Gift 🎟️</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js'"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin
+    onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js'"></script>
+
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        colors: { gold: '#FFD60A', gold2: '#FFB800', ink: '#08080B' },
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], display: ['Sora', 'Inter', 'sans-serif'] },
+      }},
+    };
+  </script>
+
   <style>
     * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
     html, body { margin: 0; padding: 0; background: #08080B; color: #fff; overflow-x: hidden; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
     body { background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(16,185,129,0.1), transparent), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(59,130,246,0.08), transparent); }
     ::-webkit-scrollbar { width: 0; height: 0; }
     .font-display { font-family: 'Sora', sans-serif; letter-spacing: -0.02em; }
-    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .tabular-nums { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
     .card-gradient { background: linear-gradient(135deg, #15151D 0%, #0F0F15 100%); border: 1px solid rgba(255,255,255,0.07); box-shadow: 0 4px 20px -5px rgba(0,0,0,0.5); }
     @keyframes popIn { 0% { transform: scale(0.85); opacity: 0; } 60% { transform: scale(1.04); opacity: 1; } 100% { transform: scale(1); } }
     @keyframes slideDown { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     @keyframes successBounce { 0% { transform: scale(0); } 60% { transform: scale(1.2); } 100% { transform: scale(1); } }
-    @keyframes coinDrop { 0% { transform: translateY(-40px) rotate(0); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(20px) rotate(180deg); opacity: 0.5; } }
     @keyframes pulseRing { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
     .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
@@ -32,10 +50,17 @@
     input { -webkit-user-select: text; user-select: text; letter-spacing: 0.08em; }
     input:focus { outline: none; }
     button { -webkit-appearance: none; appearance: none; border: none; background: none; color: inherit; font: inherit; cursor: pointer; }
+    .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
   </style>
 </head>
 <body>
   <div id="root"></div>
+
+  <script>
+    window.addEventListener('error', function (e) { console.error('Global error:', e.error || e.message); });
+    window.addEventListener('unhandledrejection', function (e) { console.error('Unhandled rejection:', e.reason); });
+  </script>
+
   <script>
     const { useState, useEffect } = React;
     const h = React.createElement;
@@ -46,7 +71,8 @@
       projectId: "lagos-life-a8706",
       storageBucket: "lagos-life-a8706.firebasestorage.app",
       messagingSenderId: "187884589425",
-      appId: "1:187884589425:web:07383ff1a19edbb751a6d0"
+      appId: "1:187884589425:web:07383ff1a19edbb751a6d0",
+      measurementId: "G-DDMJTH2WY7"
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
@@ -60,20 +86,28 @@
     };
     const fmtFull = (n) => '₦' + Math.floor(n || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const normalize = (code) => (code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-
     function App() {
       const [uid, setUid] = useState(null);
       const [userName, setUserName] = useState('Hustler');
+      const [userEmail, setUserEmail] = useState('');
       const [real, setReal] = useState(0);
       const [inputCode, setInputCode] = useState('');
-      const [stage, setStage] = useState('input'); // input | preview | success | error
+      const [stage, setStage] = useState('input'); // input | preview | success
       const [card, setCard] = useState(null);
       const [errorMsg, setErrorMsg] = useState('');
       const [loading, setLoading] = useState(false);
       const [history, setHistory] = useState([]);
       const [loadingHistory, setLoadingHistory] = useState(true);
       const [toast, setToast] = useState(null);
+
+      // Cash Out state
+      const [cashOutOpen, setCashOutOpen] = useState(false);
+      const [bankName, setBankName] = useState('');
+      const [accountNumber, setAccountNumber] = useState('');
+      const [accountName, setAccountName] = useState('');
+      const [withdrawAmount, setWithdrawAmount] = useState('');
+      const [withdrawLoading, setWithdrawLoading] = useState(false);
+      const [withdrawHistory, setWithdrawHistory] = useState([]);
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
@@ -83,10 +117,17 @@
         return () => clearTimeout(t);
       }, [toast]);
 
+      // ✅ Auth + email sync
       useEffect(() => {
         const unsub = auth.onAuthStateChanged(user => {
           if (!user) { window.location.href = '/login.html'; return; }
           setUid(user.uid);
+          setUserEmail(user.email || '');
+          if (user.email) {
+            db.collection("users").doc(user.uid)
+              .update({ email: user.email, lastSeen: Date.now() })
+              .catch(() => {});
+          }
           try {
             const cached = JSON.parse(localStorage.getItem('lagos_user_data') || '{}');
             setUserName(cached.name || 'Hustler');
@@ -105,14 +146,28 @@
             .orderBy('redeemedAt', 'desc')
             .limit(30).get();
           const arr = [];
-          snap.forEach(d => arr.push({ id: d.id, ...d.data() }));
+          snap.forEach(d => arr.push(Object.assign({ id: d.id }, d.data())));
           setHistory(arr);
         } catch (e) {
           console.error(e);
         } finally { setLoadingHistory(false); }
       };
 
-      useEffect(() => { if (uid) loadHistory(); }, [uid]);
+      const loadWithdrawHistory = async () => {
+        if (!uid) return;
+        try {
+          const snap = await db.collection("withdrawals")
+            .where("userId", "==", uid)
+            .where("source", "==", "gift_redeem")
+            .limit(20).get();
+          const arr = [];
+          snap.forEach(d => arr.push(Object.assign({ id: d.id }, d.data())));
+          arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          setWithdrawHistory(arr);
+        } catch (e) { console.error(e); }
+      };
+
+      useEffect(() => { if (uid) { loadHistory(); loadWithdrawHistory(); } }, [uid]);
 
       const formatInput = (val) => {
         const clean = (val || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 14);
@@ -145,7 +200,7 @@
             return;
           }
           const doc = snap.docs[0];
-          const data = { id: doc.id, ...doc.data() };
+          const data = Object.assign({ id: doc.id }, doc.data());
           if (data.status === 'redeemed') {
             setErrorMsg('🚫 This code has already been redeemed.');
             setLoading(false);
@@ -218,6 +273,60 @@
         setCard(null);
         setInputCode('');
         setErrorMsg('');
+      };
+
+      // ===== CASH OUT =====
+      const openCashOut = () => {
+        setWithdrawAmount(String(Math.max(100, Math.floor(real))));
+        setBankName('');
+        setAccountNumber('');
+        setAccountName('');
+        setCashOutOpen(true);
+      };
+
+      const submitWithdrawal = async () => {
+        const amt = Number(withdrawAmount);
+        if (!amt || amt < 100) return notify('Minimum withdrawal is ₦100', 'bad');
+        if (amt > real) return notify('Insufficient balance', 'bad');
+        if (!bankName.trim()) return notify('Enter bank name', 'bad');
+        if (!accountNumber.trim() || accountNumber.length < 10) return notify('Enter valid 10-digit account number', 'bad');
+        if (!accountName.trim()) return notify('Enter account name', 'bad');
+
+        setWithdrawLoading(true);
+        try {
+          await db.collection("withdrawals").add({
+            userId: uid,
+            name: userName,
+            email: userEmail,
+            bankName: bankName.trim(),
+            accountNumber: accountNumber.trim(),
+            accountName: accountName.trim(),
+            amountReal: amt,
+            source: 'gift_redeem',
+            status: 'pending',
+            createdAt: Date.now()
+          });
+
+          await db.collection("users").doc(uid).update({
+            real: firebase.firestore.FieldValue.increment(-amt),
+            lastSeen: Date.now()
+          });
+
+          const newReal = real - amt;
+          setReal(newReal);
+          try {
+            const cached = JSON.parse(localStorage.getItem('lagos_user_data') || '{}');
+            cached.real = newReal;
+            localStorage.setItem('lagos_user_data', JSON.stringify(cached));
+          } catch (e) {}
+
+          setCashOutOpen(false);
+          notify('✅ Withdrawal request sent! Admin will process in 24-48hrs.');
+          loadWithdrawHistory();
+        } catch (e) {
+          notify('Failed: ' + e.message, 'bad');
+        }
+        setWithdrawLoading(false);
       };
 
       if (!uid) return h('div', { className: 'min-h-screen grid place-items-center text-white/50' }, '⏳ Loading...');
@@ -308,7 +417,7 @@
               }, 'Cancel')
             ),
 
-            stage === 'success' && card && h('div', { className: 'animate-popIn text-center py-8' },
+            stage === 'success' && card && h('div', { className: 'animate-popIn text-center py-6' },
               h('div', { className: 'relative inline-block mb-4' },
                 h('div', { className: 'absolute inset-0 rounded-full bg-emerald-400/40', style: { animation: 'pulseRing 1.2s ease-out infinite' } }),
                 h('div', { className: 'relative w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 grid place-items-center text-5xl animate-successBounce shadow-[0_8px_40px_-8px_rgba(16,185,129,0.8)]' }, '🎉')
@@ -331,6 +440,36 @@
                   onClick: () => window.location.href = 'more.html',
                   className: 'flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[12px] font-black active:scale-95'
                 }, '🏠 Done')
+              ),
+              h('button', {
+                onClick: openCashOut,
+                className: 'mt-2 w-full py-3.5 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[13px] font-black active:scale-95 shadow-lg'
+              }, '💸 Withdraw to Bank')
+            ),
+
+            // 🏦 Withdrawal history
+            withdrawHistory.length > 0 && h('div', { className: 'mt-6' },
+              h('div', { className: 'flex items-end justify-between mb-2.5' },
+                h('h2', { className: 'text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display' }, 'Your Withdrawals'),
+                h('span', { className: 'text-[10px] font-bold text-emerald-400' }, withdrawHistory.length + ' total')
+              ),
+              h('div', { className: 'space-y-2' },
+                withdrawHistory.map(w => {
+                  const statusColor = w.status === 'paid' ? '#22C55E' : w.status === 'rejected' ? '#EF4444' : '#FFD60A';
+                  const statusLabel = w.status === 'paid' ? 'PAID ✅' : w.status === 'rejected' ? 'REJECTED ❌' : 'PENDING ⏳';
+                  return h('div', { key: w.id, className: 'card-gradient rounded-xl px-3 py-2.5' },
+                    h('div', { className: 'flex justify-between items-start gap-2' },
+                      h('div', { className: 'flex-1 min-w-0' },
+                        h('div', { className: 'text-[11px] font-black text-white' }, w.bankName + ' · ' + w.accountNumber),
+                        h('div', { className: 'text-[9px] text-white/40 mt-0.5' }, new Date(w.createdAt || 0).toLocaleString())
+                      ),
+                      h('div', { className: 'text-right shrink-0' },
+                        h('div', { className: 'text-[12px] font-black tabular-nums text-emerald-400' }, fmtFull(w.amountReal)),
+                        h('div', { className: 'text-[8px] font-black mt-0.5', style: { color: statusColor } }, statusLabel)
+                      )
+                    )
+                  );
+                })
               )
             ),
 
@@ -338,7 +477,10 @@
             h('div', { className: 'mt-6' },
               h('div', { className: 'flex items-end justify-between mb-2.5' },
                 h('h2', { className: 'text-[10px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display' }, 'Your Redemptions'),
-                h('span', { className: 'text-[10px] font-bold text-emerald-400' }, history.length + ' total')
+                real >= 100 && h('button', {
+                  onClick: openCashOut,
+                  className: 'text-[10px] font-black text-white bg-gradient-to-r from-pink-500 to-purple-600 px-3 py-1.5 rounded-lg active:scale-95'
+                }, '💸 Withdraw ' + fmt(real))
               ),
               loadingHistory ? h('div', { className: 'text-center py-6 text-white/40 text-[11px] animate-pulse' }, 'Loading...') :
               history.length === 0 ? h('div', { className: 'text-center py-6 text-white/30 text-[11px]' }, 'No gifts redeemed yet') :
@@ -359,8 +501,66 @@
             )
           ),
 
+          // ===== CASH OUT MODAL =====
+          cashOutOpen && h('div', { className: 'fixed inset-0 z-[200] grid place-items-center p-5' },
+            h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => !withdrawLoading && setCashOutOpen(false) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-emerald-400/30 rounded-3xl p-5 animate-popIn max-h-[90vh] overflow-y-auto' },
+              h('div', { className: 'text-center mb-3' },
+                h('div', { className: 'text-4xl mb-1' }, '💸'),
+                h('div', { className: 'text-[15px] font-black tracking-widest text-emerald-300 font-display' }, 'WITHDRAW TO BANK'),
+                h('div', { className: 'text-[10px] text-white/50 mt-1' }, 'Your real balance: ', h('span', { className: 'text-emerald-300 font-black' }, fmtFull(real)))
+              ),
+
+              h('div', { className: 'space-y-2.5' },
+                h('div', null,
+                  h('label', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Bank Name'),
+                  h('input', { value: bankName, onChange: e => setBankName(e.target.value), placeholder: 'e.g. GTBank, Opay, Kuda', className: 'mt-1 w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 text-[12px] font-bold text-white placeholder-white/25' })
+                ),
+                h('div', null,
+                  h('label', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Account Number'),
+                  h('input', { type: 'tel', value: accountNumber, onChange: e => setAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 10)), placeholder: '10 digits', className: 'mt-1 w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 text-[12px] font-bold text-white placeholder-white/25 tabular-nums' })
+                ),
+                h('div', null,
+                  h('label', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Account Name'),
+                  h('input', { value: accountName, onChange: e => setAccountName(e.target.value), placeholder: 'Your real name', className: 'mt-1 w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 text-[12px] font-bold text-white placeholder-white/25' })
+                ),
+                h('div', null,
+                  h('label', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Amount to Withdraw'),
+                  h('div', { className: 'mt-1 flex items-center bg-white/[0.05] border border-white/10 rounded-xl px-3' },
+                    h('span', { className: 'text-[14px] font-black text-white/50' }, '₦'),
+                    h('input', { type: 'number', value: withdrawAmount, onChange: e => setWithdrawAmount(e.target.value), placeholder: 'Min ₦100', className: 'w-full bg-transparent py-2.5 text-[13px] font-black text-white tabular-nums' })
+                  ),
+                  real >= 100 && h('div', { className: 'flex gap-1.5 mt-1.5' },
+                    [100, Math.floor(real / 2), Math.floor(real)].map((amt, i) =>
+                      h('button', {
+                        key: i,
+                        onClick: () => setWithdrawAmount(String(Math.max(100, amt))),
+                        className: 'flex-1 py-1 rounded-md bg-white/[0.06] text-[10px] font-bold text-white/70 active:scale-95'
+                      }, fmt(amt))
+                    )
+                  )
+                )
+              ),
+
+              h('div', { className: 'mt-3 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-400/30 flex justify-between items-center' },
+                h('span', { className: 'text-[9px] uppercase tracking-widest text-white/60 font-bold' }, 'You receive'),
+                h('span', { className: 'text-[14px] font-black text-emerald-300 tabular-nums' }, fmtFull(Number(withdrawAmount) || 0))
+              ),
+
+              h('div', { className: 'mt-3 flex gap-2' },
+                h('button', { onClick: () => setCashOutOpen(false), disabled: withdrawLoading, className: 'flex-1 py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 text-[11px] font-bold disabled:opacity-40' }, 'Cancel'),
+                h('button', {
+                  onClick: submitWithdrawal,
+                  disabled: withdrawLoading,
+                  className: 'flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[11px] font-black disabled:opacity-40 active:scale-95'
+                }, withdrawLoading ? '⏳ Sending...' : '✅ Submit')
+              ),
+              h('div', { className: 'mt-2 text-center text-[9px] text-white/30' }, 'Payout takes 24-48hrs. Admin reviews every request.')
+            )
+          ),
+
           toast && h('div', {
-            className: 'fixed top-20 left-1/2 -translate-x-1/2 z-[150] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl animate-slideDown font-display ' +
+            className: 'fixed top-20 left-1/2 -translate-x-1/2 z-[250] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl animate-slideDown font-display ' +
               (toast.kind === 'bad' ? 'bg-gradient-to-b from-red-500 to-red-600 text-white' : 'bg-gradient-to-b from-emerald-400 to-teal-500 text-white')
           }, toast.msg)
         )
