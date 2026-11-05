@@ -18,6 +18,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
+  <!-- Paystack Script -->
   <script src="https://js.paystack.co/v1/inline.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -47,10 +48,12 @@
     @keyframes confetti { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(600px) rotate(720deg); opacity: 0; } }
     @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
     @keyframes giftFloat { 0%, 100% { transform: translateY(0) rotate(-8deg); } 50% { transform: translateY(-8px) rotate(8deg); } }
+    @keyframes spinWheel { 0% { transform: rotate(0deg); } 100% { transform: rotate(1440deg); } }
     .animate-popIn { animation: popIn 0.32s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideDown { animation: slideDown 0.3s cubic-bezier(0.22,1,0.36,1); }
     .animate-slideUp { animation: slideUp 0.32s cubic-bezier(0.22,1,0.36,1); }
     .animate-giftFloat { animation: giftFloat 3s ease-in-out infinite; }
+    .animate-spinWheel { animation: spinWheel 1s cubic-bezier(0.17, 0.67, 0.12, 0.99) forwards; }
     .shop-hero { background: radial-gradient(circle at top right, rgba(236,72,153,0.4) 0%, transparent 55%), radial-gradient(circle at bottom left, rgba(168,85,247,0.35) 0%, transparent 55%), linear-gradient(135deg, #1a0a1f 0%, #0f0a1a 100%); }
     .shimmer-line { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); background-size: 200% 100%; animation: shimmer 3s infinite; }
     .cat-pill { transition: all 0.2s; }
@@ -63,6 +66,7 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .confetti-piece { position: fixed; top: -20px; font-size: 22px; animation: confetti 2.5s linear forwards; pointer-events: none; z-index: 999; }
     .safe-bottom { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    .trending-badge { position: absolute; top: 0; right: 0; background: linear-gradient(45deg, #FF4500, #FF8C00); color: #fff; font-size: 8px; font-weight: 900; padding: 2px 6px; border-bottom-left-radius: 8px; z-index: 10; }
   </style>
 </head>
 <body>
@@ -94,6 +98,9 @@
     const EXPIRY_DAYS = 90;
     const MIN_AMOUNT = 200;
     const MAX_AMOUNT = 50000;
+
+    // Define which products are "Trending"
+    const TRENDING_IDS = ['shawarma', 'apple', 'diamond', 'netflix', 'jollof'];
 
     const fmt = (n) => {
       n = Math.floor(n || 0);
@@ -174,92 +181,6 @@
       return [min, p2, p3, max];
     };
 
-    function drawCardCanvas(card) {
-      const c = document.createElement('canvas');
-      c.width = 1200; c.height = 750;
-      const x = c.getContext('2d');
-      const t = THEMES[card.cat] || THEMES.luxury;
-
-      const g = x.createLinearGradient(0, 0, 1200, 750);
-      g.addColorStop(0, t.bg[0]); g.addColorStop(1, t.bg[1]);
-      x.fillStyle = g; x.fillRect(0, 0, 1200, 750);
-
-      x.fillStyle = t.accent + '22';
-      x.beginPath(); x.arc(1050, 100, 280, 0, Math.PI * 2); x.fill();
-      x.fillStyle = t.accent + '15';
-      x.beginPath(); x.arc(100, 720, 320, 0, Math.PI * 2); x.fill();
-
-      for (let i = 0; i < 60; i++) {
-        x.fillStyle = 'rgba(255,255,255,' + (0.03 + Math.random() * 0.05) + ')';
-        x.fillRect(Math.random() * 1200, Math.random() * 750, 2, 2);
-      }
-
-      const sh = x.createLinearGradient(0, 0, 1200, 750);
-      sh.addColorStop(0, 'rgba(255,255,255,0.06)');
-      sh.addColorStop(0.5, 'rgba(255,255,255,0)');
-      sh.addColorStop(1, 'rgba(255,255,255,0.04)');
-      x.fillStyle = sh; x.fillRect(0, 0, 1200, 750);
-
-      x.strokeStyle = t.accent + '70'; x.lineWidth = 5;
-      x.strokeRect(25, 25, 1150, 700);
-
-      x.textAlign = 'left';
-      x.font = 'bold 30px Sora, sans-serif'; x.fillStyle = t.text;
-      x.fillText('LAGOS LIFE MINI', 60, 95);
-      x.font = 'bold 18px Inter, sans-serif'; x.fillStyle = t.accent;
-      x.fillText('★ GIFT CARD ★', 60, 125);
-
-      x.font = '100px sans-serif'; x.textAlign = 'right';
-      x.fillText(card.emoji, 1150, 150); x.textAlign = 'left';
-
-      if (card.recipientName) {
-        x.font = 'bold 24px Inter, sans-serif'; x.fillStyle = 'rgba(255,255,255,0.6)';
-        x.fillText('FOR', 60, 250);
-        x.font = 'bold 56px Sora, sans-serif'; x.fillStyle = t.text;
-        x.fillText(card.recipientName.slice(0, 20), 60, 305);
-      }
-
-      x.font = 'bold 26px Inter, sans-serif'; x.fillStyle = 'rgba(255,255,255,0.55)';
-      x.fillText('GIFT VALUE', 60, 390);
-
-      x.font = 'bold 130px Sora, sans-serif';
-      const vg = x.createLinearGradient(60, 400, 720, 520);
-      vg.addColorStop(0, t.accent); vg.addColorStop(1, '#FFFFFF');
-      x.fillStyle = vg;
-      x.fillText('₦' + card.redeemValue.toLocaleString(), 60, 510);
-
-      x.font = 'bold 34px Inter, sans-serif'; x.fillStyle = t.text;
-      x.fillText(card.emoji + ' ' + card.productName, 60, 590);
-
-      if (card.message) {
-        x.font = 'italic 22px Inter, sans-serif'; x.fillStyle = 'rgba(255,255,255,0.7)';
-        x.fillText('"' + card.message.slice(0, 55) + '"', 60, 640);
-      }
-
-      x.fillStyle = 'rgba(0,0,0,0.55)';
-      x.fillRect(60, 660, 540, 56);
-      x.strokeStyle = t.accent; x.lineWidth = 2;
-      x.strokeRect(60, 660, 540, 56);
-      x.font = 'bold 30px monospace'; x.fillStyle = t.accent;
-      x.fillText(card.code, 82, 700);
-
-      const qx = 1000, qy = 630, qs = 130;
-      for (let i = 0; i < 7; i++) {
-        for (let j = 0; j < 7; j++) {
-          const seed = (i * 7 + j + card.code.charCodeAt(i % card.code.length)) % 3;
-          if (seed !== 0) {
-            x.fillStyle = 'rgba(255,255,255,0.92)';
-            x.fillRect(qx + i * (qs / 7), qy + j * (qs / 7), qs / 7 - 1.5, qs / 7 - 1.5);
-          }
-        }
-      }
-      x.font = 'bold 20px Inter, sans-serif'; x.fillStyle = 'rgba(255,255,255,0.5)';
-      x.textAlign = 'center';
-      x.fillText('Redeem at lagoslifemini.online/redeem.html', 600, 725);
-
-      return c;
-    }
-
     function App() {
       const [uid, setUid] = useState(null);
       const [userEmail, setUserEmail] = useState('');
@@ -267,18 +188,27 @@
       const [paystackKey, setPaystackKey] = useState('');
       const [tab, setTab] = useState('shop');
       const [activeCat, setActiveCat] = useState('all');
+      
+      // Product & Purchase State
       const [selectedProduct, setSelectedProduct] = useState(null);
       const [giftAmount, setGiftAmount] = useState(1000);
       const [customAmount, setCustomAmount] = useState('');
       const [recipientName, setRecipientName] = useState('');
       const [message, setMessage] = useState('');
+      const [isSecret, setIsSecret] = useState(false);
+      const [selectedTheme, setSelectedTheme] = useState('auto');
       const [payLoading, setPayLoading] = useState(false);
+      
+      // Spin State
+      const [spinResult, setSpinResult] = useState(null);
+      const [isSpinning, setIsSpinning] = useState(false);
+
+      // UI States
       const [myCards, setMyCards] = useState([]);
       const [loadingCards, setLoadingCards] = useState(false);
       const [viewCard, setViewCard] = useState(null);
       const [cardImageUrl, setCardImageUrl] = useState(null);
       const [toast, setToast] = useState(null);
-      const [confetti, setConfetti] = useState(false);
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
@@ -299,9 +229,7 @@
           setUid(user.uid);
           setUserEmail(user.email || 'user@lagoslife.com');
           if (user.email) {
-            db.collection("users").doc(user.uid)
-              .update({ email: user.email, lastSeen: Date.now() })
-              .catch(() => {});
+            db.collection("users").doc(user.uid).update({ email: user.email, lastSeen: Date.now() }).catch(() => {});
           }
           try {
             const cached = JSON.parse(localStorage.getItem('lagos_user_data') || '{}');
@@ -341,9 +269,52 @@
         setCustomAmount('');
         setRecipientName('');
         setMessage('');
+        setIsSecret(false);
+        setSelectedTheme('auto');
+        setSpinResult(null);
       };
 
-      const totalPay = giftAmount;
+      // 🎰 Spin Logic
+      const handleSpin = () => {
+        if (isSpinning || spinResult) return;
+        setIsSpinning(true);
+        
+        // Possible discounts
+        const outcomes = [
+          { label: '0% Off', mult: 1 },
+          { label: '5% Off', mult: 0.95 },
+          { label: '10% Off', mult: 0.90 },
+          { label: '15% Off', mult: 0.85 },
+          { label: '20% Off', mult: 0.80 },
+          { label: 'No Luck', mult: 1 }
+        ];
+        
+        setTimeout(() => {
+          // Randomly pick an outcome (weighted so 20% is rare)
+          const rand = Math.random();
+          let result;
+          if (rand < 0.1) result = outcomes[4]; // 20% (10% chance)
+          else if (rand < 0.3) result = outcomes[3]; // 15% (20% chance)
+          else if (rand < 0.5) result = outcomes[2]; // 10% (20% chance)
+          else if (rand < 0.7) result = outcomes[1]; // 5% (20% chance)
+          else result = outcomes[5]; // No luck (30% chance)
+          
+          setSpinResult(result);
+          setIsSpinning(false);
+          
+          if (result.mult < 1) {
+            notify('🎉 You won ' + result.label + '!', 'good');
+          } else {
+            notify('😢 No luck this time.', 'bad');
+          }
+        }, 1500);
+      };
+
+      // Calculations
+      const baseTotal = giftAmount;
+      const discountMult = spinResult ? spinResult.mult : 1;
+      const totalPay = Math.floor(baseTotal * discountMult);
+      
       const feeAmount = Math.round(totalPay * FEE_RATE);
       const redeemValue = totalPay - feeAmount;
 
@@ -363,8 +334,7 @@
           metadata: {
             custom_fields: [
               { display_name: 'Product', variable_name: 'product', value: selectedProduct.name },
-              { display_name: 'Recipient', variable_name: 'recipient', value: recipientName || 'N/A' },
-              { display_name: 'Type', variable_name: 'type', value: 'gift_card' }
+              { display_name: 'Recipient', variable_name: 'recipient', value: recipientName || 'N/A' }
             ]
           },
           callback: (response) => { onPaymentSuccess(response.reference); },
@@ -373,7 +343,6 @@
         handler.openIframe();
       };
 
-      // ✅ FIXED: Save card → sessionStorage → redirect to payment-success.html?type=gift
       const onPaymentSuccess = async (ref) => {
         const code = genCode();
         const card = {
@@ -386,9 +355,10 @@
           feeAmount,
           redeemValue,
           buyerId: uid,
-          buyerName: userName,
+          buyerName: isSecret ? 'Secret Admirer 👻' : userName, // Secret Mode
           recipientName: recipientName.trim() || '',
           message: message.trim() || '',
+          theme: selectedTheme, // Custom Theme
           status: 'active',
           createdAt: Date.now(),
           expiresAt: Date.now() + EXPIRY_DAYS * 86400000,
@@ -396,15 +366,8 @@
         };
 
         try {
-          // 1. Save gift card to Firestore FIRST — guaranteed before redirect
           await db.collection('gift_cards').add(card);
-
-          // 2. Save to sessionStorage so payment-success.html can display it
-          try {
-            sessionStorage.setItem('pending_gift_card', JSON.stringify(card));
-          } catch (e) {}
-
-          // 3. Redirect to payment-success.html with type=gift flag
+          try { sessionStorage.setItem('pending_gift_card', JSON.stringify(card)); } catch (e) {}
           setPayLoading(false);
           window.location.href = '/payment-success.html?reference=' + ref + '&type=gift';
         } catch (e) {
@@ -412,12 +375,6 @@
           setPayLoading(false);
           notify('Card save failed. Contact support with ref: ' + ref, 'bad');
         }
-      };
-
-      const showCardPreview = (card) => {
-        setViewCard(card);
-        const canvas = drawCardCanvas(card);
-        setCardImageUrl(canvas.toDataURL('image/png'));
       };
 
       const downloadCard = () => {
@@ -437,15 +394,7 @@
           'From: ' + viewCard.buyerName;
         try {
           if (navigator.share) await navigator.share({ title: 'You have a gift! 🎁', text });
-          else if (navigator.clipboard) { await navigator.clipboard.writeText(text); notify('Copied to clipboard! 📋'); }
-        } catch (e) {}
-      };
-
-      const copyCode = async () => {
-        if (!viewCard) return;
-        try {
-          await navigator.clipboard.writeText(viewCard.code);
-          notify('Code copied! 📋');
+          else if (navigator.clipboard) { await navigator.clipboard.writeText(text); notify('Copied! 📋'); }
         } catch (e) {}
       };
 
@@ -454,6 +403,7 @@
       return h('div', { className: 'min-h-screen bg-[#08080B] text-white font-sans selection:bg-pink-500 selection:text-white' },
         h('div', { className: 'mx-auto max-w-md min-h-screen flex flex-col pb-24 relative' },
 
+          // Header
           h('header', { className: 'sticky top-0 z-30 bg-[#08080B]/95 backdrop-blur border-b border-white/[0.06]' },
             h('div', { className: 'px-4 py-2.5 flex items-center gap-3' },
               h('button', {
@@ -468,6 +418,7 @@
             )
           ),
 
+          // Tabs
           h('div', { className: 'px-4 py-3' },
             h('div', { className: 'flex gap-1 p-1 rounded-xl bg-white/[0.05] border border-white/10' },
               h('button', {
@@ -481,6 +432,7 @@
             )
           ),
 
+          // SHOP TAB
           tab === 'shop' && h('main', { className: 'flex-1 px-4 pb-4' },
             h('div', { className: 'rounded-2xl shop-hero border border-pink-400/30 p-4 relative overflow-hidden' },
               h('div', { className: 'absolute inset-0 shimmer-line pointer-events-none' }),
@@ -495,52 +447,44 @@
               )
             ),
 
+            // Categories
             h('div', { className: 'mt-4 flex gap-1.5 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4' },
               CATS.map(c =>
                 h('button', {
                   key: c.id,
                   onClick: () => setActiveCat(c.id),
                   className: 'cat-pill shrink-0 px-3 py-1.5 rounded-full text-[10px] font-black border whitespace-nowrap ' +
-                    (activeCat === c.id
-                      ? 'active'
-                      : 'bg-white/[0.04] border-white/10 text-white/60')
+                    (activeCat === c.id ? 'active' : 'bg-white/[0.04] border-white/10 text-white/60')
                 }, c.emoji + ' ' + c.name)
               )
             ),
 
+            // Products
             h('div', { className: 'mt-3 grid grid-cols-2 gap-2.5' },
               filteredProducts.map(p => {
                 const t = THEMES[p.cat];
+                const isTrending = TRENDING_IDS.includes(p.id);
                 return h('button', {
                   key: p.id,
                   onClick: () => openProduct(p),
                   className: 'prod-card rounded-2xl p-3 text-left border transition-all relative overflow-hidden card-gradient'
                 },
+                  isTrending && h('div', { className: 'trending-badge' }, '🔥 TRENDING'),
                   h('div', {
                     className: 'absolute -top-8 -right-8 w-20 h-20 rounded-full opacity-30 blur-2xl pointer-events-none',
                     style: { background: t.bg[0] }
                   }),
-                  h('div', { className: 'relative' },
+                  h('div', { className: 'relative mt-1' },
                     h('div', { className: 'text-3xl mb-1.5' }, p.emoji),
                     h('div', { className: 'text-[11.5px] font-black font-display leading-tight' }, p.name),
                     h('div', { className: 'text-[9px] text-white/45 mt-1 tabular-nums' }, fmtFull(p.min) + ' – ' + fmtFull(p.max))
                   )
                 );
               })
-            ),
-
-            h('div', { className: 'mt-6 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]' },
-              h('div', { className: 'flex items-start gap-2' },
-                h('span', { className: 'text-base' }, '💡'),
-                h('div', { className: 'text-[10px] text-white/50 leading-relaxed' },
-                  'After payment, we generate a beautiful gift card with a unique code. Send it to your loved one — they redeem at ',
-                  h('span', { className: 'text-pink-300 font-bold' }, 'redeem.html'),
-                  ' and get the money. Codes expire after 90 days.'
-                )
-              )
             )
           ),
 
+          // CARDS TAB
           tab === 'cards' && h('main', { className: 'flex-1 px-4 pb-4' },
             loadingCards ? h('div', { className: 'text-center py-20 text-white/40 text-[12px] animate-pulse' }, 'Loading your cards...') :
             myCards.length === 0 ? h('div', { className: 'text-center py-20' },
@@ -563,42 +507,55 @@
                         h('div', { className: 'text-[12px] font-black font-display truncate' }, card.productName),
                         h('span', { className: 'text-[8px] font-black px-1.5 py-0.5 rounded', style: { background: statusColor + '25', color: statusColor } }, statusLabel)
                       ),
-                      h('div', { className: 'text-[10px] text-white/50 mt-0.5' },
-                        fmtFull(card.redeemValue),
-                        card.recipientName && (' · For ' + card.recipientName)
-                      ),
+                      h('div', { className: 'text-[10px] text-white/50 mt-0.5' }, fmtFull(card.redeemValue), card.recipientName && (' · For ' + card.recipientName)),
                       h('div', { className: 'text-[9px] font-mono text-pink-300 mt-1' }, card.code)
                     )
                   ),
                   h('div', { className: 'mt-2 flex gap-1.5' },
                     h('button', {
-                      onClick: () => showCardPreview(card),
+                      onClick: () => { setViewCard(card); setCardImageUrl(null); },
                       className: 'flex-1 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-black text-white/80 active:scale-95'
-                    }, '👁️ View'),
-                    h('button', {
-                      onClick: async () => {
-                        try { await navigator.clipboard.writeText(card.code); notify('Copied!'); } catch (e) {}
-                      },
-                      className: 'flex-1 py-1.5 rounded-lg bg-white/[0.06] border border-white/10 text-[10px] font-black text-white/80 active:scale-95'
-                    }, '📋 Code')
+                    }, '📋 Copy Code')
                   )
                 );
               })
             )
           ),
 
+          // PURCHASE MODAL
           selectedProduct && h('div', { className: 'fixed inset-0 z-[100] grid place-items-end sm:place-items-center p-0 sm:p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md', onClick: () => !payLoading && setSelectedProduct(null) }),
-            h('div', { className: 'relative w-full max-w-md bg-[#121218] border-t sm:border border-pink-400/30 rounded-t-3xl sm:rounded-3xl p-5 animate-slideUp max-h-[90vh] overflow-y-auto' },
+            h('div', { className: 'relative w-full max-w-md bg-[#121218] border-t sm:border border-pink-400/30 rounded-t-3xl sm:rounded-3xl p-5 animate-slideUp max-h-[90vh] overflow-y-auto no-scrollbar' },
               h('div', { className: 'w-12 h-1 bg-white/20 rounded-full mx-auto mb-4 sm:hidden' }),
+              
               h('div', { className: 'text-center mb-4' },
                 h('div', { className: 'text-6xl mb-2 animate-giftFloat' }, selectedProduct.emoji),
                 h('div', { className: 'text-[16px] font-black font-display' }, selectedProduct.name),
                 h('div', { className: 'text-[10px] text-white/50 mt-0.5' }, 'Range: ' + fmtFull(selectedProduct.min) + ' – ' + fmtFull(selectedProduct.max))
               ),
 
+              // 🎰 SPIN FOR DISCOUNT
+              !spinResult && h('div', { className: 'mb-4 p-3 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-pink-500/30 text-center relative overflow-hidden' },
+                h('div', { className: 'text-[11px] font-black text-white mb-2' }, '🎰 Spin to win a discount!'),
+                h('button', {
+                  onClick: handleSpin,
+                  disabled: isSpinning,
+                  className: 'w-full py-2.5 rounded-lg bg-white/10 border border-white/20 text-[12px] font-black active:scale-95 disabled:opacity-50 transition flex justify-center items-center gap-2'
+                },
+                  h('span', { className: isSpinning ? 'animate-spin inline-block' : '' }, '🎡'),
+                  isSpinning ? 'Spinning...' : 'SPIN NOW'
+                )
+              ),
+              spinResult && h('div', { className: 'mb-4 p-3 rounded-xl bg-green-500/15 border border-green-500/30 text-center' },
+                h('div', { className: 'text-[12px] font-black text-green-400' }, '🎉 Discount Applied: ' + spinResult.label)
+              ),
+
+              // Amount Selection
               h('div', { className: 'mb-3' },
-                h('div', { className: 'text-[10px] uppercase tracking-widest font-extrabold text-white/40 mb-1.5' }, 'How much you want to pay?'),
+                h('div', { className: 'flex justify-between items-end mb-1.5' },
+                  h('div', { className: 'text-[10px] uppercase tracking-widest font-extrabold text-white/40' }, 'Gift Value'),
+                  spinResult && spinResult.mult < 1 && h('div', { className: 'text-[10px] line-through text-white/40' }, fmtFull(giftAmount))
+                ),
                 h('div', { className: 'grid grid-cols-4 gap-1.5' },
                   getPresets(selectedProduct.min, selectedProduct.max).map(p =>
                     h('button', {
@@ -628,30 +585,64 @@
                 )
               ),
 
+              // 🎨 THEME PICKER
+              h('div', { className: 'mb-3' },
+                h('div', { className: 'text-[10px] uppercase tracking-widest font-extrabold text-white/40 mb-1.5' }, 'Card Design'),
+                h('div', { className: 'flex gap-2 overflow-x-auto no-scrollbar pb-1' },
+                  ['auto', 'luxury', 'tech', 'food', 'fashion'].map(t => {
+                    const isSelected = selectedTheme === t;
+                    const bg = t === 'auto' ? 'bg-gradient-to-r from-gray-600 to-gray-800' : 
+                               t === 'luxury' ? 'bg-gradient-to-r from-yellow-600 to-yellow-900' :
+                               t === 'tech' ? 'bg-gradient-to-r from-blue-600 to-purple-900' :
+                               t === 'food' ? 'bg-gradient-to-r from-orange-500 to-red-700' :
+                               'bg-gradient-to-r from-pink-500 to-purple-800';
+                    return h('button', {
+                      key: t,
+                      onClick: () => setSelectedTheme(t),
+                      className: 'shrink-0 w-12 h-12 rounded-lg border-2 transition ' + bg + ' ' + (isSelected ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-60')
+                    }, h('div', { className: 'text-[8px] font-black uppercase text-white shadow-sm' }, t));
+                  })
+                )
+              ),
+
+              // 👻 SECRET SANTA TOGGLE
+              h('div', { className: 'mb-3 flex items-center justify-between px-3 py-2.5 bg-white/[0.03] border border-white/[0.06] rounded-xl' },
+                h('div', { className: 'flex items-center gap-2' },
+                  h('span', { className: 'text-lg' }, '👻'),
+                  h('div', null,
+                    h('div', { className: 'text-[11px] font-black' }, 'Secret Santa Mode'),
+                    h('div', { className: 'text-[9px] text-white/40' }, 'Hide your name on the card')
+                  )
+                ),
+                h('button', {
+                  onClick: () => setIsSecret(!isSecret),
+                  className: 'w-11 h-6 rounded-full transition relative ' + (isSecret ? 'bg-[#22C55E]' : 'bg-white/15')
+                }, h('div', { className: 'absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all', style: { left: isSecret ? '22px' : '2px' } }))
+              ),
+
+              // Recipient Details
               h('div', { className: 'mb-3' },
                 h('div', { className: 'text-[10px] uppercase tracking-widest font-extrabold text-white/40 mb-1.5' }, 'Recipient name (optional)'),
                 h('input', {
-                  value: recipientName,
-                  onChange: (e) => setRecipientName(e.target.value.slice(0, 24)),
+                  value: recipientName, onChange: (e) => setRecipientName(e.target.value.slice(0, 24)),
                   placeholder: 'e.g. Tunde, My Love, Mom',
                   className: 'w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[12px] font-bold text-white placeholder-white/30'
                 })
               ),
-
               h('div', { className: 'mb-3' },
                 h('div', { className: 'text-[10px] uppercase tracking-widest font-extrabold text-white/40 mb-1.5' }, 'Message (optional)'),
                 h('input', {
-                  value: message,
-                  onChange: (e) => setMessage(e.target.value.slice(0, 60)),
+                  value: message, onChange: (e) => setMessage(e.target.value.slice(0, 60)),
                   placeholder: 'e.g. Enjoy your shawarma! 😋',
                   className: 'w-full bg-white/[0.05] border border-white/10 rounded-lg px-3 py-2 text-[12px] font-bold text-white placeholder-white/30'
                 })
               ),
 
+              // Breakdown
               h('div', { className: 'rounded-xl bg-white/[0.03] border border-white/[0.08] p-3 mb-3' },
                 h('div', { className: 'flex justify-between items-center py-1' },
                   h('span', { className: 'text-[11px] text-white/60' }, 'You pay'),
-                  h('span', { className: 'text-[13px] font-black tabular-nums' }, fmtFull(giftAmount))
+                  h('span', { className: 'text-[13px] font-black tabular-nums' }, fmtFull(totalPay))
                 ),
                 h('div', { className: 'flex justify-between items-center py-1' },
                   h('span', { className: 'text-[11px] text-white/60' }, 'Our fee (20%)'),
@@ -667,58 +658,16 @@
                 onClick: handlePaystack,
                 disabled: payLoading || !paystackKey || giftAmount < MIN_AMOUNT || giftAmount > MAX_AMOUNT,
                 className: 'w-full py-3.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-black text-[13px] font-display shadow-[0_8px_24px_-8px_rgba(236,72,153,0.7)] active:scale-[0.97] disabled:opacity-50 disabled:shadow-none transition'
-              }, payLoading ? '⏳ Processing...' : !paystackKey ? '⏳ Loading payment...' : '💳 Pay ' + fmtFull(giftAmount)),
+              }, payLoading ? '⏳ Processing...' : '💳 Pay ' + fmtFull(totalPay)),
 
               h('button', {
-                onClick: () => setSelectedProduct(null),
-                disabled: payLoading,
+                onClick: () => setSelectedProduct(null), disabled: payLoading,
                 className: 'mt-2 w-full py-2 text-[11px] font-bold text-white/40'
               }, 'Cancel')
             )
           ),
 
-          viewCard && cardImageUrl && h('div', { className: 'fixed inset-0 z-[105] grid place-items-center p-4' },
-            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setViewCard(null) }),
-            h('div', { className: 'relative w-full max-w-sm animate-popIn' },
-              h('div', { className: 'text-center mb-3' },
-                h('div', { className: 'text-[13px] font-black tracking-widest text-pink-300 font-display' }, '🎁 YOUR GIFT CARD'),
-                h('div', { className: 'text-[10px] text-white/50 mt-0.5' }, 'Send this to your loved one')
-              ),
-              h('div', { className: 'rounded-2xl overflow-hidden border-2 border-pink-400/40 shadow-[0_0_40px_-8px_rgba(236,72,153,0.6)]' },
-                h('img', { src: cardImageUrl, alt: 'Gift Card', className: 'w-full block' })
-              ),
-              h('div', { className: 'mt-3 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-between' },
-                h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'CODE'),
-                h('div', { className: 'text-[12px] font-black font-mono text-pink-300 truncate mx-2' }, viewCard.code),
-                h('button', { onClick: copyCode, className: 'text-lg active:scale-90 shrink-0' }, '📋')
-              ),
-              h('div', { className: 'mt-2 grid grid-cols-2 gap-2' },
-                h('button', {
-                  onClick: downloadCard,
-                  className: 'py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white text-[12px] font-black active:scale-95'
-                }, '⬇️ Download'),
-                h('button', {
-                  onClick: shareCard,
-                  className: 'py-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[12px] font-black active:scale-95 shadow-lg'
-                }, '📤 Share')
-              ),
-              h('button', {
-                onClick: () => setViewCard(null),
-                className: 'mt-2 w-full py-2.5 rounded-xl bg-white/[0.03] border border-white/10 text-white/50 text-[11px] font-bold active:scale-95'
-              }, 'Close')
-            )
-          ),
-
-          confetti && h('div', { className: 'fixed inset-0 pointer-events-none z-[200]' },
-            Array.from({ length: 30 }).map((_, i) =>
-              h('div', {
-                key: i,
-                className: 'confetti-piece',
-                style: { left: Math.random() * 100 + '%', animationDelay: Math.random() * 0.5 + 's' }
-              }, ['🎉', '🎊', '⭐', '💎', '🎁', '✨'][i % 6])
-            )
-          ),
-
+          // Toast
           toast && h('div', {
             className: 'fixed top-20 left-1/2 -translate-x-1/2 z-[150] px-4 py-2.5 rounded-xl text-[11px] font-extrabold shadow-xl animate-slideDown font-display whitespace-nowrap max-w-[90vw] truncate ' +
               (toast.kind === 'bad' ? 'bg-gradient-to-b from-red-500 to-red-600 text-white' : 'bg-gradient-to-b from-pink-400 to-purple-500 text-white')
