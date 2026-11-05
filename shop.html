@@ -243,12 +243,20 @@
         if (!uid) return;
         setLoadingCards(true);
         try {
-          const snap = await db.collection('gift_cards')
-            .where('buyerId', '==', uid)
-            .orderBy('createdAt', 'desc')
-            .limit(50).get();
+          let snap;
+          try {
+            snap = await db.collection('gift_cards')
+              .where('buyerId', '==', uid)
+              .orderBy('createdAt', 'desc')
+              .limit(50).get();
+          } catch (idxErr) {
+            snap = await db.collection('gift_cards')
+              .where('buyerId', '==', uid)
+              .limit(50).get();
+          }
           const arr = [];
           snap.forEach(d => arr.push(Object.assign({ id: d.id }, d.data())));
+          arr.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
           setMyCards(arr);
         } catch (e) {
           console.error(e);
@@ -325,25 +333,8 @@
         if (giftAmount > MAX_AMOUNT) return notify('Maximum gift is ₦50,000', 'bad');
 
         setPayLoading(true);
-        const handler = PaystackPop.setup({
-          key: paystackKey,
-          email: userEmail,
-          amount: totalPay * 100,
-          currency: 'NGN',
-          ref: 'LGS_GIFT_' + Date.now() + '_' + Math.floor(Math.random() * 9999),
-          metadata: {
-            custom_fields: [
-              { display_name: 'Product', variable_name: 'product', value: selectedProduct.name },
-              { display_name: 'Recipient', variable_name: 'recipient', value: recipientName || 'N/A' }
-            ]
-          },
-          callback: (response) => { onPaymentSuccess(response.reference); },
-          onClose: () => { setPayLoading(false); notify('Payment cancelled', 'bad'); }
-        });
-        handler.openIframe();
-      };
-
-      const onPaymentSuccess = async (ref) => {
+        setPayLoading(true);
+        const ref = 'LGS_GIFT_' + Date.now() + '_' + Math.floor(Math.random() * 9999);
         const code = genCode();
         const card = {
           code,
@@ -365,16 +356,72 @@
           paystackRef: ref
         };
 
+        // Pre-cache card so any redirects can retrieve details
         try {
-          await db.collection('gift_cards').add(card);
-          try { sessionStorage.setItem('pending_gift_card', JSON.stringify(card)); } catch (e) {}
-          setPayLoading(false);
-          window.location.href = '/payment-success.html?reference=' + ref + '&type=gift';
-        } catch (e) {
-          console.error(e);
-          setPayLoading(false);
-          notify('Card save failed. Contact support with ref: ' + ref, 'bad');
-        }
+          sessionStorage.setItem('pending_gift_card', JSON.stringify(card));
+          localStorage.setItem('pending_gift_card_' + ref, JSON.stringify(card));
+        } catch (e) {}
+
+        const handler = PaystackPop.setup({
+          key: paystackKey,
+          email: userEmail || `user_${uid}@lagoslife.com`,
+          amount: totalPay * 100,
+          currency: 'NGN',
+          ref: ref,
+          metadata: {
+            type: 'gift_card',
+            productId: selectedProduct.id,
+            productName: selectedProduct.name,
+            emoji: selectedProduct.emoji,
+            cat: selectedProduct.cat,
+            amountPaid: totalPay,
+            feeAmount: feeAmount,
+            redeemValue: redeemValue,
+            buyerId: uid,
+            buyerName: isSecret ? 'Secret Admirer 👻' : userName,
+            recipientName: recipientName.trim() || '',
+            message: message.trim() || '',
+            theme: selectedTheme,
+            giftCode: code,
+            custom_fields: [
+              { display_name: 'Product', variable_name: 'product', value: selectedProduct.name },
+              { display_name: 'Recipient', variable_name: 'recipient', value: recipientName || 'N/A' },
+              { display_name: 'Type', variable_name: 'type', value: 'gift_card' }
+            ]
+          },
+          callback: (response) => {
+            const finalRef = (response && (response.reference || response.trxref)) || ref;
+            onPaymentSuccess(finalRef, card);
+          },
+          onClose: () => {
+            setPayLoading(false);
+            notify('Payment cancelled', 'bad');
+          }
+        });
+        handler.openIframe();
+      };
+
+      // Guaranteed redirect to callback URL with storage cache and async background save
+      const onPaymentSuccess = (finalRef, cardData) => {
+        const updatedCard = Object.assign({}, cardData, { paystackRef: finalRef });
+
+        // Save card to storage synchronously
+        try {
+          sessionStorage.setItem('pending_gift_card', JSON.stringify(updatedCard));
+          localStorage.setItem('pending_gift_card_' + finalRef, JSON.stringify(updatedCard));
+        } catch (e) {}
+
+        // Non-blocking background save to Firestore
+        try {
+          db.collection('gift_cards').add(updatedCard).catch(err => {
+            console.warn('Background card save warning:', err);
+          });
+        } catch (e) {}
+
+        // Immediate redirect to callback URL
+        setPayLoading(false);
+        const callbackUrl = '/payment-success.html?reference=' + encodeURIComponent(finalRef) + '&type=gift';
+        window.location.href = callbackUrl;
       };
 
       const downloadCard = () => {

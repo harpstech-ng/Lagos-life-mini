@@ -34,8 +34,8 @@
 
     const root = document.getElementById('root');
     const urlParams = new URLSearchParams(window.location.search);
-    const reference = urlParams.get('reference');
-    const isGift = urlParams.get('type') === 'gift';
+    const reference = urlParams.get('reference') || urlParams.get('trxref');
+    const isGift = urlParams.get('type') === 'gift' || (reference && reference.startsWith('LGS_GIFT_'));
 
     // ---------- GIFT CARD IMAGE GENERATOR ----------
     function generateGiftCardImage(card) {
@@ -187,44 +187,79 @@
         <a href="/club.html" class="bg-white/10 px-6 py-3 rounded-xl font-bold text-sm">Go Back</a>
       `;
     } else if (isGift) {
-      // 🎁 GIFT PURCHASE — DO NOT CALL /api/paystack
+      // 🎁 GIFT PURCHASE FLOW
       root.innerHTML = `
         <div class="spinner"></div>
         <h1 class="text-xl font-black text-white mb-2">Loading Gift Card...</h1>
-        <p class="text-white/50 text-sm">Please wait.</p>
+        <p class="text-white/50 text-sm">Please wait while we verify your purchase.</p>
       `;
 
       auth.onAuthStateChanged(async (user) => {
         if (!user) {
-          root.innerHTML = `<div class="text-4xl mb-4">🔒</div><h1 class="text-xl font-black text-red-500">You are not logged in.</h1><a href="/login.html" class="mt-4 block text-[#FFD60A]">Login here</a>`;
+          root.innerHTML = `
+            <div class="text-4xl mb-4">🔒</div>
+            <h1 class="text-xl font-black text-white mb-2">Login Required</h1>
+            <p class="text-white/50 text-sm mb-4">Please log in to retrieve your gift card.</p>
+            <a href="/login.html" class="mt-4 inline-block bg-[#FFD60A] text-black px-6 py-2.5 rounded-xl font-bold text-sm">Login here</a>
+          `;
           return;
         }
 
-        // Try sessionStorage first
-        let card = null;
+        // 1. Try storage for pre-cached card data
+        let cachedCard = null;
         try {
-          const raw = sessionStorage.getItem('pending_gift_card');
+          const raw = sessionStorage.getItem('pending_gift_card') ||
+                      localStorage.getItem('pending_gift_card_' + reference);
           if (raw) {
-            card = JSON.parse(raw);
-            sessionStorage.removeItem('pending_gift_card');
+            cachedCard = JSON.parse(raw);
           }
         } catch (e) {}
 
-        // Fallback: fetch from Firestore using paystackRef
-        if (!card) {
+        // 2. Call backend /api/paystack to verify payment & ensure gift card is saved
+        let verifiedCard = null;
+        try {
+          const res = await fetch('/api/paystack', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              reference: reference,
+              userId: user.uid,
+              type: 'gift_card',
+              cardData: cachedCard || undefined
+            })
+          });
+          const data = await res.json();
+          if (data.success && data.card) {
+            verifiedCard = data.card;
+          } else if (data.error) {
+            console.warn('Backend verification message:', data.error);
+          }
+        } catch (apiErr) {
+          console.warn('API call failed, will try fallback:', apiErr);
+        }
+
+        // 3. Fallback: check Firestore directly if API didn't return card
+        if (!verifiedCard) {
           try {
             const snap = await db.collection('gift_cards').where('paystackRef', '==', reference).limit(1).get();
             if (!snap.empty) {
               const doc = snap.docs[0];
-              card = Object.assign({ id: doc.id }, doc.data());
+              verifiedCard = Object.assign({ id: doc.id }, doc.data());
             }
           } catch (e) {
             console.error('Gift card lookup failed:', e);
           }
         }
 
-        if (card) {
-          renderGiftSuccess(card);
+        const finalCard = verifiedCard || cachedCard;
+
+        if (finalCard) {
+          try {
+            sessionStorage.removeItem('pending_gift_card');
+            localStorage.removeItem('pending_gift_card_' + reference);
+          } catch (e) {}
+
+          renderGiftSuccess(finalCard);
         } else {
           root.innerHTML = `
             <div class="text-6xl mb-4">⚠️</div>
