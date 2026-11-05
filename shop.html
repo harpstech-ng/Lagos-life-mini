@@ -292,7 +292,7 @@
         fetch('/api/config').then(r => r.json()).then(d => setPaystackKey(d.publicKey || '')).catch(() => {});
       }, []);
 
-      // ✅ Email sync on auth
+      // ✅ Auth + email sync
       useEffect(() => {
         const unsub = auth.onAuthStateChanged(user => {
           if (!user) { window.location.href = '/login.html'; return; }
@@ -363,7 +363,8 @@
           metadata: {
             custom_fields: [
               { display_name: 'Product', variable_name: 'product', value: selectedProduct.name },
-              { display_name: 'Recipient', variable_name: 'recipient', value: recipientName || 'N/A' }
+              { display_name: 'Recipient', variable_name: 'recipient', value: recipientName || 'N/A' },
+              { display_name: 'Type', variable_name: 'type', value: 'gift_card' }
             ]
           },
           callback: (response) => { onPaymentSuccess(response.reference); },
@@ -372,6 +373,7 @@
         handler.openIframe();
       };
 
+      // ✅ FIXED: Save card → sessionStorage → redirect to payment-success.html?type=gift
       const onPaymentSuccess = async (ref) => {
         const code = genCode();
         const card = {
@@ -394,13 +396,17 @@
         };
 
         try {
+          // 1. Save gift card to Firestore FIRST — guaranteed before redirect
           await db.collection('gift_cards').add(card);
+
+          // 2. Save to sessionStorage so payment-success.html can display it
+          try {
+            sessionStorage.setItem('pending_gift_card', JSON.stringify(card));
+          } catch (e) {}
+
+          // 3. Redirect to payment-success.html with type=gift flag
           setPayLoading(false);
-          setSelectedProduct(null);
-          setConfetti(true);
-          setTimeout(() => setConfetti(false), 3000);
-          showCardPreview(card);
-          notify('🎁 Gift card created!');
+          window.location.href = '/payment-success.html?reference=' + ref + '&type=gift';
         } catch (e) {
           console.error(e);
           setPayLoading(false);
