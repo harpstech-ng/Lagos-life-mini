@@ -100,7 +100,7 @@
       const [loadingHistory, setLoadingHistory] = useState(true);
       const [toast, setToast] = useState(null);
 
-      // Cash Out state
+      // Withdrawal (Cash Out) State
       const [cashOutOpen, setCashOutOpen] = useState(false);
       const [bankName, setBankName] = useState('');
       const [accountNumber, setAccountNumber] = useState('');
@@ -117,7 +117,7 @@
         return () => clearTimeout(t);
       }, [toast]);
 
-      // ✅ Auth + email sync
+      // Auth + email sync
       useEffect(() => {
         const unsub = auth.onAuthStateChanged(user => {
           if (!user) { window.location.href = '/login.html'; return; }
@@ -275,7 +275,7 @@
         setErrorMsg('');
       };
 
-      // ===== CASH OUT =====
+      // ===== CASH OUT / WITHDRAWAL =====
       const openCashOut = () => {
         setWithdrawAmount(String(Math.max(100, Math.floor(real))));
         setBankName('');
@@ -294,6 +294,7 @@
 
         setWithdrawLoading(true);
         try {
+          // 1. Create the withdrawal request in Firestore
           await db.collection("withdrawals").add({
             userId: uid,
             name: userName,
@@ -302,16 +303,18 @@
             accountNumber: accountNumber.trim(),
             accountName: accountName.trim(),
             amountReal: amt,
-            source: 'gift_redeem',
+            source: 'gift_redeem', // Tells admin this came from a gift
             status: 'pending',
             createdAt: Date.now()
           });
 
+          // 2. Deduct the amount from the user's real balance
           await db.collection("users").doc(uid).update({
             real: firebase.firestore.FieldValue.increment(-amt),
             lastSeen: Date.now()
           });
 
+          // 3. Update local state
           const newReal = real - amt;
           setReal(newReal);
           try {
