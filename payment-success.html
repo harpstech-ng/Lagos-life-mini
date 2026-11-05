@@ -7,11 +7,13 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
   <style>
     body { background: #08080B; color: #fff; font-family: 'Sora', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; text-align: center; padding: 20px; }
     .spinner { border: 4px solid rgba(255,255,255,0.1); border-left-color: #FFD60A; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .gift-card-img { max-width: 100%; border-radius: 16px; border: 2px solid rgba(236,72,153,0.5); box-shadow: 0 0 40px -8px rgba(236,72,153,0.6); }
   </style>
 </head>
 <body>
@@ -28,13 +30,155 @@
     };
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
+    const db = firebase.firestore();
 
     const root = document.getElementById('root');
-
-    // 1. Get reference from URL
     const urlParams = new URLSearchParams(window.location.search);
     const reference = urlParams.get('reference');
+    const isGift = urlParams.get('type') === 'gift';
 
+    // ---------- GIFT CARD IMAGE GENERATOR ----------
+    function generateGiftCardImage(card) {
+      const THEMES = {
+        food:      { bg: ['#FF6B35', '#C41E3A'], accent: '#FFD166', text: '#FFFFFF' },
+        tech:      { bg: ['#1E3A8A', '#6D28D9'], accent: '#60A5FA', text: '#FFFFFF' },
+        luxury:    { bg: ['#0a0a0a', '#2a1a0a'], accent: '#FFD700', text: '#FFD700' },
+        fashion:   { bg: ['#DB2777', '#7E22CE'], accent: '#F9A8D4', text: '#FFFFFF' },
+        lifestyle: { bg: ['#047857', '#0891B2'], accent: '#5EEAD4', text: '#FFFFFF' },
+        wellness:  { bg: ['#7C3AED', '#0891B2'], accent: '#A5F3FC', text: '#FFFFFF' },
+      };
+      const c = document.createElement('canvas');
+      c.width = 1200; c.height = 750;
+      const x = c.getContext('2d');
+      const t = THEMES[card.cat] || THEMES.luxury;
+
+      const g = x.createLinearGradient(0, 0, 1200, 750);
+      g.addColorStop(0, t.bg[0]); g.addColorStop(1, t.bg[1]);
+      x.fillStyle = g; x.fillRect(0, 0, 1200, 750);
+
+      x.fillStyle = t.accent + '22';
+      x.beginPath(); x.arc(1050, 100, 280, 0, Math.PI * 2); x.fill();
+      x.fillStyle = t.accent + '15';
+      x.beginPath(); x.arc(100, 720, 320, 0, Math.PI * 2); x.fill();
+
+      for (let i = 0; i < 60; i++) {
+        x.fillStyle = 'rgba(255,255,255,' + (0.03 + Math.random() * 0.05) + ')';
+        x.fillRect(Math.random() * 1200, Math.random() * 750, 2, 2);
+      }
+
+      const sh = x.createLinearGradient(0, 0, 1200, 750);
+      sh.addColorStop(0, 'rgba(255,255,255,0.06)');
+      sh.addColorStop(0.5, 'rgba(255,255,255,0)');
+      sh.addColorStop(1, 'rgba(255,255,255,0.04)');
+      x.fillStyle = sh; x.fillRect(0, 0, 1200, 750);
+
+      x.strokeStyle = t.accent + '70'; x.lineWidth = 5;
+      x.strokeRect(25, 25, 1150, 700);
+
+      x.textAlign = 'left';
+      x.font = 'bold 30px Sora, sans-serif'; x.fillStyle = t.text;
+      x.fillText('LAGOS LIFE MINI', 60, 95);
+      x.font = 'bold 18px Inter, sans-serif'; x.fillStyle = t.accent;
+      x.fillText('★ GIFT CARD ★', 60, 125);
+
+      x.font = '100px sans-serif'; x.textAlign = 'right';
+      x.fillText(card.emoji || '🎁', 1150, 150); x.textAlign = 'left';
+
+      if (card.recipientName) {
+        x.font = 'bold 24px Inter, sans-serif'; x.fillStyle = 'rgba(255,255,255,0.6)';
+        x.fillText('FOR', 60, 250);
+        x.font = 'bold 56px Sora, sans-serif'; x.fillStyle = t.text;
+        x.fillText(card.recipientName.slice(0, 20), 60, 305);
+      }
+
+      x.font = 'bold 26px Inter, sans-serif'; x.fillStyle = 'rgba(255,255,255,0.55)';
+      x.fillText('GIFT VALUE', 60, 390);
+
+      x.font = 'bold 130px Sora, sans-serif';
+      const vg = x.createLinearGradient(60, 400, 720, 520);
+      vg.addColorStop(0, t.accent); vg.addColorStop(1, '#FFFFFF');
+      x.fillStyle = vg;
+      x.fillText('₦' + Number(card.redeemValue || 0).toLocaleString(), 60, 510);
+
+      x.font = 'bold 34px Inter, sans-serif'; x.fillStyle = t.text;
+      x.fillText((card.emoji || '🎁') + ' ' + (card.productName || 'Gift'), 60, 590);
+
+      if (card.message) {
+        x.font = 'italic 22px Inter, sans-serif'; x.fillStyle = 'rgba(255,255,255,0.7)';
+        x.fillText('"' + card.message.slice(0, 55) + '"', 60, 640);
+      }
+
+      x.fillStyle = 'rgba(0,0,0,0.55)';
+      x.fillRect(60, 660, 540, 56);
+      x.strokeStyle = t.accent; x.lineWidth = 2;
+      x.strokeRect(60, 660, 540, 56);
+      x.font = 'bold 30px monospace'; x.fillStyle = t.accent;
+      x.fillText(card.code, 82, 700);
+
+      const qx = 1000, qy = 630, qs = 130;
+      for (let i = 0; i < 7; i++) {
+        for (let j = 0; j < 7; j++) {
+          const seed = (i * 7 + j + card.code.charCodeAt(i % card.code.length)) % 3;
+          if (seed !== 0) {
+            x.fillStyle = 'rgba(255,255,255,0.92)';
+            x.fillRect(qx + i * (qs / 7), qy + j * (qs / 7), qs / 7 - 1.5, qs / 7 - 1.5);
+          }
+        }
+      }
+      x.font = 'bold 20px Inter, sans-serif'; x.fillStyle = 'rgba(255,255,255,0.5)';
+      x.textAlign = 'center';
+      x.fillText('Redeem at lagoslifemini.online/redeem.html', 600, 725);
+
+      return c.toDataURL('image/png');
+    }
+
+    // ---------- GIFT CARD RENDERER ----------
+    function renderGiftSuccess(card) {
+      const imgUrl = generateGiftCardImage(card);
+      root.innerHTML = `
+        <div style="max-width:420px; width:100%;">
+          <div class="text-5xl mb-3">🎁</div>
+          <h1 class="text-xl font-black text-pink-400 mb-1">Gift Card Created!</h1>
+          <p class="text-white/50 text-sm mb-4">Send this to your loved one</p>
+
+          <img src="${imgUrl}" alt="Gift Card" class="gift-card-img" />
+
+          <div style="margin-top:14px; padding:10px 14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <span style="font-size:9px; text-transform:uppercase; letter-spacing:0.15em; color:rgba(255,255,255,0.4); font-weight:800;">CODE</span>
+            <span style="font-size:12px; font-family:monospace; color:#F9A8D4; font-weight:900;">${card.code}</span>
+            <button onclick="navigator.clipboard.writeText('${card.code}').then(()=>alert('Code copied!'))" style="font-size:18px; cursor:pointer; background:none; border:none;">📋</button>
+          </div>
+
+          <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <button onclick="window.__downloadGift()" style="padding:12px; border-radius:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#fff; font-weight:900; font-size:12px; cursor:pointer;">⬇️ Download</button>
+            <button onclick="window.__shareGift()" style="padding:12px; border-radius:12px; background:linear-gradient(to right,#EC4899,#A855F7); color:#fff; font-weight:900; font-size:12px; cursor:pointer; border:none;">📤 Share</button>
+          </div>
+
+          <a href="/more.html" style="display:block; margin-top:10px; padding:10px; border-radius:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); color:rgba(255,255,255,0.6); font-weight:800; font-size:11px; text-decoration:none;">← Back to Menu</a>
+        </div>
+      `;
+
+      window.__downloadGift = () => {
+        const a = document.createElement('a');
+        a.href = imgUrl;
+        a.download = 'lagos-gift-' + card.code + '.png';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      };
+
+      window.__shareGift = async () => {
+        const text = '🎁 You got a gift! ' + (card.emoji || '') + ' ' + (card.productName || '') +
+          ' worth ₦' + Number(card.redeemValue || 0).toLocaleString() +
+          '\n\nCode: ' + card.code +
+          '\nRedeem: https://lagoslifemini.online/redeem.html' +
+          '\nFrom: ' + (card.buyerName || 'A friend');
+        try {
+          if (navigator.share) await navigator.share({ title: 'A gift for you!', text });
+          else if (navigator.clipboard) { await navigator.clipboard.writeText(text); alert('Copied to clipboard!'); }
+        } catch (e) {}
+      };
+    }
+
+    // ---------- MAIN FLOW ----------
     if (!reference) {
       root.innerHTML = `
         <div class="text-6xl mb-4">⚠️</div>
@@ -42,15 +186,63 @@
         <p class="text-white/50 text-sm mb-6">This page must be accessed after a payment.</p>
         <a href="/club.html" class="bg-white/10 px-6 py-3 rounded-xl font-bold text-sm">Go Back</a>
       `;
+    } else if (isGift) {
+      // 🎁 GIFT PURCHASE — DO NOT CALL /api/paystack
+      root.innerHTML = `
+        <div class="spinner"></div>
+        <h1 class="text-xl font-black text-white mb-2">Loading Gift Card...</h1>
+        <p class="text-white/50 text-sm">Please wait.</p>
+      `;
+
+      auth.onAuthStateChanged(async (user) => {
+        if (!user) {
+          root.innerHTML = `<div class="text-4xl mb-4">🔒</div><h1 class="text-xl font-black text-red-500">You are not logged in.</h1><a href="/login.html" class="mt-4 block text-[#FFD60A]">Login here</a>`;
+          return;
+        }
+
+        // Try sessionStorage first
+        let card = null;
+        try {
+          const raw = sessionStorage.getItem('pending_gift_card');
+          if (raw) {
+            card = JSON.parse(raw);
+            sessionStorage.removeItem('pending_gift_card');
+          }
+        } catch (e) {}
+
+        // Fallback: fetch from Firestore using paystackRef
+        if (!card) {
+          try {
+            const snap = await db.collection('gift_cards').where('paystackRef', '==', reference).limit(1).get();
+            if (!snap.empty) {
+              const doc = snap.docs[0];
+              card = Object.assign({ id: doc.id }, doc.data());
+            }
+          } catch (e) {
+            console.error('Gift card lookup failed:', e);
+          }
+        }
+
+        if (card) {
+          renderGiftSuccess(card);
+        } else {
+          root.innerHTML = `
+            <div class="text-6xl mb-4">⚠️</div>
+            <h1 class="text-2xl font-black text-red-500 mb-2">Gift Card Not Found</h1>
+            <p class="text-white/50 text-sm mb-2">Payment was received but we couldn't locate your gift card.</p>
+            <p class="text-white/40 text-xs mb-6">Contact support with Ref: ${reference}</p>
+            <a href="/shop.html" class="bg-white/10 px-6 py-3 rounded-xl font-bold text-sm">Back to Shop</a>
+          `;
+        }
+      });
     } else {
-      // Show loading spinner
+      // 💰 NORMAL TOP-UP — original flow unchanged
       root.innerHTML = `
         <div class="spinner"></div>
         <h1 class="text-xl font-black text-white mb-2">Verifying Payment...</h1>
         <p class="text-white/50 text-sm">Please do not close this page.</p>
       `;
 
-      // 2. Wait for Firebase Auth to load the user, then verify
       auth.onAuthStateChanged(async (user) => {
         if (!user) {
           root.innerHTML = `<div class="text-4xl mb-4">🔒</div><h1 class="text-xl font-black text-red-500">You are not logged in.</h1><a href="/login.html" class="mt-4 block text-[#FFD60A]">Login here</a>`;
@@ -58,7 +250,17 @@
         }
 
         try {
-          // 3. Call our existing backend to verify and update Firestore
+          // Safety check: never verify a gift reference through top-up API
+          if (reference.startsWith('LGS_GIFT_')) {
+            root.innerHTML = `
+              <div class="text-6xl mb-4">⚠️</div>
+              <h1 class="text-2xl font-black text-red-500 mb-2">Invalid Reference</h1>
+              <p class="text-white/50 text-sm mb-6">This reference is not a top-up payment.</p>
+              <a href="/more.html" class="bg-white/10 px-6 py-3 rounded-xl font-bold text-sm">Go Back</a>
+            `;
+            return;
+          }
+
           const res = await fetch('/api/paystack', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -75,7 +277,6 @@
               <p class="text-white/40 text-sm mb-6">Ref: ${reference}</p>
               <a href="/club.html" class="bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black px-8 py-3 rounded-xl font-black text-sm active:scale-95 transition">Return to Game</a>
             `;
-            // Optional: Auto-redirect after 3 seconds
             setTimeout(() => { window.location.href = '/club.html'; }, 4000);
           } else {
             root.innerHTML = `
