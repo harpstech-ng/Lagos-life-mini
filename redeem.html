@@ -169,12 +169,18 @@
 
       useEffect(() => { if (uid) { loadHistory(); loadWithdrawHistory(); } }, [uid]);
 
+      // 🔥 BULLETPROOF CODE FORMATTER
       const formatInput = (val) => {
-        // 🔥 FIXED: Changed 14 to 15 to match the generator
-        const clean = (val || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 15);
+        // 1. Remove all non-alphanumeric characters and convert to uppercase
+        let clean = (val || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        // 2. Limit to 15 characters
+        if (clean.length > 15) clean = clean.slice(0, 15);
+        
+        // 3. Insert hyphens at exact spots for LGM-XXXX-XXXX-XXXX
         let out = '';
         for (let i = 0; i < clean.length; i++) {
-          if (i === 3 || i === 8 || i === 13) out += '-'; // Adjusted hyphen logic for 15 chars
+          // Insert hyphen before the 4th (index 3), 8th (index 7), and 12th (index 11) characters
+          if (i === 3 || i === 7 || i === 11) out += '-';
           out += clean[i];
         }
         return out;
@@ -187,7 +193,7 @@
 
       const checkCode = async () => {
         const code = inputCode.trim();
-        // 🔥 FIXED: Changed 14 to 15
+        // Check against 15 alphanumeric characters
         if (code.replace(/-/g, '').length !== 15) {
           setErrorMsg('Code must be 15 characters (LGM-XXXX-XXXX-XXXX)');
           return;
@@ -296,7 +302,6 @@
 
         setWithdrawLoading(true);
         try {
-          // 1. Create the withdrawal request in Firestore
           await db.collection("withdrawals").add({
             userId: uid,
             name: userName,
@@ -305,18 +310,16 @@
             accountNumber: accountNumber.trim(),
             accountName: accountName.trim(),
             amountReal: amt,
-            source: 'gift_redeem', // Tells admin this came from a gift
+            source: 'gift_redeem',
             status: 'pending',
             createdAt: Date.now()
           });
 
-          // 2. Deduct the amount from the user's real balance
           await db.collection("users").doc(uid).update({
             real: firebase.firestore.FieldValue.increment(-amt),
             lastSeen: Date.now()
           });
 
-          // 3. Update local state
           const newReal = real - amt;
           setReal(newReal);
           try {
@@ -373,14 +376,14 @@
                   className: 'w-full bg-white/[0.05] border-2 border-white/15 focus:border-emerald-400/60 rounded-2xl px-4 py-4 text-center text-[18px] font-black font-mono text-emerald-300 placeholder-white/25 tabular-nums transition'
                 }),
                 inputCode && h('div', { className: 'mt-1 text-center text-[10px] text-white/40 tabular-nums' },
-                  inputCode.replace(/-/g, '').length + ' / 15 characters' // 🔥 FIXED TEXT
+                  inputCode.replace(/-/g, '').length + ' / 15 characters'
                 ),
                 errorMsg && h('div', { className: 'mt-2 text-center text-[11px] text-red-400 font-bold' }, errorMsg)
               ),
 
               h('button', {
                 onClick: checkCode,
-                disabled: loading || inputCode.replace(/-/g, '').length !== 15, // 🔥 FIXED CHECK
+                disabled: loading || inputCode.replace(/-/g, '').length !== 15,
                 className: 'mt-4 w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-black text-[13px] font-display shadow-[0_8px_24px_-8px_rgba(16,185,129,0.7)] active:scale-[0.97] transition disabled:opacity-40 disabled:shadow-none'
               }, loading ? '⏳ Checking...' : '🔍 Check Code')
             ),
