@@ -67,6 +67,10 @@
     .marquee { animation: marquee 15s linear infinite; white-space: nowrap; }
     @keyframes marquee { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
     .music-toggle { position: fixed; top: 70px; right: 12px; z-index: 40; }
+    @keyframes flashRed { 0%,100% { background: rgba(239,68,68,0.15); } 50% { background: rgba(239,68,68,0.4); } }
+    @keyframes flashGreen { 0%,100% { background: rgba(34,197,94,0.15); } 50% { background: rgba(34,197,94,0.4); } }
+    .market-bear { animation: flashRed 2s infinite; }
+    .market-bull { animation: flashGreen 2s infinite; }
   </style>
 </head>
 <body>
@@ -92,10 +96,10 @@
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    // ✅ Offline persistence — cache-first loads, offline play, free
     db.enablePersistence().catch((e) => console.warn('Persistence:', e.code));
     const auth = firebase.auth();
 
+    // ════════ CONFIG ════════
     const MAX_E = 100;
     const ENERGY_MS = 5 * 60 * 1000;
     const MAX_OFFLINE_HOURS = 48;
@@ -103,11 +107,16 @@
     const AUTO_COLLECT_COST = 10_000_000_000_000;
     const SETTINGS_REFRESH_MS = 5 * 60 * 1000;
     const ENERGY_SYNC_MS = 60000;
-    const SAFETY_FLUSH_MS = 5 * 60 * 1000;         // ✅ bot delta flushed every 5 min
-    const DRAMA_COOLDOWN_MS = 30 * 1000;           // ✅ drama button cooldown
+    const SAFETY_FLUSH_MS = 5 * 60 * 1000;
+    const DRAMA_COOLDOWN_MS = 30 * 1000;
     const SETTINGS_CACHE_KEY = 'lagos_settings_v1';
     const SETTINGS_CACHE_TTL = 10 * 60 * 1000;
-    const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/DLTh6m6oyUBBIbmk1dS8Um?s=cl&p=i&mlu=4&ilr=4&iam=2';
+    const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/DLTh6m6oyUBBIbmk1dS8Um';
+
+    const FREE_BUSINESS_LIMIT = 100;
+    const BUSINESS_TAX_REAL = 200;
+
+    const MARKET_TICK_MS = 5000;
 
     const CATEGORIES = ["All", "Street", "Small", "Mid", "High", "Cartel", "Ultra", "Cosmic"];
 
@@ -221,7 +230,9 @@
       "Your Satellite Network just signed a ₦50T government contract 🛰️",
       "Your Mars Colony just shipped rare minerals back to Earth 🔴",
       "Your Central Bank just printed another quadrillion 🏦",
-      "Your Private Army just secured another nation ⚔️"
+      "📈 Market is BULLISH — businesses earning 1.5x!",
+      "📉 Market is BEARISH — businesses earning 0.5x...",
+      "💳 Someone just bought a business with their Black Card!"
     ];
 
     const getCachedData = () => {
@@ -233,7 +244,8 @@
             lastCollected: parsed.lastCollected || Date.now(),
             upgrades: parsed.upgrades || {},
             autoCollect: parsed.autoCollect === true,
-            whatsappJoined: parsed.whatsappJoined === true
+            whatsappJoined: parsed.whatsappJoined === true,
+            jointVentures: parsed.jointVentures || {}
           });
         }
       } catch (e) {}
@@ -243,7 +255,8 @@
         lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
         taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
         transactions: [], history: [], lastCollected: Date.now(),
-        upgrades: {}, autoCollect: false, whatsappJoined: false
+        upgrades: {}, autoCollect: false, whatsappJoined: false, jointVentures: {},
+        hasCard: false, cardPin: null
       };
     };
 
@@ -251,6 +264,8 @@
       n = Math.floor(n || 0);
       const s = n < 0 ? '-' : '';
       n = Math.abs(n);
+      if (n >= 1e21) return s + '₦' + (n / 1e21).toFixed(2) + 'Sx';
+      if (n >= 1e18) return s + '₦' + (n / 1e18).toFixed(2) + 'Qi';
       if (n >= 1e15) return s + '₦' + (n / 1e15).toFixed(2) + 'Q';
       if (n >= 1e12) return s + '₦' + (n / 1e12).toFixed(2) + 'T';
       if (n >= 1e9) return s + '₦' + (n / 1e9).toFixed(2) + 'B';
@@ -314,7 +329,6 @@
       return count * biz.perHr * Math.pow(3, level || 0);
     };
 
-    // ✅ Local-only history storage
     const logHistory = (title, desc, amount) => {
       try {
         const hist = JSON.parse(localStorage.getItem("lagos_history") || "[]");
@@ -322,6 +336,79 @@
         localStorage.setItem("lagos_history", JSON.stringify(hist.slice(0, 50)));
       } catch (e) {}
     };
+
+    // ═══════════════ CANDLESTICK CHART COMPONENT ═══════════════
+    function MarketChart({ candles, trend, fullSize }) {
+      const canvasRef = React.useRef(null);
+
+      React.useEffect(() => {
+        const c = canvasRef.current;
+        if (!c) return;
+        const ctx = c.getContext('2d');
+        const W = c.width = c.offsetWidth * 2;
+        const H = c.height = c.offsetHeight * 2;
+        ctx.scale(1, 1);
+        const cw = c.offsetWidth;
+        const ch = c.offsetHeight;
+
+        ctx.fillStyle = '#0a0a10';
+        ctx.fillRect(0, 0, cw, ch);
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 5; i++) {
+          const y = (ch / 4) * i;
+          ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke();
+        }
+
+        if (!candles || candles.length === 0) return;
+
+        let min = Infinity, max = -Infinity;
+        candles.forEach(k => { min = Math.min(min, k.low); max = Math.max(max, k.high); });
+        const range = max - min || 1;
+
+        const candleW = cw / candles.length;
+        const wickW = candleW * 0.15;
+
+        candles.forEach((k, i) => {
+          const x = candleW * i + candleW / 2;
+          const yHigh = ((max - k.high) / range) * (ch - 20) + 10;
+          const yLow = ((max - k.low) / range) * (ch - 20) + 10;
+          const yOpen = ((max - k.open) / range) * (ch - 20) + 10;
+          const yClose = ((max - k.close) / range) * (ch - 20) + 10;
+
+          const isUp = k.close >= k.open;
+          const color = isUp ? '#22C55E' : '#EF4444';
+
+          ctx.strokeStyle = color;
+          ctx.lineWidth = wickW;
+          ctx.beginPath();
+          ctx.moveTo(x, yHigh);
+          ctx.lineTo(x, yLow);
+          ctx.stroke();
+
+          ctx.fillStyle = color;
+          const bodyTop = Math.min(yOpen, yClose);
+          const bodyH = Math.max(2, Math.abs(yClose - yOpen));
+          ctx.fillRect(x - candleW * 0.35, bodyTop, candleW * 0.7, bodyH);
+        });
+      }, [candles]);
+
+      return h('div', { className: 'relative rounded-xl overflow-hidden border border-white/[0.08] bg-[#0a0a10]' },
+        h('canvas', { ref: canvasRef, className: 'w-full block ' + (fullSize ? 'h-80' : 'h-32') }),
+        h('div', { className: 'absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md ' +
+          (trend === 'bull' ? 'bg-[#22C55E]/20 border border-[#22C55E]/40' :
+           trend === 'bear' ? 'bg-[#EF4444]/20 border border-[#EF4444]/40' :
+           'bg-white/[0.06] border border-white/10') },
+          h('span', { className: 'text-[10px]' }, trend === 'bull' ? '📈' : trend === 'bear' ? '📉' : '➖'),
+          h('span', { className: 'text-[9px] font-black uppercase tracking-wider ' +
+            (trend === 'bull' ? 'text-[#22C55E]' : trend === 'bear' ? 'text-[#EF4444]' : 'text-white/60') },
+            trend === 'bull' ? 'BULL MARKET · 1.5x' : trend === 'bear' ? 'BEAR MARKET · 0.5x' : 'STABLE'
+          )
+        ),
+        h('div', { className: 'absolute bottom-2 right-2 text-[8px] text-white/30 font-mono' }, 'LGM INDEX')
+      );
+    }
 
     function App() {
       const [s, setS] = useState(getCachedData);
@@ -340,15 +427,70 @@
 
       const [now, setNow] = useState(Date.now());
 
-      // Refs
+      // MARKET STATE
+      const [candles, setCandles] = useState(() => {
+        const arr = [];
+        let price = 1000;
+        for (let i = 0; i < 30; i++) {
+          const open = price;
+          const change = (Math.random() - 0.5) * 100;
+          price = Math.max(100, price + change);
+          const close = price;
+          const high = Math.max(open, close) + Math.random() * 30;
+          const low = Math.min(open, close) - Math.random() * 30;
+          arr.push({ open, close, high, low });
+        }
+        return arr;
+      });
+      const [marketTrend, setMarketTrend] = useState('neutral');
+      const [chartExpanded, setChartExpanded] = useState(false);
+
+      // BLACK CARD STATE
+      const [taxPayModal, setTaxPayModal] = useState(null);
+      const [cardPayModal, setCardPayModal] = useState(null);
+      const [cardPinInput, setCardPinInput] = useState('');
+
+      // JOINT VENTURE STATE
+      const [jvModal, setJvModal] = useState(null);
+      const [jvTarget, setJvTarget] = useState('');
+      const [jvSending, setJvSending] = useState(false);
+
       const stateRef = useRef(s);
       const lastSyncedEnergyRef = useRef({ energy: -1, lastEnergy: 0 });
-      // ✅ Bot earnings accumulated locally, folded into next Firestore write
       const unflushedCashRef = useRef(0);
 
       useEffect(() => { stateRef.current = s; }, [s]);
 
-      // ✅ Flush bot delta + energy to Firestore via increment() — never SET cash
+      // MARKET ENGINE
+      useEffect(() => {
+        const iv = setInterval(() => {
+          setCandles(prev => {
+            const last = prev[prev.length - 1];
+            const open = last.close;
+            const change = (Math.random() - 0.48) * 150;
+            const close = Math.max(100, open + change);
+            const high = Math.max(open, close) + Math.random() * 30;
+            const low = Math.min(open, close) - Math.random() * 30;
+            const next = [...prev.slice(-29), { open, close, high, low }];
+            return next;
+          });
+        }, MARKET_TICK_MS);
+        return () => clearInterval(iv);
+      }, []);
+
+      useEffect(() => {
+        if (candles.length < 10) return;
+        const recent = candles.slice(-10);
+        const start = recent[0].open;
+        const end = recent[recent.length - 1].close;
+        const pctChange = (end - start) / start;
+        if (pctChange > 0.03) setMarketTrend('bull');
+        else if (pctChange < -0.03) setMarketTrend('bear');
+        else setMarketTrend('neutral');
+      }, [candles]);
+
+      const marketMultiplier = marketTrend === 'bull' ? 1.5 : marketTrend === 'bear' ? 0.5 : 1.0;
+
       const flushToServer = async () => {
         const cur = stateRef.current;
         if (!cur || !uid) return;
@@ -375,13 +517,11 @@
         }
       };
 
-      // Local ticker
       useEffect(() => {
         const iv = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(iv);
       }, []);
 
-      // ✅ Settings — cached 10 min, then get() once per refresh
       useEffect(() => {
         let cancelled = false;
         const checkMaintenance = async () => {
@@ -405,7 +545,6 @@
         return () => { cancelled = true; clearInterval(iv); };
       }, []);
 
-      // ✅ Auth — get() once, no onSnapshot. Server wins; vault absorbs unflushed delta.
       useEffect(() => {
         let cancelled = false;
         const unsub = auth.onAuthStateChanged(async (user) => {
@@ -422,6 +561,7 @@
                 businesses: d.businesses || {},
                 assets: d.assets || {},
                 upgrades: d.upgrades || {},
+                jointVentures: d.jointVentures || {},
                 history: (d.history || []).slice(-30),
                 transactions: (d.transactions || []).slice(-30),
                 cash: d.cash !== undefined ? d.cash : 25000,
@@ -439,7 +579,7 @@
                 lastEnergy: Date.now(), businesses: {}, assets: {}, travels: [],
                 taps: 0, clout: 0, goldName: false, lastSeen: Date.now(),
                 transactions: [], history: [], lastCollected: Date.now(),
-                upgrades: {}, autoCollect: false, whatsappJoined: false
+                upgrades: {}, autoCollect: false, whatsappJoined: false, jointVentures: {}
               };
               await userRef.set(defaultData);
               if (cancelled) return;
@@ -454,21 +594,18 @@
         return () => { cancelled = true; unsub(); };
       }, []);
 
-      // Music unlock
       useEffect(() => {
         const unlock = () => { if (!musicOn) { AudioEngine.startMusic(); setMusicOn(true); } };
         window.addEventListener("pointerdown", unlock, { once: true });
         return () => window.removeEventListener("pointerdown", unlock);
       }, [musicOn]);
 
-      // Toast auto-dismiss
       useEffect(() => {
         if (!toast) return;
         const t = setTimeout(() => setToast(null), 2400);
         return () => clearTimeout(t);
       }, [toast]);
 
-      // Feed rotation
       useEffect(() => {
         const iv = setInterval(() => {
           setFeedMsg(BUSINESS_FEED[Math.floor(Math.random() * BUSINESS_FEED.length)]);
@@ -476,7 +613,6 @@
         return () => clearInterval(iv);
       }, []);
 
-      // ✅ Energy regen — local only
       useEffect(() => {
         if (!uid) return;
         const iv = setInterval(() => {
@@ -493,7 +629,7 @@
         return () => clearInterval(iv);
       }, [uid]);
 
-      // ✅ Bot — LOCAL ONLY. Zero Firestore writes. Accumulates into unflushedCashRef.
+      // AUTO COLLECT BOT
       useEffect(() => {
         if (!s.autoCollect || !uid) return;
         const iv = setInterval(() => {
@@ -507,7 +643,7 @@
             }, 0);
             if (perHr <= 0) return prev;
             const elapsed = Math.min(Date.now() - (prev.lastCollected || Date.now()), MAX_OFFLINE_HOURS * 3600000);
-            const amount = Math.floor((elapsed / 3600000) * perHr);
+            const amount = Math.floor((elapsed / 3600000) * perHr * marketMultiplier);
             if (amount < 1) return prev;
             unflushedCashRef.current += amount;
             AudioEngine.coin();
@@ -518,9 +654,8 @@
           });
         }, 60000);
         return () => clearInterval(iv);
-      }, [s.autoCollect, uid]);
+      }, [s.autoCollect, uid, marketMultiplier]);
 
-      // ✅ Safety flush — every 5 min, only if delta > 0
       useEffect(() => {
         if (!uid) return;
         const iv = setInterval(() => {
@@ -531,7 +666,6 @@
         return () => clearInterval(iv);
       }, [uid]);
 
-      // ✅ Flush on tab-hide / pagehide / beforeunload
       useEffect(() => {
         if (!uid) return;
         const handleHidden = () => {
@@ -549,7 +683,6 @@
         };
       }, [uid]);
 
-      // ✅ Refresh on tab-focus — picks up real-money purchases, cross-device changes
       useEffect(() => {
         if (!uid) return;
         let initialized = false;
@@ -564,7 +697,9 @@
             const d = snap.data();
             setS(prev => Object.assign({}, prev, {
               cash: d.cash !== undefined ? d.cash : prev.cash,
-              real: d.real !== undefined ? d.real : prev.real
+              real: d.real !== undefined ? d.real : prev.real,
+              hasCard: d.hasCard === true,
+              cardPin: d.cardPin || null
             }));
           } catch (e) {}
         };
@@ -577,7 +712,6 @@
 
       const notify = (msg, kind = 'good') => setToast({ msg, kind, id: Date.now() });
 
-      // ✅ Vault calculation (client-side only)
       const vault = useMemo(() => {
         const safeBiz = s.businesses || {};
         const upgrades = s.upgrades || {};
@@ -592,8 +726,8 @@
         const elapsedMs = Math.max(0, now - lastCollected);
         const maxMs = MAX_OFFLINE_HOURS * 60 * 60 * 1000;
         const effectiveMs = Math.min(elapsedMs, maxMs);
-        return Math.floor((effectiveMs / 3600000) * perHr);
-      }, [s.businesses, s.upgrades, s.lastCollected, now]);
+        return Math.floor((effectiveMs / 3600000) * perHr * marketMultiplier);
+      }, [s.businesses, s.upgrades, s.lastCollected, now, marketMultiplier]);
 
       const totalPerHr = useMemo(() => {
         const safeBiz = s.businesses || {};
@@ -726,7 +860,9 @@
       const assetValue = Object.entries(s.assets || {}).reduce((a, kv) => a + kv[1] * (ASSET_PRICES[kv[0]] || 0), 0);
       const netWorth = Math.floor((s.cash || 0) + bizValue + assetValue);
       const ownedCount = Object.values(safeBiz).reduce((a, c) => a + c, 0);
-      const perSec = totalPerHr / 3600;
+      const perSec = totalPerHr / 3600 * marketMultiplier;
+
+      const isOverFreeLimit = ownedCount >= FREE_BUSINESS_LIMIT;
 
       let bizRank = "Street Hustler";
       if (ownedCount > 5) bizRank = "Small Business Owner";
@@ -735,7 +871,18 @@
       if (ownedCount > 60) bizRank = "Global Titan 🌍";
       if (ownedCount > 100) bizRank = "Cosmic Emperor 🌌";
 
-      const buyBusiness = async (b) => {
+      // BUY BUSINESS FLOW
+      const handleBuyBusiness = (b) => {
+        if (isOverFreeLimit) {
+          // Over 100 limit — open payment method selection
+          setTaxPayModal({ business: b });
+        } else {
+          // Under limit — pay with fake cash
+          processNormalBuy(b);
+        }
+      };
+
+      const processNormalBuy = async (b) => {
         const currentVault = vault;
         if ((s.cash + currentVault) < b.price) {
           AudioEngine.error();
@@ -770,6 +917,88 @@
           }
           logHistory('Bought Business', 'Bought ' + b.name, -b.price);
         }
+      };
+
+      const processBuyWithRealTax = async (b) => {
+        if ((s.real || 0) < BUSINESS_TAX_REAL) {
+          AudioEngine.error();
+          return notify('Not enough real cash! Need ₦' + BUSINESS_TAX_REAL, 'bad');
+        }
+        const buyNow = Date.now();
+        setS(prev => {
+          const newBiz = Object.assign({}, prev.businesses || {});
+          newBiz[b.id] = (newBiz[b.id] || 0) + 1;
+          return Object.assign({}, prev, {
+            real: prev.real - BUSINESS_TAX_REAL,
+            businesses: newBiz,
+            lastCollected: buyNow
+          });
+        });
+        AudioEngine.purchase();
+        notify('💰 Paid ₦200 real cash! ' + b.emoji + ' ' + b.name + ' bought.');
+        if (uid) {
+          const delta = unflushedCashRef.current;
+          unflushedCashRef.current = 0;
+          const updates = {
+            real: firebase.firestore.FieldValue.increment(-BUSINESS_TAX_REAL),
+            cash: firebase.firestore.FieldValue.increment(delta),
+            lastCollected: buyNow,
+            lastSeen: Date.now()
+          };
+          updates['businesses.' + b.id] = firebase.firestore.FieldValue.increment(1);
+          try {
+            await db.collection("users").doc(uid).update(updates);
+          } catch (e) {
+            unflushedCashRef.current += delta;
+          }
+          logHistory('Bought Business (Tax)', 'Bought ' + b.name + ' via real cash', -BUSINESS_TAX_REAL);
+        }
+        setTaxPayModal(null);
+      };
+
+      const confirmCardPayment = async () => {
+        if (!cardPayModal) return;
+        if (cardPinInput !== s.cardPin) {
+          AudioEngine.error();
+          return notify('❌ Incorrect PIN!', 'bad');
+        }
+        if ((s.real || 0) < BUSINESS_TAX_REAL) {
+          AudioEngine.error();
+          return notify('Not enough real cash in your wallet!', 'bad');
+        }
+
+        const b = cardPayModal.business;
+        const buyNow = Date.now();
+        setS(prev => {
+          const newBiz = Object.assign({}, prev.businesses || {});
+          newBiz[b.id] = (newBiz[b.id] || 0) + 1;
+          return Object.assign({}, prev, {
+            real: prev.real - BUSINESS_TAX_REAL,
+            businesses: newBiz,
+            lastCollected: buyNow
+          });
+        });
+        AudioEngine.purchase();
+        notify('💳 Black Card authorized! ' + b.name + ' bought.');
+        if (uid) {
+          const delta = unflushedCashRef.current;
+          unflushedCashRef.current = 0;
+          const updates = {
+            real: firebase.firestore.FieldValue.increment(-BUSINESS_TAX_REAL),
+            cash: firebase.firestore.FieldValue.increment(delta),
+            lastCollected: buyNow,
+            lastSeen: Date.now()
+          };
+          updates['businesses.' + b.id] = firebase.firestore.FieldValue.increment(1);
+          try {
+            await db.collection("users").doc(uid).update(updates);
+          } catch (e) {
+            unflushedCashRef.current += delta;
+          }
+          logHistory('Black Card Purchase', 'Bought ' + b.name + ' via Black Card', -BUSINESS_TAX_REAL);
+        }
+        setCardPayModal(null);
+        setCardPinInput('');
       };
 
       const upgradeBiz = async (b) => {
@@ -844,8 +1073,57 @@
         setManageBiz(null);
       };
 
+      const sendJointVenture = async () => {
+        if (!jvModal || !jvTarget.trim()) return notify('Enter a player name', 'bad');
+        if (jvTarget.trim() === s.name) return notify('You cannot JV with yourself 😂', 'bad');
+        if ((safeBiz[jvModal.id] || 0) < 1) return notify('You must own this business first', 'bad');
+        if (jvSending) return;
+
+        setJvSending(true);
+        try {
+          const snap = await db.collection("users").where("name", "==", jvTarget.trim()).limit(1).get();
+          if (snap.empty) {
+            notify('Player not found!', 'bad');
+            setJvSending(false);
+            return;
+          }
+          const target = snap.docs[0];
+          if (target.id === uid) {
+            notify('You cannot JV with yourself', 'bad');
+            setJvSending(false);
+            return;
+          }
+
+          const jvId = Date.now().toString();
+          const jvDoc = {
+            id: jvId,
+            businessId: jvModal.id,
+            businessName: jvModal.name,
+            emoji: jvModal.emoji,
+            fromUid: uid,
+            fromName: s.name,
+            split: 50,
+            status: 'pending',
+            createdAt: Date.now()
+          };
+
+          await db.collection("users").doc(target.id).update({
+            jvInbox: firebase.firestore.FieldValue.arrayUnion(jvDoc)
+          });
+
+          AudioEngine.coin();
+          notify('🤝 Joint Venture request sent to ' + target.data().name + '!');
+          setJvModal(null);
+          setJvTarget('');
+        } catch (e) {
+          console.error(e);
+          notify('Failed to send request', 'bad');
+        }
+        setJvSending(false);
+      };
+
       const buyAutoCollect = async () => {
-        if (s.autoCollect) return notify('Already active! 🤖', 'bad');
+        if (s.autoCollect) return toggleAutoCollect(); // If active, toggle off
         if ((s.cash + vault) < AUTO_COLLECT_COST) { AudioEngine.error(); return notify('Need ' + fmt(AUTO_COLLECT_COST), 'bad'); }
         const buyNow = Date.now();
         setS(prev => Object.assign({}, prev, {
@@ -870,6 +1148,15 @@
           }
           logHistory('Bought Auto-Collect Bot', 'Active forever', -AUTO_COLLECT_COST);
         }
+      };
+
+      const toggleAutoCollect = async () => {
+        const newVal = !s.autoCollect;
+        setS(prev => Object.assign({}, prev, { autoCollect: newVal }));
+        if (uid) {
+          await db.collection("users").doc(uid).update({ autoCollect: newVal });
+        }
+        notify(newVal ? '🤖 Auto-Collect activated!' : '🤖 Auto-Collect deactivated.', 'good');
       };
 
       const joinWhatsApp = async () => {
@@ -944,12 +1231,30 @@
 
           h('main', { className: 'flex-1 px-4 pb-4 animate-slideDown' },
 
+            // ══════ MARKET CHART ══════
+            h('div', { className: 'mt-3' },
+              h('div', { className: 'flex items-center justify-between mb-1.5' },
+                h('div', { className: 'text-[9px] uppercase tracking-[0.2em] font-extrabold text-white/40 font-display' }, '📊 Lagos Market Index'),
+                h('div', { className: 'text-[9px] font-bold ' +
+                  (marketTrend === 'bull' ? 'text-[#22C55E]' : marketTrend === 'bear' ? 'text-[#EF4444]' : 'text-white/40') },
+                  marketTrend === 'bull' ? '📈 +50% income' : marketTrend === 'bear' ? '📉 -50% income' : '➖ Stable'
+                )
+              ),
+              h('div', { onClick: () => setChartExpanded(true), className: 'cursor-pointer relative active:scale-[0.98] transition' },
+                h(MarketChart, { candles, trend: marketTrend }),
+                h('div', { className: 'absolute bottom-2 left-2 text-[8px] text-white/60 bg-black/60 px-2 py-1 rounded backdrop-blur-sm' }, '🔍 Tap to expand')
+              )
+            ),
+
             h(Card, { className: 'p-5 mt-3 relative overflow-hidden', gold: true },
               h('div', { className: 'absolute -top-10 -right-10 w-32 h-32 rounded-full bg-[#FFD60A]/20 blur-2xl pointer-events-none' }),
               h('div', { className: 'text-center relative z-10' },
                 h('div', { className: 'text-[10px] uppercase tracking-widest text-[#FFD60A]/70 font-bold mb-1' }, 'Business Vault'),
                 h('div', { className: 'text-4xl font-black text-gradient-gold tabular-nums font-display drop-shadow-md mb-1' }, fmt(vault)),
-                perSec > 0 && h('div', { className: 'text-[10px] text-[#22C55E] font-bold mb-3 tabular-nums' }, '+ ' + fmt(perSec) + ' / second'),
+                perSec > 0 && h('div', { className: 'text-[10px] font-bold mb-3 tabular-nums ' +
+                  (marketTrend === 'bull' ? 'text-[#22C55E]' : marketTrend === 'bear' ? 'text-[#EF4444]' : 'text-[#22C55E]') },
+                  '+ ' + fmt(perSec) + ' / second' + (marketMultiplier !== 1 ? ' (' + (marketMultiplier > 1 ? '+' : '') + Math.round((marketMultiplier - 1) * 100) + '%)' : '')
+                ),
                 h('div', { className: 'text-[10px] text-white/50 mb-4' }, s.autoCollect ? '🤖 Bot auto-collects for you' : 'Collect before 48hrs so Sapa no catch you'),
 
                 h('button', {
@@ -969,7 +1274,7 @@
             h('div', { className: 'grid grid-cols-3 gap-2 mt-3' },
               h(Card, { className: 'p-2.5 text-center' },
                 h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Per Hour'),
-                h('div', { className: 'text-[12px] font-black text-[#22C55E] tabular-nums mt-0.5' }, '+' + fmt(totalPerHr))
+                h('div', { className: 'text-[12px] font-black text-[#22C55E] tabular-nums mt-0.5' }, '+' + fmt(totalPerHr * marketMultiplier))
               ),
               h(Card, { className: 'p-2.5 text-center' },
                 h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Owned'),
@@ -978,6 +1283,16 @@
               h(Card, { className: 'p-2.5 text-center' },
                 h('div', { className: 'text-[9px] uppercase tracking-widest text-white/40 font-bold' }, 'Title'),
                 h('div', { className: 'text-[10px] font-black text-[#FFD60A] mt-0.5 truncate' }, bizRank)
+              )
+            ),
+
+            // FREE LIMIT WARNING
+            isOverFreeLimit && h('div', { className: 'mt-3 p-3 rounded-xl bg-red-500/15 border border-red-500/40 flex items-start gap-2' },
+              h('span', { className: 'text-lg shrink-0' }, '🛑'),
+              h('div', { className: 'flex-1 min-w-0' },
+                h('div', { className: 'text-[11px] font-black text-red-400' }, 'FREE LIMIT REACHED (' + ownedCount + '/100)'),
+                h('div', { className: 'text-[10px] text-white/60 mt-0.5' }, 'Any new business now costs ₦200 real cash. Use Black Card or Real Balance!'),
+                h('div', { className: 'text-[10px] text-[#22C55E] mt-1 font-bold' }, 'Your existing ' + ownedCount + ' businesses still earn normally ✅')
               )
             ),
 
@@ -1013,10 +1328,11 @@
                 ),
                 h('button', {
                   onClick: buyAutoCollect,
-                  disabled: s.autoCollect,
                   className: 'px-3 py-2 rounded-lg text-[11px] font-black active:scale-95 transition ' +
-                    (s.autoCollect ? 'bg-white/[0.06] text-white/40 border border-white/[0.08]' : 'bg-gradient-to-b from-[#A855F7] to-[#7C3AED] text-white shadow-[0_4px_12px_-4px_rgba(168,85,247,0.7)]')
-                }, s.autoCollect ? '✅' : 'BUY')
+                    (s.autoCollect 
+                      ? 'bg-red-500/20 border border-red-500/40 text-red-400' 
+                      : 'bg-gradient-to-b from-[#A855F7] to-[#7C3AED] text-white shadow-[0_4px_12px_-4px_rgba(168,85,247,0.7)]')
+                }, s.autoCollect ? 'DEACTIVATE' : 'BUY')
               )
             ),
 
@@ -1072,9 +1388,13 @@
               filteredBusinesses.map((b) => {
                 const owned = safeBiz[b.id] || 0;
                 const lvl = upgrades[b.id] || 0;
-                const canAfford = (s.cash + vault) >= b.price;
+                const canAffordFake = (s.cash + vault) >= b.price;
+                const canBuyWithTax = isOverFreeLimit && (s.hasCard || (s.real || 0) >= BUSINESS_TAX_REAL);
                 const roiHours = (b.price / b.perHr).toFixed(1);
                 const isExpensive = b.price >= 50_000_000_000_000;
+                const buyDisabled = isOverFreeLimit ? !canBuyWithTax : !canAffordFake;
+                const buyLabel = isOverFreeLimit ? '₦200 Tax' : fmt(b.price);
+
                 return h(Card, {
                   key: b.id,
                   className: 'p-3 flex items-center gap-3 transition-all ' + 
@@ -1093,18 +1413,18 @@
                     ),
                     h('div', { className: 'text-[9px] text-white/40 truncate mb-1' }, b.desc),
                     h('div', { className: 'flex items-center gap-2' },
-                      h('span', { className: 'text-[10px] font-black text-[#22C55E] tabular-nums' }, '+' + fmt(b.perHr) + '/hr'),
+                      h('span', { className: 'text-[10px] font-black text-[#22C55E] tabular-nums' }, '+' + fmt(b.perHr * marketMultiplier) + '/hr'),
                       h('span', { className: 'text-[9px] text-white/30 font-bold' }, '· ROI ' + roiHours + 'h')
                     )
                   ),
                   h('button', {
-                    onClick: () => buyBusiness(b),
-                    disabled: !canAfford,
+                    onClick: () => handleBuyBusiness(b),
+                    disabled: buyDisabled,
                     className: 'shrink-0 rounded-lg text-[11px] font-black px-3 py-2 active:scale-95 transition-all tabular-nums ' +
-                      (canAfford
+                      (!buyDisabled
                         ? 'bg-gradient-to-b from-[#FFE566] to-[#FFB800] text-black shadow-[0_4px_12px_-4px_rgba(255,214,10,0.5)]'
                         : 'bg-white/[0.07] text-white/30')
-                  }, fmt(b.price))
+                  }, buyLabel)
                 );
               })
             ),
@@ -1113,11 +1433,15 @@
               h('div', { className: 'flex items-start gap-2' },
                 h('span', { className: 'text-base' }, '💡'),
                 h('p', { className: 'text-[10.5px] text-white/50 leading-relaxed' },
-                  'Your businesses no dey sleep. Money dey enter your vault 24/7 (max 48 hours). Tap any business in "Your Empire" to ',
-                  h('span', { className: 'text-[#A855F7] font-bold' }, 'UPGRADE'),
-                  ' (×3 income per level) or ',
-                  h('span', { className: 'text-[#FFD60A] font-bold' }, 'SELL'),
-                  ' for cash. 🚀'
+                  'First 100 businesses = ',
+                  h('span', { className: 'text-[#22C55E] font-bold' }, 'FREE'),
+                  ' with fake cash. After 100, each new business needs ',
+                  h('span', { className: 'text-[#FFD60A] font-bold' }, '₦200 real cash or Black Card'),
+                  '. Watch the market: ',
+                  h('span', { className: 'text-[#22C55E] font-bold' }, '📈 BULL = 1.5x income'),
+                  ' · ',
+                  h('span', { className: 'text-[#EF4444] font-bold' }, '📉 BEAR = 0.5x income'),
+                  '. Tap any business in "Your Empire" to upgrade (×3 income) or sell. 🚀'
                 )
               )
             )
@@ -1138,6 +1462,34 @@
             )
           ),
 
+          // ══════ FULL SCREEN CHART MODAL ══════
+          chartExpanded && h('div', { className: 'fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 animate-popIn' },
+            h('div', { className: 'w-full max-w-lg' },
+              h('div', { className: 'flex justify-between items-center mb-4' },
+                h('div', null,
+                  h('h2', { className: 'text-white font-black font-display text-lg' }, 'Lagos Market Index'),
+                  h('p', { className: 'text-white/50 text-[10px]' }, 'Live candlestick chart · Updated every 5s')
+                ),
+                h('button', { onClick: () => setChartExpanded(false), className: 'w-10 h-10 rounded-full bg-white/10 grid place-items-center text-white text-xl active:scale-90' }, '×')
+              ),
+              h(MarketChart, { candles, trend: marketTrend, fullSize: true }),
+              h('div', { className: 'mt-4 grid grid-cols-2 gap-2' },
+                h('div', { className: 'bg-white/[0.05] rounded-xl p-3 text-center' },
+                  h('div', { className: 'text-[9px] text-white/40 uppercase font-bold' }, 'Market Status'),
+                  h('div', { className: 'text-[14px] font-black ' +
+                    (marketTrend === 'bull' ? 'text-[#22C55E]' : marketTrend === 'bear' ? 'text-[#EF4444]' : 'text-white') },
+                    marketTrend === 'bull' ? '📈 BULL (1.5x)' : marketTrend === 'bear' ? '📉 BEAR (0.5x)' : '➖ NEUTRAL (1x)'
+                  )
+                ),
+                h('div', { className: 'bg-white/[0.05] rounded-xl p-3 text-center' },
+                  h('div', { className: 'text-[9px] text-white/40 uppercase font-bold' }, 'Current Multiplier'),
+                  h('div', { className: 'text-[14px] font-black text-[#FFD60A]' }, marketMultiplier.toFixed(1) + 'x')
+                )
+              )
+            )
+          ),
+
+          // ══════ MANAGE BUSINESS MODAL ══════
           manageBiz && (() => {
             const owned = safeBiz[manageBiz.id] || 0;
             const lvl = upgrades[manageBiz.id] || 0;
@@ -1156,7 +1508,7 @@
                   h('div', { className: 'text-[11px] text-white/50 mt-1' }, 'Owned: ' + owned + ' · Level ' + lvl + '/' + MAX_UPGRADE_LEVEL),
                   h('div', { className: 'mt-3 px-3 py-2 rounded-xl bg-[#22C55E]/15 border border-[#22C55E]/30' },
                     h('div', { className: 'text-[9px] uppercase tracking-widest text-white/50 font-bold' }, 'Income'),
-                    h('div', { className: 'text-[16px] font-black text-[#22C55E] tabular-nums font-display' }, '+' + fmt(effPerHr) + ' /hr')
+                    h('div', { className: 'text-[16px] font-black text-[#22C55E] tabular-nums font-display' }, '+' + fmt(effPerHr * marketMultiplier) + ' /hr')
                   )
                 ),
                 h('div', { className: 'mt-4 space-y-2' },
@@ -1175,6 +1527,18 @@
                     )
                   ) : h('div', { className: 'w-full rounded-xl p-3 bg-[#FFD60A]/15 border border-[#FFD60A]/30 text-center' },
                     h('div', { className: 'text-[12px] font-black text-[#FFD60A]' }, '🏆 MAX LEVEL')
+                  ),
+                  h('button', {
+                    onClick: () => { setJvModal(manageBiz); setManageBiz(null); },
+                    className: 'w-full rounded-xl p-3 text-left active:scale-95 transition bg-gradient-to-b from-[#3B82F6] to-[#2563EB] text-white shadow-[0_4px_14px_-4px_rgba(59,130,246,0.7)]'
+                  },
+                    h('div', { className: 'flex items-center justify-between' },
+                      h('div', null,
+                        h('div', { className: 'text-[11px] font-black uppercase tracking-widest' }, '🤝 Joint Venture'),
+                        h('div', { className: 'text-[10px] opacity-80 mt-0.5' }, 'Split 50/50 profit with a partner')
+                      ),
+                      h('div', { className: 'text-lg' }, '→')
+                    )
                   ),
                   h('button', {
                     onClick: () => sellBiz(manageBiz),
@@ -1196,6 +1560,115 @@
               )
             );
           })(),
+
+          // ══════ TAX PAYMENT METHOD SELECTION ══════
+          taxPayModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setTaxPayModal(null) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/40 rounded-3xl p-5 animate-popIn' },
+              h('div', { className: 'text-center mb-4' },
+                h('div', { className: 'text-5xl mb-2' }, '💳'),
+                h('div', { className: 'text-[14px] font-black tracking-widest text-[#FFD60A] font-display' }, 'PAY ₦200 TAX'),
+                h('p', { className: 'text-[11px] text-white/60 mt-1' }, taxPayModal.business.emoji + ' ' + taxPayModal.business.name)
+              ),
+              h('div', { className: 'space-y-2' },
+                h('button', {
+                  onClick: () => { setTaxPayModal(null); processBuyWithRealTax(taxPayModal.business); },
+                  disabled: (s.real || 0) < BUSINESS_TAX_REAL,
+                  className: 'w-full p-3 rounded-xl bg-gradient-to-r from-[#34D976] to-[#22C55E] text-black font-black text-[13px] active:scale-95 transition disabled:opacity-40 flex justify-between items-center'
+                },
+                  h('span', null, '💰 Pay from Real Balance'),
+                  h('span', { className: 'text-[11px] tabular-nums opacity-70' }, fmtReal(s.real || 0))
+                ),
+                h('button', {
+                  onClick: () => { 
+                    if (!s.hasCard) return notify('You need a Black Card first!', 'bad');
+                    setTaxPayModal(null); 
+                    setCardPayModal({ business: taxPayModal.business, taxAmount: BUSINESS_TAX_REAL }); 
+                  },
+                  disabled: !s.hasCard,
+                  className: 'w-full p-3 rounded-xl bg-gradient-to-r from-[#FFE566] to-[#FFB800] text-black font-black text-[13px] active:scale-95 transition disabled:opacity-40 flex justify-between items-center'
+                },
+                  h('span', null, '💳 Pay with Black Card'),
+                  h('span', { className: 'text-[11px] tabular-nums' }, s.hasCard ? 'PIN required' : 'Not owned')
+                )
+              ),
+              h('div', { className: 'text-[10px] text-white/40 text-center mt-3' },
+                'You reached the 100 business free limit. Any new business requires ₦200 tax.'
+              ),
+              h('button', { onClick: () => setTaxPayModal(null), className: 'mt-3 w-full py-2 text-[11px] font-bold text-white/40' }, 'Cancel')
+            )
+          ),
+
+          // ══════ BLACK CARD PIN MODAL ══════
+          cardPayModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => setCardPayModal(null) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#FFD60A]/40 rounded-3xl p-5 animate-popIn' },
+              h('div', { className: 'text-center mb-3' },
+                h('div', { className: 'text-5xl mb-2' }, '💳'),
+                h('div', { className: 'text-[14px] font-black tracking-widest text-[#FFD60A] font-display' }, 'BLACK CARD CHECKOUT'),
+                h('p', { className: 'text-[11px] text-white/60 mt-1' }, cardPayModal.business.emoji + ' ' + cardPayModal.business.name)
+              ),
+              h('div', { className: 'bg-white/[0.05] border border-white/10 rounded-xl p-3 mb-3' },
+                h('div', { className: 'flex justify-between text-[10px] text-white/60' },
+                  h('span', null, 'Business tax'),
+                  h('span', { className: 'text-[#FFD60A] font-black' }, '₦' + cardPayModal.taxAmount)
+                )
+              ),
+              h('div', { className: 'mb-3' },
+                h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Enter Card PIN'),
+                h('input', {
+                  type: 'tel',
+                  maxLength: 4,
+                  value: cardPinInput,
+                  onChange: e => setCardPinInput(e.target.value.replace(/\D/g, '').slice(0, 4)),
+                  placeholder: '••••',
+                  autoFocus: true,
+                  className: 'mt-1 w-full bg-white/[0.05] border-2 border-white/15 focus:border-[#FFD60A]/60 rounded-xl px-3 py-3 text-center text-[22px] font-black text-white tracking-[0.4em] placeholder-white/20 transition'
+                })
+              ),
+              h('div', { className: 'flex gap-2' },
+                h('button', { onClick: () => setCardPayModal(null), className: 'flex-1 py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 text-[12px] font-bold' }, 'Cancel'),
+                h('button', {
+                  onClick: confirmCardPayment,
+                  disabled: cardPinInput.length !== 4,
+                  className: 'flex-1 py-3 rounded-xl bg-gradient-to-r from-[#FFE566] to-[#FFB800] text-black text-[12px] font-black active:scale-95 disabled:opacity-40'
+                }, '💳 Pay ₦200')
+              )
+            )
+          ),
+
+          // ══════ JOINT VENTURE MODAL ══════
+          jvModal && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
+            h('div', { className: 'absolute inset-0 bg-black/95 backdrop-blur-md', onClick: () => !jvSending && setJvModal(null) }),
+            h('div', { className: 'relative w-full max-w-sm bg-[#121218] border border-[#3B82F6]/40 rounded-3xl p-5 animate-popIn' },
+              h('div', { className: 'text-center mb-4' },
+                h('div', { className: 'text-5xl mb-2' }, '🤝'),
+                h('div', { className: 'text-[14px] font-black tracking-widest text-[#3B82F6] font-display' }, 'JOINT VENTURE'),
+                h('p', { className: 'text-[11px] text-white/60 mt-1' }, jvModal.emoji + ' ' + jvModal.name + ' · Split 50/50')
+              ),
+              h('div', { className: 'mb-3' },
+                h('label', { className: 'text-[10px] uppercase tracking-widest text-white/40 font-bold' }, 'Partner Username'),
+                h('input', {
+                  value: jvTarget,
+                  onChange: e => setJvTarget(e.target.value.slice(0, 20)),
+                  placeholder: 'Type their in-game name',
+                  disabled: jvSending,
+                  className: 'mt-1 w-full bg-white/[0.05] border border-white/10 rounded-xl px-3 py-2.5 text-[13px] font-bold text-white placeholder-white/30 focus:border-[#3B82F6]/50 transition'
+                })
+              ),
+              h('div', { className: 'text-[10px] text-white/50 mb-3 p-2 rounded-lg bg-[#3B82F6]/10 border border-[#3B82F6]/30' },
+                '📌 Both of you will share the profit from this business. They must accept the request first.'
+              ),
+              h('div', { className: 'flex gap-2' },
+                h('button', { onClick: () => setJvModal(null), disabled: jvSending, className: 'flex-1 py-3 rounded-xl bg-white/[0.06] border border-white/10 text-white/70 text-[12px] font-bold disabled:opacity-50' }, 'Cancel'),
+                h('button', {
+                  onClick: sendJointVenture,
+                  disabled: jvSending || !jvTarget.trim(),
+                  className: 'flex-1 py-3 rounded-xl bg-gradient-to-r from-[#3B82F6] to-[#2563EB] text-white text-[12px] font-black active:scale-95 disabled:opacity-40'
+                }, jvSending ? 'Sending...' : 'Send Request')
+              )
+            )
+          ),
 
           dramaEvent && h('div', { className: 'fixed inset-0 z-[100] grid place-items-center p-6' },
             h('div', { className: 'absolute inset-0 bg-black/90 backdrop-blur-md' }),
